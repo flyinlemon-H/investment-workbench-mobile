@@ -1,7 +1,7 @@
 {
     "manifestVersion":  1,
-    "assetVersion":  "sprint03r-task09-20260802",
-    "dataMode":  "safe empty placeholders + browser localStorage + manual JSON import",
+    "assetVersion":  "sprint04c-shadow-test-20260803",
+    "dataMode":  "safe empty placeholders + browser localStorage + manual JSON import + user-triggered IndexedDB shadow verification",
     "files":  [
                   {
                       "path":  ".nojekyll",
@@ -54,8 +54,8 @@
                   {
                       "path":  "index.html",
                       "role":  "entrypoint",
-                      "bytes":  39956,
-                      "sha256":  "681ca15e810e8faf484d331a602ae502508df0387b2eda11527e189a1ae2efb9"
+                      "bytes":  40602,
+                      "sha256":  "cfbc69340f20990b230e83fc19656814c07874bd6186e82e23c58487a354839a"
                   },
                   {
                       "path":  "social_posts.json",
@@ -96,14 +96,14 @@
                   {
                       "path":  "src/app.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  5907,
-                      "sha256":  "e933bb85173e9d9f7737c51602bf87ca12de6ce9c2e5743e466d2dd3b5d5b58c"
+                      "bytes":  18494,
+                      "sha256":  "d0a92764c69d4a6bb1fb4396c21a9ded6c888e2fb967cde597d4ced34c3bd3a8"
                   },
                   {
                       "path":  "src/import-export.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  4502,
-                      "sha256":  "54e68bc6a43f160cb62f3ef9a2c3288d160eb7630678a1adf2dc9e64d9574eae"
+                      "bytes":  4638,
+                      "sha256":  "f3afded4501d7412817d506ed409c4aa5d83f23573af44f5b2d5e802a9d23ed5"
                   },
                   {
                       "path":  "src/market-data-bridge.js",
@@ -150,8 +150,50 @@
                   {
                       "path":  "src/state.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  111966,
-                      "sha256":  "d0b26429a96130df770ffc6fe86908dbb6ad840343bd5db177ae885693788f84"
+                      "bytes":  111998,
+                      "sha256":  "766aad0c10f7afbf582673f59720f93bd6893c1dc3961c31e0567aeb014d5c96"
+                  },
+                  {
+                      "path":  "src/storage/idb-adapter.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  6836,
+                      "sha256":  "f182b4a4d9c228f70486e39915b2fad9eea1efcba98a7577e79e8cde2cff28f3"
+                  },
+                  {
+                      "path":  "src/storage/local-storage-adapter.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  2786,
+                      "sha256":  "1d764278a531523108faced3584331053abd60b05ffe90b073508fbc7d086ce8"
+                  },
+                  {
+                      "path":  "src/storage/migration-v1.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  15355,
+                      "sha256":  "53849c8bf74619ceaef7490011d02974f0b6c3f966681668d339ee4ce94741c1"
+                  },
+                  {
+                      "path":  "src/storage/storage-checksum.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  3977,
+                      "sha256":  "54e05acf59b71f8c670a590fe2ff0d6b370197065d2d57277ccb891a278a0a4c"
+                  },
+                  {
+                      "path":  "src/storage/storage-errors.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  2093,
+                      "sha256":  "dc6edf8a0f934746a2aae58452a3949ff9725148f0bd13605da3fde9276570b2"
+                  },
+                  {
+                      "path":  "src/storage/storage-manager.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  6668,
+                      "sha256":  "53b9e945e4ef480578f298043e399f983c86d0bfdbe883c4bbab27dcda39c62a"
+                  },
+                  {
+                      "path":  "src/storage/storage-validation.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  4532,
+                      "sha256":  "1e41cd2ee766954f81c36cfef71b93f50257afaabf1aeda47ec4a2cd0a5f80dc"
                   },
                   {
                       "path":  "src/ui-render.js",

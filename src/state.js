@@ -1955,5 +1955,15 @@ function toCNY(v,s){if(v===null||v===undefined||isNaN(v))return v;return getCurr
 function fxLabel(){const f=(state&&state.fx)||{};const base=`HKD→CNY ${fxHKD().toFixed(4)}`;return f.updatedAt?`${base} · ${f.updatedAt}`:`${base} · 默认值`}
 function normalizeAlpha3Compatibility(s){s=(s&&typeof s==='object'&&!Array.isArray(s))?s:{};if(!Array.isArray(s.decisionRecords))s.decisionRecords=[];if(!Array.isArray(s.decisionStates))s.decisionStates=[];s.alpha3DataVersion=ALPHA3_DATA_VERSION;return s}
 function normalize(s){s=normalizeAlpha3Compatibility(s);if(typeof normalizeV13RuleConfig==='function')s.ruleConfig=normalizeV13RuleConfig(s.ruleConfig||s.rules||s.config||{});if(!s.fx||!(Number(s.fx.hkdcny)>0))s.fx={hkdcny:DEFAULT_HKD_CNY,updatedAt:'',source:'默认'};s.stocks=(s.stocks||[]).map(x=>{if(x.currency===undefined)x.currency='';if(x.currentPrice===undefined)x.currentPrice='';if(x.currentValue===undefined)x.currentValue='';if(x.priceUpdatedAt===undefined)x.priceUpdatedAt='';if(x.valueUpdatedAt===undefined)x.valueUpdatedAt='';if(x.code===undefined)x.code=DEFAULT_CODES[x.id]||'';if(x.priceSource===undefined)x.priceSource='';if(x.trimPct===undefined)x.trimPct='';if(x.trimToPct===undefined)x.trimToPct='';if(x.capPct===undefined)x.capPct='';if(x.syncStatus===undefined)x.syncStatus='';if(x.tradePlan!==undefined&&(!x.tradePlan||typeof x.tradePlan!=='object'||Array.isArray(x.tradePlan)))x.tradePlan=null;if(!x.id)x.id=uid();if(!x.type)x.type='holding';if(!x.role)x.role=x.type==='watching'?'观察仓':'核心仓';if(!x.theme)x.theme='其他';if(!Array.isArray(x.plans))x.plans=[];const refPrice=x.type==='etf'?(Number(x.lastUnitPrice)||((Number(x.currentValue)>0&&Number(x.shares)>0)?Number(x.currentValue)/Number(x.shares):null)):(Number(x.currentPrice)||null);x.plans=x.plans.map(p=>{if(!p.triggerOn)p.triggerOn=inferTriggerOn(refPrice,p.price,p.action);return p});if(!x.thesis)x.thesis=x.notes||'';if(!x.buyRule){const buys=x.plans.filter(p=>(p.action||'buy')==='buy');x.buyRule=buys.map(p=>`${p.price}：${p.note||'加仓'}`).join('；')||'低于目标仓位且逻辑未变时再考虑。'}if(!x.sellRule){const sells=x.plans.filter(p=>p.action==='sell');x.sellRule=sells.map(p=>`${p.price}：${p.note||'减仓'}`).join('；')||(x.type==='etf'?'不设机械止损，只按目标仓位再平衡。':'逻辑破坏、估值过热或仓位超标时处理。')}return normalizeStockAnalysis(x,{ruleConfig:s.ruleConfig})});return s}
-function loadState(){try{let raw=localStorage.getItem(STORAGE_KEY);state=raw?normalize(JSON.parse(raw)):normalize({stocks:[],updatedAt:null})}catch(e){console.warn(e);state=normalize({stocks:[],updatedAt:null})}}
-function saveState(){state=normalize(state);state.updatedAt=Date.now();localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+async function loadState(){
+  const raw=await StorageManager.loadState();
+  state=raw?normalize(raw):normalize({stocks:[],updatedAt:null});
+  return state;
+}
+function saveState(nextState=state,options={}){
+  state=normalize(nextState);
+  state.updatedAt=Date.now();
+  const pending=StorageManager.saveState(state,options);
+  void pending.catch(()=>{});
+  return pending;
+}

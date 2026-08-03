@@ -32,6 +32,9 @@ function exportData(){
   downloadJson(alpha3ExportSnapshot(state),backupFilename('投资作战手册'));
   render();
 }
+function exportShadowVerificationBackup(){
+  downloadJson(alpha3ExportSnapshot(state),backupFilename('存储升级验证前备份'));
+}
 function autoBackupBeforeImport(){
   if(!state||!Array.isArray(state.stocks))return;
   const snapshot=alpha3ExportSnapshot(state);
