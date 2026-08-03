@@ -1,0 +1,199 @@
+{
+    "manifestVersion":  1,
+    "assetVersion":  "sprint03r-task09-20260802",
+    "dataMode":  "safe empty placeholders + browser localStorage + manual JSON import",
+    "files":  [
+                  {
+                      "path":  ".nojekyll",
+                      "role":  "GitHub Pages control",
+                      "bytes":  0,
+                      "sha256":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  },
+                  {
+                      "path":  "data/ai_decision_review_data.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  399,
+                      "sha256":  "487c2dc27dcc3db5aa094ad9936a3e184431e89bc7a4e1612682414614ae54c6"
+                  },
+                  {
+                      "path":  "data/backend_config.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  43,
+                      "sha256":  "5f7f469a485c816299530d5e63f8c33e141fbaf2cb2a4ce71db7975fc808d952"
+                  },
+                  {
+                      "path":  "data/market_data_bridge.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  65,
+                      "sha256":  "c70d7da20604ee263720c63043712ddc89e78257eb6397cc68b5ffce705114c2"
+                  },
+                  {
+                      "path":  "data/market_task_status_bridge.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  285,
+                      "sha256":  "c0fa93dde27c55815316ee046a74b0d204692c6f27e0194e46f21ce1174abe5f"
+                  },
+                  {
+                      "path":  "data/operation_application_status_bridge.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  95,
+                      "sha256":  "45998fb5ee2298c58891ff8e62969ecea9740165b481f0efa397a58af25758dd"
+                  },
+                  {
+                      "path":  "data/plan_application_status_bridge.js",
+                      "role":  "safe static configuration or empty bridge",
+                      "bytes":  77,
+                      "sha256":  "15516cca7a55876b43b5ee5443aa94042eccd6d2626929afaaf64e10f297c142"
+                  },
+                  {
+                      "path":  "favicon.svg",
+                      "role":  "local icon",
+                      "bytes":  270,
+                      "sha256":  "ab251514150ee5fb91cec552bc9adb564813a408cc0787478d1abbd8d6ae5603"
+                  },
+                  {
+                      "path":  "index.html",
+                      "role":  "entrypoint",
+                      "bytes":  39956,
+                      "sha256":  "681ca15e810e8faf484d331a602ae502508df0387b2eda11527e189a1ae2efb9"
+                  },
+                  {
+                      "path":  "social_posts.json",
+                      "role":  "empty social data",
+                      "bytes":  3,
+                      "sha256":  "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+                  },
+                  {
+                      "path":  "social_summary.json",
+                      "role":  "empty social summary",
+                      "bytes":  3,
+                      "sha256":  "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+                  },
+                  {
+                      "path":  "src/ai-decision-review.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  21371,
+                      "sha256":  "2f05e99b620e7b4b31e0666ff14392f3667aa402d3a37fc9aadea1f55c68f7d5"
+                  },
+                  {
+                      "path":  "src/api/api-client.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  3280,
+                      "sha256":  "6c5a62d5c2071a2f17be09fd0875ec6fcf825bd695289a044400c4ca0daf0b89"
+                  },
+                  {
+                      "path":  "src/api/api-errors.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  1434,
+                      "sha256":  "afaf4f115f4b9b3bf40d6e84c48ce79fbd8fbe86ed4bcf66a0a51e79a8ae32e3"
+                  },
+                  {
+                      "path":  "src/api/health-api.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  818,
+                      "sha256":  "ca7ccccae7725bcfb8a092dbfcde5fd130d2c661a296b76161fb44ecafe0abad"
+                  },
+                  {
+                      "path":  "src/app.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  5907,
+                      "sha256":  "e933bb85173e9d9f7737c51602bf87ca12de6ce9c2e5743e466d2dd3b5d5b58c"
+                  },
+                  {
+                      "path":  "src/import-export.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  4502,
+                      "sha256":  "54e68bc6a43f160cb62f3ef9a2c3288d160eb7630678a1adf2dc9e64d9574eae"
+                  },
+                  {
+                      "path":  "src/market-data-bridge.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  954,
+                      "sha256":  "504e52a524547461ffe918b2ced434aae8d1f954cbb811f34d9ddaa909fd79c1"
+                  },
+                  {
+                      "path":  "src/operation-entry.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  11722,
+                      "sha256":  "478fcaf5cbd47dabab4a059c92b5dad02471e72811a053bcd768b442155ac7d2"
+                  },
+                  {
+                      "path":  "src/plan-update-draft.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  12870,
+                      "sha256":  "0eca31b730a107ff515a219bb36cda7401e8ce9e1f70011c80c8c3d907123b8c"
+                  },
+                  {
+                      "path":  "src/position.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  4086,
+                      "sha256":  "e9f6c7e31b24894e186aca999a77cdb5f3f8582b172215f78f3a8a5d6900b52e"
+                  },
+                  {
+                      "path":  "src/price-refresh.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  12372,
+                      "sha256":  "f4b5dc31df21ae4c6d19659825fb80e5b5eab111e080c0e541df56273c52f51e"
+                  },
+                  {
+                      "path":  "src/rebalance.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  5520,
+                      "sha256":  "2dc19cb22dc58e470b3a923391bc5c822eada68066c84b6a96b74ed93bf1e852"
+                  },
+                  {
+                      "path":  "src/social.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  17636,
+                      "sha256":  "1d07aac37ad742d8f8754cc50694395f485c26d348c949b596e2dd474a79e8fc"
+                  },
+                  {
+                      "path":  "src/state.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  111966,
+                      "sha256":  "d0b26429a96130df770ffc6fe86908dbb6ad840343bd5db177ae885693788f84"
+                  },
+                  {
+                      "path":  "src/ui-render.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  585595,
+                      "sha256":  "c3b127bd73761c2a236cc46a06b691733c17aad991d1d44adf3ec27c40339775"
+                  },
+                  {
+                      "path":  "src/v13-alpha3-services.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  13069,
+                      "sha256":  "41b1bd694501f36af7c734d762357e22f41ed9abce7cba08e6eca1919c313c46"
+                  },
+                  {
+                      "path":  "src/v13-core-model.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  11567,
+                      "sha256":  "3cce3a9b2a140f8dd563d333df96e9c3c5a7abdfce360cf81037eb5841ffd594"
+                  },
+                  {
+                      "path":  "src/v13-event-engine.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  2143,
+                      "sha256":  "15c3aecf1c70dca23fb34cf1c0dbb2ed41f5c48c34b3c4e701ddeadaed424814"
+                  },
+                  {
+                      "path":  "src/v13-plan-engine.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  3679,
+                      "sha256":  "e3b4a9ec7e15418085b2488fd16e48a5f8207c6e68e88a36daa3acf3a8e7c1fb"
+                  },
+                  {
+                      "path":  "src/v13-recommendation-engine.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  11312,
+                      "sha256":  "06ea959e14cbc34a8c66c6a8cffb68a809746c268a555d2859ab0a7ddeecd298"
+                  },
+                  {
+                      "path":  "src/v13-risk-engine.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  5571,
+                      "sha256":  "2a197b686f4e42dba6deac14ac1a4d7b49d5766d57bbaef59f19cd7a684f28e1"
+                  }
+              ]
+}
