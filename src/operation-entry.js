@@ -1,5 +1,6 @@
 (function(){
   const STORAGE_KEY='v13_operation_entry_drafts_v1';
+  const DRAFT_KIND='operation_entry';
   const obj=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const arr=value=>Array.isArray(value)?value:[];
   const symbol=value=>String(value||'').trim().toUpperCase();
@@ -7,8 +8,13 @@
   const integer=value=>typeof value==='number'&&Number.isInteger(value)?value:null;
   const stableStringify=value=>Array.isArray(value)?'['+value.map(stableStringify).join(',')+']':(value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+stableStringify(value[key])).join(',')+'}':JSON.stringify(value));
   const dateValid=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value||''))&&!isNaN(Date.parse(value+'T00:00:00'));
-  function load(){try{return obj(JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'))}catch(_){return {}}}
-  function saveAll(value){localStorage.setItem(STORAGE_KEY,JSON.stringify(value))}
+  function manager(){if(!window.StorageManager)throw new Error('StorageManager is unavailable.');return window.StorageManager}
+  async function persist(key,value){
+    const previous=saved(key),write=()=>manager().saveDraft(DRAFT_KIND,key,value);
+    if(window.MultiTabProtection&&typeof window.MultiTabProtection.runProtectedDraftSave==='function')await window.MultiTabProtection.runProtectedDraftSave(DRAFT_KIND,key,previous,value,write);
+    else await write();
+    return value;
+  }
   function canonicalPositionValue(value){if(value===null||value===undefined||value==='')return value;const number=Number(value);return Number.isFinite(number)?number:value}
   function positionPayload(stock){return {symbol:symbol(stock&& (stock.code||stock.symbol)),shares:canonicalPositionValue(stock&&stock.shares),avgCost:canonicalPositionValue(stock&&stock.avgCost),positionUpdatedAt:stock&& (stock.positionUpdatedAt||stock.updatedAt)||''}}
   async function snapshotHash(stock){const bytes=new TextEncoder().encode(stableStringify(positionPayload(stock))),hash=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(hash)).map(value=>value.toString(16).padStart(2,'0')).join('')}
@@ -28,7 +34,7 @@
     const linked=record?context(record.reviewId,stock):null;
     return eligible(linked)?linked:manualContext(stock);
   }
-  function saved(key){return load()[key]||null}
+  function saved(key){return manager().getDraft(DRAFT_KIND,key)}
   function defaultDraft(ctx){
     const now=new Date().toISOString(),stock=ctx.stock,linked=sourceType(ctx)==='operation_request';
     return {draft_id:uuid(),source_type:sourceType(ctx),source_request_id:linked?ctx.request.request_id:null,source_decision_id:linked?ctx.outcome.decision_id:null,source_review_id:linked?ctx.record.reviewId:null,symbol:ctx.request.symbol,previous_shares:stock.shares,new_shares:stock.shares,previous_avg_cost:stock.avgCost,new_avg_cost:stock.avgCost,operation_date:now.slice(0,10),note:'',draft_status:'draft',created_at:now,updated_at:now};
@@ -62,13 +68,16 @@
     }
     return {schema_valid:errors.filter(item=>item.indexOf('缺少字段')===0).length===0,business_valid:errors.length===0,warnings,errors,normalized_new_avg_cost:normalizedCost,position_change:positionChange(d.previous_shares,d.new_shares)};
   }
-  function saveDraft(ctx,draft,validation,snapshot){
-    const all=load(),now=new Date().toISOString(),key=contextKey(ctx);
-    all[key]={draft:{...draft,new_avg_cost:validation.normalized_new_avg_cost,updated_at:now},validation,current_position_snapshot_hash:snapshot,status:validation.business_valid?'pending_confirmation':'draft',saved_at:now};
-    saveAll(all);return all[key];
+  async function saveDraft(ctx,draft,validation,snapshot){
+    const now=new Date().toISOString(),key=contextKey(ctx),value={draft:{...draft,new_avg_cost:validation.normalized_new_avg_cost,updated_at:now},validation,current_position_snapshot_hash:snapshot,status:validation.business_valid?'pending_confirmation':'draft',saved_at:now};
+    return persist(key,value);
   }
-  function markApplicationRequest(requestId,application){const all=load(),item=all[requestId]||{};all[requestId]={...item,status:'application_request_generated',application_request:application,application_request_generated_at:new Date().toISOString()};saveAll(all);return all[requestId]}
-  function abandon(requestId){const all=load();delete all[requestId];saveAll(all)}
+  async function markApplicationRequest(requestId,application){const item=saved(requestId)||{},value={...item,status:'application_request_generated',application_request:application,application_request_generated_at:new Date().toISOString()};return persist(requestId,value)}
+  async function abandon(requestId){
+    const previous=saved(requestId),write=()=>manager().deleteDraft(DRAFT_KIND,requestId);
+    if(window.MultiTabProtection&&typeof window.MultiTabProtection.runProtectedDraftSave==='function')await window.MultiTabProtection.runProtectedDraftSave(DRAFT_KIND,requestId,previous,null,write);
+    else await write();
+  }
   async function createApplicationRequest(ctx,savedItem){
     if(!eligible(ctx))throw new Error('当前标的无法录入操作结果。');
     if(!savedItem||savedItem.status!=='pending_confirmation')throw new Error('录入草案尚未通过校验。');
@@ -91,5 +100,5 @@
   function valueEqual(left,right){const ln=left===''||left===null||left===undefined?null:Number(left),rn=right===''||right===null||right===undefined?null:Number(right);return Number.isFinite(ln)&&Number.isFinite(rn)?ln===rn:left===right}
   function zeroCostAllowed(formal,value){if(typeof formal==='string')return value===''||value===null||Number(value)===0;if(formal===null)return value===null||value===''||Number(value)===0;return value===''||value===null||Number(value)===0}
   function uuid(){if(crypto.randomUUID)return crypto.randomUUID();const values=new Uint8Array(16);crypto.getRandomValues(values);values[6]=(values[6]&15)|64;values[8]=(values[8]&63)|128;const hex=Array.from(values).map(v=>v.toString(16).padStart(2,'0')).join('');return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20)}
-  window.OperationEntry={context,manualContext,latestContext,eligible,contextKey,defaultDraft,validate,saveDraft,saved,abandon,snapshotHash,createApplicationRequest,markApplicationRequest,appliedStatus,positionPayload,positionChange,storageKey:STORAGE_KEY};
+  window.OperationEntry={context,manualContext,latestContext,eligible,contextKey,defaultDraft,validate,saveDraft,saved,abandon,snapshotHash,createApplicationRequest,markApplicationRequest,appliedStatus,positionPayload,positionChange,storageKey:STORAGE_KEY,draftKind:DRAFT_KIND};
 })();

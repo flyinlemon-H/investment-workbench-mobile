@@ -20,6 +20,35 @@ let v13ActiveReviewReturn=null;
 let v13DecisionReviewDirty={};
 let v13DecisionReviewCloseContext=null;
 let detailWorkspace='plan';
+const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm']);
+const DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1';
+function normalizeDetailWorkspace(value){return DETAIL_WORKSPACE_TABS.includes(String(value||''))?String(value):'plan'}
+function loadDetailWorkspacePreference(){
+  try{return normalizeDetailWorkspace(window.sessionStorage&&window.sessionStorage.getItem(DETAIL_WORKSPACE_SESSION_KEY))}catch(_){return 'plan'}
+}
+function setDetailWorkspace(value,{persist=true}={}){
+  detailWorkspace=normalizeDetailWorkspace(value);
+  if(persist){try{if(window.sessionStorage)window.sessionStorage.setItem(DETAIL_WORKSPACE_SESSION_KEY,detailWorkspace)}catch(_){}}
+  return detailWorkspace;
+}
+let criticalRollbackSnapshot=null;
+function criticalWriteFailure(error){
+  if(criticalRollbackSnapshot)state=criticalRollbackSnapshot;
+  alert(`保存失败\n\n数据尚未确认保存\n\n请重试${error&&error.message?'：'+error.message:''}`);
+}
+async function withCriticalRollback(action,args){
+  const previous=criticalRollbackSnapshot;
+  try{criticalRollbackSnapshot=typeof structuredClone==='function'?structuredClone(state):JSON.parse(JSON.stringify(state));return await action(...args)}
+  finally{criticalRollbackSnapshot=previous}
+}
+const saveWithoutCriticalRollback=save;
+save=(...args)=>withCriticalRollback(saveWithoutCriticalRollback,args);
+const delWithoutCriticalRollback=del;
+del=(...args)=>withCriticalRollback(delWithoutCriticalRollback,args);
+if(typeof executePlan==='function'){
+  const executePlanWithoutCriticalRollback=executePlan;
+  executePlan=(...args)=>withCriticalRollback(executePlanWithoutCriticalRollback,args);
+}
 function backupReminderText(){
   const t=Number(state.lastBackupAt);
   if(!t)return ' · 建议导出备份';
@@ -389,7 +418,7 @@ function etfAnalysisSummary(stock){
     summary:has?`${a.conclusion||'暂无综合结论'}。指数估值：${a.indexValuationLevel||'暂无'}；行业景气：${a.industryTrend||'暂无'}；宏观环境：${a.macroView||'暂无'}。`:'尚未导入 ETF 指数/行业分析。'
   };
 }
-function currentDisplay(s){const isEtf=s.type==='etf';const val=isEtf?fmtMaybe(s.currentValue,0):fmtMaybe(s.currentPrice);const curTag=(getCurrency(s)==='HKD'&&val!=='—')?' <span class="muted" style="font-size:11px;font-weight:400">HKD</span>':'';const date=isEtf?s.valueUpdatedAt:s.priceUpdatedAt;const code=s.code?` · ${esc(s.code)}`:'';const source=s.priceSource?` · ${esc(s.priceSource)}`:'';const status=s.syncStatus==='failed'?' · 刷新失败，仍使用旧价格':(s.syncStatus==='updating'?' · 刷新中':'');const chg=s.dailyChange;const chgHtml=(typeof chg==='number'&&!isNaN(chg))?` <span class="daily-chg ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`:'';const comparable=isEtf?`<div class="text">ETF比较单价：${fmtMaybe(getComparablePrice(s))} · 价位计划按单位净值/单价判断</div>`:'';const risks=priceRiskWarnings(s);const riskHtml=risks.length?`<div class="alert" style="margin-top:6px">${risks.map(esc).join('；')}</div>`:'';return `${val}${curTag}${chgHtml}<div class="text">${freshnessText(date)}${code}${source}${status}</div>${comparable}${riskHtml}`}
+function currentDisplay(s){const isEtf=s.type==='etf';const val=isEtf?fmtMaybe(s.currentValue,0):fmtMaybe(s.currentPrice);const curTag=(getCurrency(s)==='HKD'&&val!=='—')?' <span class="muted" style="font-size:11px;font-weight:400">HKD</span>':'';const date=isEtf?s.valueUpdatedAt:s.priceUpdatedAt;const code=s.code?` · ${esc(s.code)}`:'';const source=s.priceSource?` · ${esc(s.priceSource)}`:'';const refresh=typeof getPriceRefreshUiState==='function'?getPriceRefreshUiState(s.id):{status:'idle'};const uiStatus={refreshing:' · 正在刷新',persisting:' · 正在保存',success:' · 价格已更新并保存',refresh_failed:' · 刷新失败，仍使用旧价格',persistence_failed:' · 最新价格保存失败，仍使用旧价格'}[refresh.status]||'';const legacyStatus=!uiStatus?(s.syncStatus==='failed'?' · 刷新失败，仍使用旧价格':(s.syncStatus==='updating'?' · 刷新中':'')):'';const chg=s.dailyChange;const chgHtml=(typeof chg==='number'&&!isNaN(chg))?` <span class="daily-chg ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`:'';const comparable=isEtf?`<div class="text">ETF比较单价：${fmtMaybe(getComparablePrice(s))} · 价位计划按单位净值/单价判断</div>`:'';const risks=priceRiskWarnings(s);const riskHtml=risks.length?`<div class="alert" style="margin-top:6px">${risks.map(esc).join('；')}</div>`:'';return `${val}${curTag}${chgHtml}<div class="text">${freshnessText(date)}${code}${source}${uiStatus||legacyStatus}</div>${comparable}${riskHtml}`}
 function stalePanel(){const items=state.stocks.map(s=>{const date=s.type==='etf'?s.valueUpdatedAt:s.priceUpdatedAt;const val=s.type==='etf'?s.currentValue:s.currentPrice;return {s,date,val,days:daysSince(date)}}).filter(x=>x.val!==''&&x.val!==undefined&&x.val!==null&&(x.days===null||x.days>30));if(!items.length)return '<div class="card" style="margin-bottom:14px"><div class="card-title">数据更新提醒</div><div class="card-note">当前没有超过30天的价格/市值数据。</div></div>';return `<div class="card" style="margin-bottom:14px"><div class="card-title">数据更新提醒（${items.length} 项）</div><div class="stale-list">${items.map(x=>{const days=x.days;const urgent=days===null||days>60;const meta=days===null?'未记录更新时间':`已 ${days} 天未更新`;return `<div class="stale-row"><div class="stale-name">${esc(x.s.name)} <span class="muted" style="font-weight:400">· ${x.s.type==='etf'?'市值':'价格'}</span></div><div class="stale-meta${urgent?' urgent':''}">${meta}</div></div>`}).join('')}</div><div class="alert" style="margin-top:10px">这些数据可能已经不适合直接用于决策。建议按月更新ETF市值，按需更新重点个股价格。</div></div>`}
 function freshnessDays(dateStr){const d=normalizeDateOnly(dateStr);if(!d)return null;const t=new Date(d+'T00:00:00').getTime();if(isNaN(t))return null;return Math.floor((Date.now()-t)/86400000)}
 function dataFreshnessStatus(dateStr){
@@ -761,6 +790,28 @@ function v13StockSymbolMatches(stock,symbol){
   const stripped=target.replace(/\.(SS|SZ|HK)$/,'').replace(/^0+/,'');
   return values.some(v=>v.replace(/\.(SS|SZ|HK)$/,'').replace(/^0+/,'')===stripped);
 }
+function planGenerationGateResult(stock){
+  if(!window.PlanGenerationGate||typeof window.PlanGenerationGate.evaluatePlanGenerationReadiness!=='function')return {status:'blocked',canGenerate:false,blockingReasons:['计划生成前置检查不可用。'],warnings:[],requiredActions:['重新加载页面'],dates:{}};
+  return window.PlanGenerationGate.evaluatePlanGenerationReadiness({
+    stock,
+    currentPrice:getComparablePrice(stock)||stockCurrentPrice(stock)||null,
+    priceUpdatedAt:stock.priceUpdatedAt||stock.valueUpdatedAt||normalizeDataFreshness(stock.dataFreshness).priceUpdatedAt,
+    existingPlans:stock.plans
+  });
+}
+function planGenerationBlockedText(result){return `无法生成新版计划\n\n原因：\n${(result.blockingReasons||[]).join('\n')}\n\n建议：\n${(result.requiredActions||[]).join('\n')}`}
+function confirmPlanGenerationWarnings(result){
+  if(!result||result.status!=='warning'||!(result.warnings||[]).length)return true;
+  return confirm(`存在以下数据提醒：\n\n${result.warnings.join('\n')}\n\n仍要继续生成新版计划吗？`);
+}
+function planGenerationReadinessCard(stock,options={}){
+  const result=planGenerationGateResult(stock),dates=result.dates||{};
+  const meta=`价格 ${dates.price||'未更新'} · 最新交易日 ${dates.latestTrading||'未知'} · 技术面 ${dates.technical||'未更新'} · 配置 ${dates.allocation||'未更新'}`;
+  const actions=options.actions===false?'':`<div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn ghost small" type="button" data-detail-action="update-daily-kline">更新日K</button><button class="btn small" type="button" data-detail-action="copy-technical-prompt">更新技术面</button></div>`;
+  if(result.status==='blocked')return `<div class="card" data-plan-generation-gate="blocked" style="margin-bottom:12px;border-left:4px solid var(--seal)"><div class="card-title">计划生成状态</div><div class="text" style="max-width:none"><b>✕ 无法生成新版计划</b></div><div class="card-note" style="margin-top:6px">${esc(meta)}</div><div class="alert" style="margin-top:8px">${(result.blockingReasons||[]).map(esc).join('；')}</div><div class="card-note" style="margin-top:8px">建议：${(result.requiredActions||[]).map(esc).join('；')}</div>${actions}</div>`;
+  if(result.status==='warning')return `<div class="card" data-plan-generation-gate="warning" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="card-title">计划生成状态</div><div class="text" style="max-width:none"><b>⚠ 存在数据提醒</b></div><div class="card-note" style="margin-top:6px">${esc(meta)}</div><div class="alert" style="margin-top:8px">${(result.warnings||[]).map(esc).join('；')}</div><div class="card-note" style="margin-top:8px">仍可在确认提醒后生成新版计划。</div></div>`;
+  return `<div class="card" data-plan-generation-gate="ready" style="margin-bottom:12px;border-left:4px solid var(--teal)"><div class="card-title">计划生成状态</div><div class="text" style="max-width:none"><b>✓ 数据已准备</b></div><div class="card-note" style="margin-top:6px">${esc(meta)}</div><div class="card-note" style="margin-top:8px">可以生成新版计划。</div></div>`;
+}
 function v13PlanRefreshContext(stock){
   normalizeStockAnalysis(stock);
   const total=getEstimatedTotalAssets();
@@ -802,6 +853,8 @@ function v13PlanRefreshContext(stock){
   };
 }
 function v13PlanRefreshPrompt(stock){
+  const readiness=planGenerationGateResult(stock);
+  if(!readiness.canGenerate)throw new Error(planGenerationBlockedText(readiness));
   const ctx=v13PlanRefreshContext(stock);
   const today=typeof todayDate==='function'?todayDate():new Date().toISOString().slice(0,10);
   const sample={
@@ -821,7 +874,7 @@ function v13PlanRefreshPrompt(stock){
       notes:['不构成确定性买卖指令。']
     }]
   };
-  return [
+  const body=[
     `请为以下标的生成新版人工复核计划 JSON：${ctx.stock.name} (${ctx.stock.symbol})。`,
     '',
     '上下文：',
@@ -840,6 +893,8 @@ function v13PlanRefreshPrompt(stock){
     '请严格只输出 JSON，不要输出 Markdown 代码块，不要输出解释文字。JSON 结构如下：',
     JSON.stringify(sample,null,2)
   ].join('\n');
+  const warning=window.PlanGenerationGate.warningHeader(readiness);
+  return warning?warning+'\n'+body:body;
 }
 function v13ValidatePlanRefreshPayload(stock,payload){
   const errors=[];
@@ -926,7 +981,7 @@ function v13AppendPlanRefreshAudit(stock,batchId,oldPlansArchivedCount,newPlansI
     version:'v13.rc2.plan-refresh'
   });
 }
-function v13ImportPlanRefreshPayload(stock,payload){
+async function v13ImportPlanRefreshPayload(stock,payload){
   const validation=v13ValidatePlanRefreshPayload(stock,payload);
   if(!validation.ok)return validation;
   const today=typeof todayDate==='function'?todayDate():new Date().toISOString().slice(0,10);
@@ -968,7 +1023,7 @@ function v13ImportPlanRefreshPayload(stock,payload){
     }
   };
   v13AppendPlanRefreshAudit(stock,batchId,archivedCount+archivedTradePlanCount,newPlans.length);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return {...validation,ok:false,errors:['保存失败，数据尚未确认保存，请重试'],warnings:validation.warnings||[]}}
   render();
   return {...validation,batchId,oldPlansArchivedCount:archivedCount+archivedTradePlanCount,newPlansImportedCount:newPlans.length};
 }
@@ -990,12 +1045,12 @@ function ensureV13PlanRefreshToolDialog(){
   el=document.createElement('div');
   el.className='modal-bg import-layer';
   el.id='v13PlanRefreshToolDialog';
-  el.innerHTML=`<div class="modal"><h2>V13 计划刷新工具</h2><div class="modal-sub">只生成 Prompt 和导入人工确认后的新版计划 JSON；不调用外部 AI，不生成交易，不修改持仓、成本或现金。</div><div class="form-row"><label>刷新标的</label><select id="v13PlanRefreshStockSelect"></select></div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn ghost small" type="button" id="v13CopyPlanRefreshPromptBtn">复制刷新 Prompt</button><button class="btn ghost small" type="button" id="v13PreviewPlanRefreshPromptBtn">预览 Prompt</button></div><div class="form-row"><label>Prompt / 导入结果</label><textarea id="v13PlanRefreshPromptText" style="min-height:150px" readonly></textarea></div><div class="form-row"><label>新版计划 JSON</label><textarea id="v13PlanRefreshJsonText" style="min-height:150px" placeholder="粘贴 AI 返回的纯 JSON。"></textarea></div><div class="card-note" id="v13PlanRefreshMessage"></div><div class="modal-actions"><button class="btn ghost" type="button" id="v13PlanRefreshCancelBtn">取消</button><button class="btn" type="button" id="v13PlanRefreshImportBtn">导入计划</button></div></div>`;
+  el.innerHTML=`<div class="modal"><h2>V13 计划刷新工具</h2><div class="modal-sub">只生成 Prompt 和导入人工确认后的新版计划 JSON；不调用外部 AI，不生成交易，不修改持仓、成本或现金。</div><div class="form-row"><label>刷新标的</label><select id="v13PlanRefreshStockSelect"></select></div><div id="v13PlanRefreshGateStatus"></div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn ghost small" type="button" id="v13CopyPlanRefreshPromptBtn">复制刷新 Prompt</button><button class="btn ghost small" type="button" id="v13PreviewPlanRefreshPromptBtn">预览 Prompt</button></div><div class="form-row"><label>Prompt / 导入结果</label><textarea id="v13PlanRefreshPromptText" style="min-height:150px" readonly></textarea></div><div class="form-row"><label>新版计划 JSON</label><textarea id="v13PlanRefreshJsonText" style="min-height:150px" placeholder="粘贴 AI 返回的纯 JSON。"></textarea></div><div class="card-note" id="v13PlanRefreshMessage"></div><div class="modal-actions"><button class="btn ghost" type="button" id="v13PlanRefreshCancelBtn">取消</button><button class="btn" type="button" id="v13PlanRefreshImportBtn">导入计划</button></div></div>`;
   document.body.appendChild(el);
   el.addEventListener('click',e=>{if(e.target.id==='v13PlanRefreshToolDialog')closeV13PlanRefreshToolDialog()});
   document.getElementById('v13PlanRefreshCancelBtn').addEventListener('click',closeV13PlanRefreshToolDialog);
   document.getElementById('v13CopyPlanRefreshPromptBtn').addEventListener('click',copyV13PlanRefreshPrompt);
-  document.getElementById('v13PreviewPlanRefreshPromptBtn').addEventListener('click',previewV13PlanRefreshPrompt);
+  document.getElementById('v13PreviewPlanRefreshPromptBtn').addEventListener('click',()=>previewV13PlanRefreshPrompt({confirmWarnings:true}));
   document.getElementById('v13PlanRefreshImportBtn').addEventListener('click',importV13PlanRefreshJson);
   document.getElementById('v13PlanRefreshStockSelect').addEventListener('change',previewV13PlanRefreshPrompt);
   return el;
@@ -1028,20 +1083,33 @@ function closeV13PlanRefreshToolDialog(){
   const el=document.getElementById('v13PlanRefreshToolDialog');
   if(el)el.classList.remove('show');
 }
-function previewV13PlanRefreshPrompt(){
+function previewV13PlanRefreshPrompt(options={}){
   const stock=currentV13PlanRefreshStock();
   const text=document.getElementById('v13PlanRefreshPromptText');
   if(!stock){if(text)text.value='当前没有计划刷新候选。';return}
-  if(text)text.value=v13PlanRefreshPrompt(stock);
+  const result=planGenerationGateResult(stock),blocked=!result.canGenerate;
+  const gate=document.getElementById('v13PlanRefreshGateStatus');
+  if(gate)gate.innerHTML=planGenerationReadinessCard(stock,{actions:false});
+  ['v13CopyPlanRefreshPromptBtn','v13PreviewPlanRefreshPromptBtn','v13PlanRefreshImportBtn'].forEach(id=>{const button=document.getElementById(id);if(button)button.disabled=blocked});
+  if(blocked){if(text)text.value='';setV13PlanRefreshMessage(planGenerationBlockedText(result),true);return}
+  if(result.status==='warning'&&!options.confirmWarnings){if(text)text.value='';setV13PlanRefreshMessage(`数据提醒：${result.warnings.join('；')}。请点击“预览 Prompt”并确认后继续。`);return}
+  if(result.status==='warning'&&!confirmPlanGenerationWarnings(result)){if(text)text.value='';setV13PlanRefreshMessage('已取消生成计划 Prompt。');return}
+  try{if(text)text.value=v13PlanRefreshPrompt(stock);setV13PlanRefreshMessage(result.status==='warning'?`数据提醒：${result.warnings.join('；')}`:'数据已准备，可以生成新版计划。')}catch(err){if(text)text.value='';setV13PlanRefreshMessage(err&&err.message?err.message:String(err),true)}
 }
 function copyV13PlanRefreshPrompt(){
   const stock=currentV13PlanRefreshStock();
   if(!stock)return setV13PlanRefreshMessage('当前没有可复制的刷新候选。',true);
-  copyText(v13PlanRefreshPrompt(stock),'计划刷新 Prompt 已复制。');
+  const result=planGenerationGateResult(stock);
+  if(!result.canGenerate)return setV13PlanRefreshMessage(planGenerationBlockedText(result),true);
+  if(!confirmPlanGenerationWarnings(result))return setV13PlanRefreshMessage('已取消生成计划 Prompt。');
+  try{copyText(v13PlanRefreshPrompt(stock),'计划刷新 Prompt 已复制。')}catch(err){setV13PlanRefreshMessage(err&&err.message?err.message:String(err),true)}
 }
-function importV13PlanRefreshJson(){
+async function importV13PlanRefreshJson(){
   const stock=currentV13PlanRefreshStock();
   if(!stock)return setV13PlanRefreshMessage('请选择刷新标的。',true);
+  const readiness=planGenerationGateResult(stock);
+  if(!readiness.canGenerate)return setV13PlanRefreshMessage(planGenerationBlockedText(readiness),true);
+  if(!confirmPlanGenerationWarnings(readiness))return setV13PlanRefreshMessage('已取消导入新版计划。');
   const raw=document.getElementById('v13PlanRefreshJsonText')&&document.getElementById('v13PlanRefreshJsonText').value;
   let payload;
   try{
@@ -1050,7 +1118,7 @@ function importV13PlanRefreshJson(){
     setV13PlanRefreshMessage('导入失败：JSON 解析失败。'+(err&&err.message?` ${err.message}`:''),true);
     return;
   }
-  const result=v13ImportPlanRefreshPayload(stock,payload);
+  const result=await v13ImportPlanRefreshPayload(stock,payload);
   if(!result.ok){
     setV13PlanRefreshMessage('导入失败：'+result.errors.join('；'),true);
     return;
@@ -1467,10 +1535,10 @@ function goV13DecisionReviewStockDetail(stockId,target,recArg){
   const stock=state.stocks.find(x=>String(x.id)===String(stockId));
   const rec=recArg||(stock?v13RecommendationById(stock,currentRecId):null);
   const cfg=v13ReviewTargetConfig(target,rec);
-  detailWorkspace=cfg.workspace||'plan';
+  setDetailWorkspace(cfg.workspace||'plan');
   v13ActiveReviewReturn={stockId,recId:currentRecId,target:cfg.anchor,workspace:cfg.workspace};
   closeV13DecisionReviewModal(false);
-  openStockDetail(stockId);
+  openStockDetail(stockId,cfg.workspace);
   setTimeout(()=>{
     const el=document.querySelector(`[data-v13-detail-anchor="${cfg.anchor}"]`)||document.querySelector(`[data-workspace-section="${cfg.workspace}"]`);
     if(el&&typeof el.scrollIntoView==='function')el.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1538,7 +1606,7 @@ function restoreV13DecisionReviewCloseContext(){
   if(ctx.detailStockId){
     detailStockId=ctx.detailStockId;
     detailSubView=ctx.detailSubView||'';
-    detailWorkspace=ctx.detailWorkspace||'plan';
+    setDetailWorkspace(ctx.detailWorkspace||'plan');
     render();
     return;
   }
@@ -1591,13 +1659,16 @@ function closeV13UserDecisionDialog(){
   const modal=document.getElementById('v13UserDecisionDialog');
   if(modal)modal.classList.remove('show');
 }
-function saveV13UserDecisionStub(){
+async function saveV13UserDecisionStub(){
   const resultType=document.getElementById('v13UserDecisionResult')&&document.getElementById('v13UserDecisionResult').value;
   const note=document.getElementById('v13UserDecisionNote')&&document.getElementById('v13UserDecisionNote').value;
   const stockId=document.getElementById('v13UserDecisionStockId')&&document.getElementById('v13UserDecisionStockId').value;
   const recommendationId=document.getElementById('v13UserDecisionRecommendationId')&&document.getElementById('v13UserDecisionRecommendationId').value;
   let saved=null;
   let record=null;
+  const previousRecords=typeof structuredClone==='function'?structuredClone(state.decisionRecords||[]):JSON.parse(JSON.stringify(state.decisionRecords||[]));
+  const previousStates=typeof structuredClone==='function'?structuredClone(state.decisionStates||[]):JSON.parse(JSON.stringify(state.decisionStates||[]));
+  const previousUpdatedAt=state.updatedAt;
   try{
     if(typeof ProcessingResultService==='object'&&ProcessingResultService&&typeof ProcessingResultService.createSessionResult==='function'){
       saved=ProcessingResultService.setCurrent(ProcessingResultService.createSessionResult({resultType,note,stockId,recommendationId}));
@@ -1622,6 +1693,7 @@ function saveV13UserDecisionStub(){
     if(message)message.textContent='处理记录未生成：当前处理结果不合法或复核上下文缺失。';
     return;
   }
+  try{await saveState(state,{critical:true})}catch(error){state.decisionRecords=previousRecords;state.decisionStates=previousStates;state.updatedAt=previousUpdatedAt;criticalWriteFailure(error);return}
   closeV13UserDecisionDialog();
   const label=saved&&saved.resultLabel?saved.resultLabel:'处理结果';
   setV13DecisionReviewActionNote(`${label} 已记录为本次复核处理信息。`);
@@ -1690,7 +1762,7 @@ function bindV13DecisionReviewActions(stock,rec,plan){
     }
   }));
 }
-function openV13DecisionReview(stockId,recId,options={}){
+async function openV13DecisionReview(stockId,recId,options={}){
   const stock=state.stocks.find(x=>String(x.id)===String(stockId))||state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   v13DecisionReviewCloseContext=captureV13DecisionReviewCloseContext(stock.id);
@@ -1713,7 +1785,10 @@ function openV13DecisionReview(stockId,recId,options={}){
     v13ActiveReviewReturn={...v13ActiveReviewReturn,recId:rec.id||currentRecId||''};
   }
   if(typeof DecisionStateService==='object'&&DecisionStateService&&typeof DecisionStateService.markReviewing==='function'){
+    const previous=typeof structuredClone==='function'?structuredClone(state.decisionStates||[]):JSON.parse(JSON.stringify(state.decisionStates||[]));
+    const previousUpdatedAt=state.updatedAt;
     DecisionStateService.markReviewing(rec.id);
+    try{await saveState(state,{critical:true})}catch(error){state.decisionStates=previous;state.updatedAt=previousUpdatedAt;criticalWriteFailure(error);return}
   }
   const cm=stock.coreModel||{};
   const plan=reviewContext&&reviewContext.plan?reviewContext.plan:v13DecisionReviewPlanContext(stock,rec);
@@ -1877,7 +1952,7 @@ function technicalAnalysisFlowPanel(){
   const body=`<div class="modal-actions" style="justify-content:flex-start;margin:0 0 12px;flex-wrap:wrap"><button class="btn ghost small" id="copyTechnicalScreenshotPromptBtn" type="button">复制技术面截图摘要 Prompt</button></div><div class="dash" style="grid-template-columns:1fr 1fr;margin-bottom:0"><div class="card"><div class="card-title">步骤 1：获取技术面资料</div><div class="text" style="max-width:none">可以使用历史价格 CSV 导入，让程序自动计算 MA20 / MA60 / MA120、支撑位、压力位。也可以从富途、东方财富、同花顺、TradingView 截图 K 线图。截图建议包含日K、周K、成交量、均线。</div></div><div class="card"><div class="card-title">步骤 2：让 GPT 整理截图摘要</div><div class="text" style="max-width:none">复制“技术面截图摘要 Prompt”，把 K 线截图发给 GPT，让 GPT 按固定格式整理技术面摘要。</div></div><div class="card"><div class="card-title">步骤 3：粘贴技术形态资料</div><div class="text" style="max-width:none">将 GPT 整理后的摘要粘贴到“信息采集面板 → 技术形态资料”。保存后会更新 technicalUpdatedAt。</div></div><div class="card"><div class="card-title">步骤 4：生成技术复核</div><div class="text" style="max-width:none">打开“统一 Prompt 生成器”，选择“技术复核”，复制 Prompt 发给 GPT。将返回的 technicalReview JSON 粘贴到“AI 复核导入”，类型选择“技术复核 technicalReview”。</div></div></div>`;
   return collapsibleCard('技术面分析流程',body,false,'默认折叠，截图或历史价格导入后，用于整理技术形态资料和 technicalReview。');
 }
-function saveCollectionInputs(){
+async function saveCollectionInputs(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const prev=normalizeCollectionInputs(stock.collectionInputs);
@@ -1893,7 +1968,7 @@ function saveCollectionInputs(){
   if(next.financialRawText!==prev.financialRawText)touchDataFreshness(stock,'financialUpdatedAt');
   if(next.socialRawText!==prev.socialRawText)touchDataFreshness(stock,'socialUpdatedAt');
   if(next.technicalRawText!==prev.technicalRawText)touchDataFreshness(stock,'technicalUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
   alert('采集资料已保存。');
 }
@@ -2009,7 +2084,7 @@ function refreshAiReviewImportBox(){
   const status=document.getElementById('aiReviewCurrentStatus');
   if(status)status.textContent=`${current?'已导入':'暂无复核'} · 更新 ${aiReviewUpdatedAt(stock,type)||'—'}`;
 }
-function importAiReview(){
+async function importAiReview(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const type=currentAiReviewType();
@@ -2027,17 +2102,17 @@ function importAiReview(){
   stock.aiReviews=normalizeAiReviews(stock.aiReviews);
   stock.aiReviews[type]=review;
   touchDataFreshness(stock,AI_REVIEW_TYPES[type].freshnessKey);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
   alert(`${AI_REVIEW_TYPES[type].label}已导入。`);
 }
-function clearAiReview(type=currentAiReviewType(),silent=false){
+async function clearAiReview(type=currentAiReviewType(),silent=false){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock||!AI_REVIEW_TYPES[type])return;
   if(!silent&&!confirm(`确认清空当前股票的${AI_REVIEW_TYPES[type].label}？`))return;
   stock.aiReviews=normalizeAiReviews(stock.aiReviews);
   stock.aiReviews[type]=null;
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
   if(!silent)alert(`${AI_REVIEW_TYPES[type].label}已清空。`);
 }
@@ -2053,12 +2128,12 @@ function copyAllAiReviews(){
   if(!stock)return;
   copyText(JSON.stringify(normalizeAiReviews(stock.aiReviews),null,2),'全部 AI Review JSON 已复制。');
 }
-function clearAllAiReviews(){
+async function clearAllAiReviews(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   if(!confirm('确认清空当前股票的全部 AI Review？'))return;
   stock.aiReviews=defaultAiReviews();
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
   alert('全部 AI Review 已清空。');
 }
@@ -3008,9 +3083,9 @@ function renderPlanEditor(){document.getElementById('buyRows').innerHTML=tempBuy
 function planRow(p,i,type){return `<tr><td><input type="number" step="any" value="${esc(p.price??'')}" data-type="${type}" data-index="${i}" data-field="price"></td><td><input type="number" step="any" value="${esc(p.shares??'')}" data-type="${type}" data-index="${i}" data-field="shares"></td><td><input type="text" value="${esc(p.note??'')}" data-type="${type}" data-index="${i}" data-field="note"></td><td><button class="link-btn danger" type="button" data-type="${type}" data-remove="${i}">删除</button></td></tr>`}
 function addPlan(type){(type==='buy'?tempBuy:tempSell).push({id:uid(),action:type,price:'',shares:'',note:''});renderPlanEditor()}
 function collect(currentPrice){const clean=(a,action)=>a.map(p=>{const price=Number(p.price);const shares=Number(p.shares);return {id:p.id||uid(),action,price,shares,note:String(p.note||'').trim(),triggerOn:p.triggerOn||inferTriggerOn(currentPrice,price,action)}}).filter(p=>!isNaN(p.price)&&p.price>0&&!isNaN(p.shares)&&p.shares>0);return [...clean(tempBuy,'buy'),...(formType==='watching'?[]:clean(tempSell,'sell'))]}
-function save(){const name=document.getElementById('fName').value.trim();if(!name)return alert('请填写名称');const costRaw=document.getElementById('fCost').value,targetRaw=document.getElementById('fTarget').value,currentPriceRaw=document.getElementById('fCurrentPrice').value,currentValueRaw=document.getElementById('fCurrentValue').value;const old=editingId?state.stocks.find(x=>x.id===editingId):null;const oldPrice=old?String(old.currentPrice??''):'';const oldValue=old?String(old.currentValue??''):'';const today=todayDate();const nextPrice=currentPriceRaw===''?'':parseFloat(currentPriceRaw);const nextValue=currentValueRaw===''?'':parseFloat(currentValueRaw);const priceChanged=currentPriceRaw!=='' && String(nextPrice)!==oldPrice;const valueChanged=currentValueRaw!=='' && String(nextValue)!==oldValue;const payload={type:formType,name,code:document.getElementById('fCode').value.trim(),currency:document.getElementById('fCurrency').value,shares:parseFloat(document.getElementById('fShares').value)||0,avgCost:costRaw===''?'':parseFloat(costRaw),targetPct:targetRaw===''?'':parseFloat(targetRaw),trimPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrim').value),trimToPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrimTo').value),capPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fCap').value),currentPrice:nextPrice,currentValue:nextValue,priceUpdatedAt:priceChanged?today:(old?.priceUpdatedAt||''),valueUpdatedAt:valueChanged?today:(old?.valueUpdatedAt||''),role:document.getElementById('fRole').value,theme:document.getElementById('fTheme').value,thesis:document.getElementById('fThesis').value.trim(),sellRule:document.getElementById('fSellRule').value.trim(),notes:document.getElementById('fNotes').value.trim(),plans:collect(formType==='etf'?(Number(old?.lastUnitPrice)||((Number(document.getElementById('fShares').value)>0&&Number(nextValue)>0)?Number(nextValue)/Number(document.getElementById('fShares').value):null)):nextPrice),updatedAt:Date.now()};payload.dataFreshness=normalizeDataFreshness(old&&old.dataFreshness);if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);payload.analysisScore=calculateAnalysisScore(payload.analysisFramework);if(editingId){const s=state.stocks.find(x=>x.id===editingId);if(s)Object.assign(s,payload)}else state.stocks.push({id:uid(),...payload,createdAt:Date.now()});const returnTab=editModalReturnTab;currentTab=returnTab==='edit'?'edit':formType;saveState();closeModal();render()}
+async function save(){const name=document.getElementById('fName').value.trim();if(!name)return alert('请填写名称');const costRaw=document.getElementById('fCost').value,targetRaw=document.getElementById('fTarget').value,currentPriceRaw=document.getElementById('fCurrentPrice').value,currentValueRaw=document.getElementById('fCurrentValue').value;const old=editingId?state.stocks.find(x=>x.id===editingId):null;const oldPrice=old?String(old.currentPrice??''):'';const oldValue=old?String(old.currentValue??''):'';const today=todayDate();const nextPrice=currentPriceRaw===''?'':parseFloat(currentPriceRaw);const nextValue=currentValueRaw===''?'':parseFloat(currentValueRaw);const priceChanged=currentPriceRaw!=='' && String(nextPrice)!==oldPrice;const valueChanged=currentValueRaw!=='' && String(nextValue)!==oldValue;const payload={type:formType,name,code:document.getElementById('fCode').value.trim(),currency:document.getElementById('fCurrency').value,shares:parseFloat(document.getElementById('fShares').value)||0,avgCost:costRaw===''?'':parseFloat(costRaw),targetPct:targetRaw===''?'':parseFloat(targetRaw),trimPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrim').value),trimToPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrimTo').value),capPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fCap').value),currentPrice:nextPrice,currentValue:nextValue,priceUpdatedAt:priceChanged?today:(old?.priceUpdatedAt||''),valueUpdatedAt:valueChanged?today:(old?.valueUpdatedAt||''),role:document.getElementById('fRole').value,theme:document.getElementById('fTheme').value,thesis:document.getElementById('fThesis').value.trim(),sellRule:document.getElementById('fSellRule').value.trim(),notes:document.getElementById('fNotes').value.trim(),plans:collect(formType==='etf'?(Number(old?.lastUnitPrice)||((Number(document.getElementById('fShares').value)>0&&Number(nextValue)>0)?Number(nextValue)/Number(document.getElementById('fShares').value):null)):nextPrice),updatedAt:Date.now()};payload.dataFreshness=normalizeDataFreshness(old&&old.dataFreshness);if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);payload.analysisScore=calculateAnalysisScore(payload.analysisFramework);if(editingId){const s=state.stocks.find(x=>x.id===editingId);if(s)Object.assign(s,payload)}else state.stocks.push({id:uid(),...payload,createdAt:Date.now()});const returnTab=editModalReturnTab;currentTab=returnTab==='edit'?'edit':formType;try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}closeModal();render()}
 
-function del(id){const s=state.stocks.find(x=>x.id===id);if(!s)return;if(!confirm(`确认删除「${s.name}」？`))return;state.stocks=state.stocks.filter(x=>x.id!==id);saveState();render()}
+async function del(id){const s=state.stocks.find(x=>x.id===id);if(!s)return;if(!confirm(`确认删除「${s.name}」？`))return;state.stocks=state.stocks.filter(x=>x.id!==id);try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}render()}
 
 function getExecutionLogRows(stockName=logStockFilter){
   const logs=Array.isArray(state.executionLog)?state.executionLog:[];
@@ -3532,6 +3607,22 @@ function allocationDecisionPanel(stock){
   const detail=empty?'':`<div class="text" style="max-width:none;margin-top:10px"><b>建议角色：</b>${esc(zhStrategyRole(ad.recommendedRole)||formatChineseText(ad.recommendedRole)||'—')}<br><b>配置理由：</b>${listText(ad.allocationReasons)}<br><b>核心风险：</b>${listText(ad.keyRisks)}<br><b>建议动作：</b>${listText(ad.suggestedActions)}<br><b>备注：</b>${esc(formatChineseText(ad.notes||'—'))}</div>`;
   return `<div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)">${moduleTitleActions('配置决策','copy-allocation-prompt','import-allocation-json')}<div class="dash" style="margin:0"><div><div class="card-title">配置结论</div><div class="text" style="max-width:none">${esc(formatChineseText(ad.conclusion||'暂无配置决策'))}</div><div class="card-note">更新：${esc(ad.updatedAt||'—')} · 置信度 ${esc(zhConfidence(ad.confidence||'low'))}</div></div><div><div class="card-title">配置区间</div><div class="card-num" style="font-size:20px">${esc(ad.recommendedWeightRange||'—')}</div><div class="card-note">建议目标 ${allocationPercentText(ad.recommendedTargetWeight)} · 最大 ${allocationPercentText(ad.recommendedMaxWeight)}</div></div><div><div class="card-title">目标调整</div><div class="card-note">${esc(zhTargetAdjustment(ad.targetAdjustment||'unknown'))}</div></div><div><div class="card-title">新增资金观点</div><div class="card-note">${esc(zhCapitalView(ad.capitalAllocationView||'unknown'))}</div></div></div>${detail}${empty?'<div class="card-note" style="margin-top:10px">尚未导入配置决策。可复制 Prompt 给 GPT 复核后导入 JSON。</div>':''}<div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn small" data-detail-action="view-allocation-detail">查看完整配置分析</button></div></div>`;
 }
+function priceRefreshFeedbackView(stock){
+  const current=typeof getPriceRefreshUiState==='function'?getPriceRefreshUiState(stock.id):{status:'idle'};
+  const status=current.status||'idle';
+  const isEtf=stock.type==='etf';
+  const busy=status==='refreshing'||status==='persisting';
+  const buttonText=status==='refreshing'?'正在刷新...':(status==='persisting'?'正在保存...':(status==='refresh_failed'||status==='persistence_failed'?'重试刷新':(isEtf?'刷新市值':'刷新价格')));
+  let message='';
+  let tone='card-note';
+  if(status==='refreshing')message=`正在获取即时${isEtf?'单位价格并计算市值':'价格'}，请稍候。`;
+  if(status==='persisting')message=`已获取${isEtf?'单位价格':'价格'} ${fmtMaybe(current.price,2)}，正在保存，尚未确认持久化成功。`;
+  if(status==='success')message=`${isEtf?'市值':'价格'}已更新：${fmtMaybe(current.price,2)} · 来源 ${esc(current.source||'—')} · 更新 ${esc(current.updatedAt||'—')} · 已保存 ${esc(String(current.savedAt||'').replace('T',' ').slice(0,19)||'—')}。技术面复核结论未同步刷新。`;
+  if(status==='refresh_failed'){tone='alert';message=`${isEtf?'市值':'价格'}刷新失败，继续使用旧值。原因：${esc(String(current.error||'未知错误').slice(0,220))}`;}
+  if(status==='persistence_failed'){tone='alert';message=`已获取最新${isEtf?'单位价格':'价格'} ${fmtMaybe(current.price,2)}，但保存失败；当前仍使用刷新前的数据，请重试。`}
+  const feedback=message?`<div class="${tone}" data-price-refresh-status="${esc(status)}" role="status" aria-live="polite" style="grid-column:1/-1;width:min(420px,100%);text-align:left">${message}</div>`:`<span data-price-refresh-status="idle" role="status" aria-live="polite"></span>`;
+  return `<button class="btn small" data-detail-action="refresh" data-price-refresh-button type="button" aria-busy="${busy?'true':'false'}"${busy?' disabled':''}>${esc(buttonText)}</button>${feedback}`;
+}
 function detailHeroPanel(s,mv,actual,deviation){
   const category=s.type==='etf'?'ETF':(s.type==='watching'?'观察标的':'个股');
   const current=s.type==='etf'?fmtMaybe(s.lastUnitPrice||((Number(s.currentValue)>0&&Number(s.shares)>0)?Number(s.currentValue)/Number(s.shares):s.currentPrice),2):fmtMaybe(s.currentPrice);
@@ -3539,8 +3630,7 @@ function detailHeroPanel(s,mv,actual,deviation){
   const chg=(typeof s.dailyChange==='number'&&!isNaN(s.dailyChange))?`${s.dailyChange>=0?'+':''}${s.dailyChange.toFixed(2)}%`:'—';
   const currency=getCurrency(s)||'—';
   const actualText=actual===null?'—':actual.toFixed(1)+'%';
-  const wsBtn=(key,label,color)=>`<button class="btn ${detailWorkspace===key?'':'ghost'} small" style="border-color:${color};${detailWorkspace===key?`background:${color};color:#fff`:''}" data-workspace="${esc(key)}" type="button">${esc(label)}</button>`;
-  return `<div class="card detail-title-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'未命名标的')}</div><div class="entry-code">${esc(s.code||'无代码')} · ${esc(category)}</div></div><div class="detail-title-actions"><button class="btn small" data-detail-action="copy-ai-discussion-prompt" type="button">AI讨论</button>${wsBtn('plan','计划','var(--gold)')}${wsBtn('operation','操作记录','var(--seal)')}${wsBtn('technical','技术面','var(--teal)')}${wsBtn('news','新闻催化','var(--seal)')}${wsBtn('fundamental','基本面','var(--purple)')}${wsBtn('valuation','估值/配置','var(--ink2)')}${wsBtn('longterm','长期逻辑','var(--ink)')}<button class="btn small" data-detail-action="refresh" type="button">${s.type==='etf'?'刷新市值':'刷新价格'}</button></div></div></div><div class="card core-summary-card"><div class="card-title">核心数据摘要</div><div class="core-summary-grid"><div class="core-summary-item"><span>成本</span><strong>${fmtMaybe(s.avgCost)}</strong></div><div class="core-summary-item"><span>现价</span><strong>${current}</strong></div><div class="core-summary-item"><span>持仓</span><strong>${fmtInt(s.shares)}</strong></div><div class="core-summary-item"><span>市值</span><strong>${fmtMoney(mv)}</strong></div><div class="core-summary-item"><span>目标</span><strong>${fmtMaybe(s.targetPct,1)}%</strong></div><div class="core-summary-item"><span>实际</span><strong>${actualText}</strong></div></div><div class="core-summary-meta">更新 ${esc(date||'—')} · ${esc(s.code||'无代码')} · ${esc(currency)} · ${esc(chg)} · 偏差 ${esc(deviation)}</div></div>`;
+  return `<div class="card detail-title-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'未命名标的')}</div><div class="entry-code">${esc(s.code||'无代码')} · ${esc(category)}</div></div><div class="detail-title-actions">${priceRefreshFeedbackView(s)}</div></div></div><div class="card core-summary-card"><div class="card-title">核心数据摘要</div><div class="core-summary-grid"><div class="core-summary-item"><span>成本</span><strong>${fmtMaybe(s.avgCost)}</strong></div><div class="core-summary-item"><span>现价</span><strong>${current}</strong></div><div class="core-summary-item"><span>持仓</span><strong>${fmtInt(s.shares)}</strong></div><div class="core-summary-item"><span>市值</span><strong>${fmtMoney(mv)}</strong></div><div class="core-summary-item"><span>目标</span><strong>${fmtMaybe(s.targetPct,1)}%</strong></div><div class="core-summary-item"><span>实际</span><strong>${actualText}</strong></div></div><div class="core-summary-meta">更新 ${esc(date||'—')} · ${esc(s.code||'无代码')} · ${esc(currency)} · ${esc(chg)} · 偏差 ${esc(deviation)}</div></div>`;
 }
 function detailToolsPanel(s){
   return `<details class="card" style="margin-top:14px;margin-bottom:14px"><summary class="card-title" style="cursor:pointer">详情工具</summary><div class="card-note" style="margin:8px 0 12px">这些是维护、导入和生成提示词工具，已从首屏下移，避免干扰日常分析。</div><div class="actions"><button class="btn small" data-detail-action="ai-assistant">AI助手</button><button class="btn ghost small" data-detail-action="financial-source">财报助手</button><button class="btn ghost small" data-detail-action="valuation-source">估值助手</button><button class="btn ghost small" data-detail-action="template">套用分析模板</button><button class="btn ghost small" data-detail-action="ai-prompt">生成分析提示词</button><button class="btn ghost small" data-detail-action="ai-import">导入AI分析JSON</button><button class="btn ghost small" data-detail-action="ai-strategy-import">导入AI策略JSON</button><button class="btn ghost small" data-detail-action="refresh">${s.type==='etf'?'刷新市值':'刷新价格'}</button><button class="btn ghost small" data-detail-action="edit">编辑标的</button></div></details>`;
@@ -4226,7 +4316,7 @@ function closeTradePlanImportModal(){
   const modal=document.getElementById('tradePlanImportModal');
   if(modal)modal.classList.remove('show');
 }
-function importTradePlanJson(){
+async function importTradePlanJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={plans:JSON.parse(JSON.stringify(stock.plans||[])),tradePlan:JSON.parse(JSON.stringify(stock.tradePlan||null))};
@@ -4239,7 +4329,7 @@ function importTradePlanJson(){
     const oldPlans=(stock.plans||[]).filter(p=>p.source!=='GPT/manual import');
     stock.plans=oldPlans.concat(mapped);
     stock.updatedAt=Date.now();
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeTradePlanImportModal();
     render();
     alert(`加仓/减仓计划已导入。已保存 ${tradePlan.planItems.length} 条计划项，其中 ${mapped.length} 条可跟踪触发价。不会自动修改持仓或成本。`);
@@ -4319,12 +4409,14 @@ function positionManagementReviewPanel(stock){
   const risks=r.riskFlags.length?`<ul style="margin:6px 0 0 18px;padding:0">${r.riskFlags.map(x=>`<li>${esc(formatChineseText(x))}</li>`).join('')}</ul>`:'—';
   return `<div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)"><div class="card-title">仓位管理与利润兑现</div><div class="dash" style="margin:0"><div><div class="card-title">当前仓位</div><div class="card-num" style="font-size:20px">${fmtMaybe(r.currentWeight,1)}%</div><div class="card-note">更新：${esc(r.updatedAt||'—')}</div></div><div><div class="card-title">目标仓位</div><div class="card-num" style="font-size:20px">${fmtMaybe(r.targetWeight,1)}%</div></div><div><div class="card-title">仓位状态</div><div class="card-note">${esc(zhEnum(r.weightStatus)||'—')}</div></div><div><div class="card-title">利润保护 / 减仓观察</div><div class="card-note">${esc(zhEnum(r.profitProtectionStatus)||'—')} · ${esc(zhEnum(r.reduceWatchStatus)||'—')}</div></div></div><div class="text" style="max-width:none;margin-top:10px"><b>摘要：</b>${esc(formatChineseText(r.summary||'—'))}<br><b>操作提示：</b>${esc(formatChineseText(r.actionHint||'—'))}<br><b>风险提示：</b>${risks}<br><b>备注：</b>${esc(formatChineseText(r.notes||'—'))}</div></div>`;
 }
-function fundamentalAnalysisPanel(stock){
+function fundamentalAnalysisPanel(stock,options={}){
   const f=fundamentalAnalysis(stock);
   const fd=f.financialData;
   const vd=f.valuationData;
-  const valuationRisks=zhList((f.valuationReview&&f.valuationReview.riskFlags)||[]).slice(0,3).map(esc).join('；')||'—';
-  const financialRisks=zhList((f.financialReview&&(f.financialReview.riskPoints||f.financialReview.riskFlags))||[]).slice(0,3).map(esc).join('；')||'—';
+  const valuationRiskItems=zhList((f.valuationReview&&f.valuationReview.riskFlags)||[]).slice(0,3);
+  const financialRiskItems=zhList((f.financialReview&&(f.financialReview.riskPoints||f.financialReview.riskFlags))||[]).slice(0,3);
+  const valuationRisks=valuationRiskItems.map(esc).join('；')||'—';
+  const financialRisks=financialRiskItems.map(esc).join('；')||'—';
   const companyQuality=inferCompanyQualityLabel(f);
   const valuationLevel=inferValuationLevelLabel(f);
   const combined=fundamentalCombinedJudgement(companyQuality,valuationLevel);
@@ -4334,7 +4426,16 @@ function fundamentalAnalysisPanel(stock){
   const financialReviewSummary=(f.financialReview&&f.financialReview.summary)||f.financialSummary||'—';
   const valuationReviewSummary=(f.valuationReview&&f.valuationReview.summary)||vd.valuationConclusion||f.valuationSummary||'—';
   const missingText=f.missing.length?' · '+f.missing.map(esc).join('、'):'';
-  const details=`<div class="text" style="max-width:none"><b>财务质量：</b>${esc(formatChineseText(financialReviewSummary))}<br><b>关键财务指标：</b>${esc(financialMetrics)}<br><b>估值结论：</b>${esc(formatChineseText(valuationReviewSummary))}<br><b>财务风险：</b>${financialRisks}<br><b>估值风险：</b>${valuationRisks}<br><b>评分拆分：</b>财务质量 ${fmtMaybe(f.financialScore,1)} / 10 · 估值吸引力 ${fmtMaybe(f.valuationScore,1)} / 10 · 综合评分 ${fmtMaybe(f.score,1)} / 10<br><span class="muted">估值偏贵会降低“估值吸引力”，但不会直接把公司质量判断降为“一般”。</span></div>`;
+  const evidence=`<div class="text" style="max-width:none"><b>财务质量依据：</b>${esc(formatChineseText(financialReviewSummary))}<br><b>关键财务指标：</b>${esc(financialMetrics)}<br><b>估值结论：</b>${esc(formatChineseText(valuationReviewSummary))}<br><b>财务风险：</b>${financialRisks}<br><b>估值风险：</b>${valuationRisks}<br><b>缺失字段：</b>${f.missing.length?f.missing.map(esc).join('、'):'无'}<br><b>更新时间：</b>财报 ${esc(fd.lastUpdated||'—')} · 估值 ${esc(vd.updatedAt||vd.lastUpdated||'—')}</div>`;
+  const scoreDiagnostics=`<details class="card" data-fundamental-score-diagnostics style="margin-top:10px;background:rgba(255,255,255,.42)"><summary class="card-title" style="cursor:pointer">数据与评分诊断</summary><div class="text" style="max-width:none;margin-top:10px">财务质量评分 ${fmtMaybe(f.financialScore,1)} / 10<br>估值吸引力评分 ${fmtMaybe(f.valuationScore,1)} / 10<br>综合评分 ${fmtMaybe(f.score,1)} / 10<br><span class="muted">评分仅用于辅助诊断，不作为主要投资结论。</span></div></details>`;
+  if(options.workspaceDetail){
+    const focus=[`公司质量 ${companyQuality} · ${financialLine}`,`逻辑兑现：${logicRealization}`,`估值水平 ${valuationLevel}`];
+    const changes=[missingText?`缺失项：${missingText.slice(3)}`:'暂无新增缺失项',`财报更新 ${fd.lastUpdated||'—'}`,`估值更新 ${vd.updatedAt||vd.lastUpdated||'—'}`];
+    const risks=[...financialRiskItems,...valuationRiskItems];
+    const opportunities=[financialLine,valuationReviewSummary,financialReviewSummary].filter(Boolean);
+    return `<div data-fundamental-workspace-detail>${highFrequencySectionHtml('今日重点',focus)}${highFrequencySectionHtml('今日变化',changes)}<div class="dash" style="margin:8px 0 0"><div style="grid-column:span 2">${highFrequencySectionHtml('风险',risks.length?risks:['暂无明确风险记录'])}</div><div style="grid-column:span 2">${highFrequencySectionHtml('机会',opportunities)}</div></div><div class="card" style="margin-top:10px"><div class="card-title">研究依据</div>${evidence}</div>${scoreDiagnostics}</div>`;
+  }
+  const details=`${evidence}${scoreDiagnostics}`;
   return highFrequencyAnalysisCard({
     title:'基本面分析',
     conclusion:combined,
@@ -4766,10 +4867,10 @@ function renderAnalysisOverview(){
   document.querySelectorAll('[data-analysis-stock]').forEach(row=>row.addEventListener('click',()=>openStockDetail(row.dataset.analysisStock)));
 }
 
-function openStockDetail(id){
+function openStockDetail(id,workspace=''){
   detailStockId=id;
   detailSubView='';
-  detailWorkspace='plan';
+  setDetailWorkspace(workspace||loadDetailWorkspacePreference(),{persist:Boolean(workspace)});
   render();
 }
 function openStockPlanCenter(id){
@@ -4889,10 +4990,11 @@ function v13PlanUpdateDraftPanel(stock,record){
   if(!record||record.outcomeType!=='plan_update')return '';
   const module=window.PlanUpdateDraft,ctx=module&&module.context?module.context(record.reviewId,stock):null;
   if(!module||!module.eligible(ctx))return '<div class="alert" style="margin-top:10px">尚未形成计划更新请求。本页面不会生成空白计划草案。</div>';
+  const readiness=planGenerationGateResult(stock),blocked=!readiness.canGenerate;
   const saved=module.saved(ctx.request.request_id),validation=saved&&saved.validation||null;
   const applied=v13PlanApplicationStatus(saved&&saved.draft&&saved.draft.draft_id);
   const status=applied?`计划更新已应用：${applied.applied_at||'—'}，新增 ${arrSafe(applied.created_plan_ids).length} 条，归档 ${arrSafe(applied.archived_plan_ids).length} 条，审计记录 ${applied.application_id||'—'}。`:(saved&&saved.status==='application_request_generated'?'已生成计划应用请求，尚未写入正式计划。':(saved?(validation&&validation.business_valid?'计划草案已通过校验，尚未写入正式计划。':'草案存在，但尚未通过校验。'):'等待生成Prompt并导入计划草案。'));
-  return `<div class="card" style="margin-top:10px;border-left:4px solid var(--gold)"><div class="card-title">计划更新草案</div><div class="card-note">来源决策：${esc(ctx.outcome.decision_id||'—')} · 请求：${esc(ctx.request.request_id||'—')}</div><div class="text" style="max-width:none;margin-top:8px">${esc(status)}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn small" type="button" data-detail-action="generate-plan-update-prompt">生成计划更新Prompt</button><button class="btn ghost small" type="button" data-detail-action="import-plan-update-draft">导入计划草案</button><button class="btn ghost small" type="button" data-detail-action="view-plan-update-diff" ${saved&&validation&&validation.business_valid?'':'disabled'}>查看计划差异</button></div></div>`;
+  return `<div class="card" style="margin-top:10px;border-left:4px solid var(--gold)"><div class="card-title">计划更新草案</div><div class="card-note">来源决策：${esc(ctx.outcome.decision_id||'—')} · 请求：${esc(ctx.request.request_id||'—')}</div><div class="text" style="max-width:none;margin-top:8px">${esc(status)}</div>${blocked?`<div class="alert" style="margin-top:8px">${esc(planGenerationBlockedText(readiness).replace(/\n+/g,' '))}</div>`:''}<div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn small" type="button" data-detail-action="generate-plan-update-prompt" ${blocked?'disabled':''}>生成计划更新Prompt</button><button class="btn ghost small" type="button" data-detail-action="import-plan-update-draft" ${blocked?'disabled':''}>导入计划草案</button><button class="btn ghost small" type="button" data-detail-action="view-plan-update-diff" ${saved&&validation&&validation.business_valid?'':'disabled'}>查看计划差异</button></div></div>`;
 }
 function arrSafe(value){return Array.isArray(value)?value:[]}
 function v13PlanApplicationStatus(draftId){const payload=window.PLAN_APPLICATION_STATUS,rows=payload&&Array.isArray(payload.applications)?payload.applications:[];return rows.find(row=>row&&row.draft_id===draftId&&row.result==='applied')||null}
@@ -4923,11 +5025,6 @@ function openV13LongTermApiReviewDialog(stock){
   document.getElementById('v13LongTermApiCommandText').value=v13LongTermApiCommand(stock);
   el.classList.add('show');
 }
-function stockWorkspaceSection(key,title,summary,body,color){
-  const active=detailWorkspace===key;
-  const anchor=`workspace-${key}`;
-  return `<section class="card" data-workspace-section="${esc(key)}" data-v13-detail-anchor="${esc(anchor)}" style="margin-bottom:12px;border-left:4px solid ${color}"><button class="link-btn" data-workspace="${esc(key)}" type="button" style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:0"><span><span class="card-title">${esc(active?'▼':'▶')} ${esc(title)}</span><span class="card-note" style="display:block;margin-top:4px">${esc(summary)}</span></span><span class="chip ${active?'role':'tag'}">${active?'展开':'折叠'}</span></button>${active?`<div style="margin-top:12px">${v13TargetReviewReturnBanner(state.stocks.find(x=>x.id===detailStockId),anchor)}${body}</div>`:''}</section>`;
-}
 function workspaceDetails(title,body){
   return `<details class="card" style="margin-bottom:12px;background:rgba(255,255,255,.42)"><summary class="card-title" style="cursor:pointer">${esc(title)}</summary><div style="margin-top:10px">${body}</div></details>`;
 }
@@ -4954,12 +5051,13 @@ function v13WorkspaceAiReviewSummary(stock,taskTypes,title){
 function planWorkspacePanel(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
   const refresh=v13PlanCenterRefreshInfo(stock,plans);
-  const refreshPanel=`<div class="card" style="margin-bottom:12px;background:rgba(255,255,255,.56)"><div class="card-title">刷新计划</div><div class="card-note">刷新时间 ${esc(refresh.updated||'尚未刷新')} · 下次建议刷新 ${esc(refresh.validUntil||'尚未刷新')}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn small" type="button" data-detail-action="open-plan-refresh">刷新计划</button></div></div>`;
+  const readiness=planGenerationGateResult(stock);
+  const refreshPanel=`<div class="card" style="margin-bottom:12px;background:rgba(255,255,255,.56)"><div class="card-title">刷新计划</div><div class="card-note">刷新时间 ${esc(refresh.updated||'尚未刷新')} · 下次建议刷新 ${esc(refresh.validUntil||'尚未刷新')}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn small" type="button" data-detail-action="open-plan-refresh" ${readiness.canGenerate?'':'disabled'}>刷新计划</button></div></div>`;
   const planSummary=`<div class="card" style="margin-bottom:12px"><div class="card-title">当前有效计划摘要</div>${v13PlanCompactSummary(stock)}</div>`;
   const reviewRows=window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.recordsForStock==='function'?window.AiDecisionReviewReader.recordsForStock(stock):[];
   const planReview=reviewRows.find(record=>record.isCurrent&&record.outcomeType==='plan_update')||reviewRows.find(record=>record.outcomeType==='plan_update');
   const planUpdate=planReview?(planReview.resolutionType==='plan_applied'?`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="card-title">计划更新已应用</div><div class="card-note">应用时间 ${esc(planReview.applicationAppliedAt||planReview.resolvedAt||'—')} · 新增 ${esc(planReview.createdPlanCount||0)} 条 · 归档 ${esc(planReview.archivedPlanCount||0)} 条 · 审计编号 ${esc(planReview.applicationAuditId||planReview.sourceApplicationId||'—')}</div></div>`:v13PlanUpdateDraftPanel(stock,planReview)):'';
-  return `${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
+  return `${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
 }
 function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--teal)',copyAction='',importAction='',extraAction='',extraLabel=''){
   const rows=(Array.isArray(items)?items:[]).filter(Boolean).slice(0,4);
@@ -4981,12 +5079,19 @@ function newsWorkspacePanel(stock){
   return workspaceSummaryCard('新闻催化摘要',[rc.todayCatalyst||'未发现明确当日催化',`新闻 ${info.news} · 催化 ${info.catalyst}`,st.marketMood?`情绪 ${st.marketMood}`:'情绪资料待补充',st.fundFlowView?`资金 ${st.fundFlowView}`:'资金流待补充'],'查看新闻催化详情 / Prompt / JSON 导入',body,'var(--seal)','copy-recent-catalyst-prompt','import-recent-catalyst-json');
 }
 function fundamentalWorkspacePanel(stock){
-  const main=stock.type==='etf'?etfIndexAnalysisPanel(stock):fundamentalAnalysisPanel(stock);
-  const financial=stock.type==='etf'?'':financialSignalPanel(stock);
-  const flow=stock.type==='etf'?'':financialAnalysisFlowPanel();
+  if(stock.type==='etf'){
+    const f=fundamentalAnalysis(stock);
+    return `${v13WorkspaceAiReviewSummary(stock,['fundamental_review'],'最近基本面复核')}${workspaceSummaryCard('基本面摘要',[f.finalSummary||f.summary||'基本面资料待补充',`综合 ${fmtMaybe(f.score,1)} / 10`,f.financialSummary?`财务 ${f.financialSummary}`:'财务质量待补充',f.valuationSummary?`估值 ${f.valuationSummary}`:'估值资料待补充'],'查看基本面详情 / Prompt / JSON 导入',etfIndexAnalysisPanel(stock),'var(--purple)','copy-fundamental-prompt','import-fundamental-json')}`;
+  }
   const f=fundamentalAnalysis(stock);
-  const body=`${main}${financial}${flow}`;
-  return `${v13WorkspaceAiReviewSummary(stock,['fundamental_review'],'最近基本面复核')}${workspaceSummaryCard('基本面摘要',[f.finalSummary||f.summary||'基本面资料待补充',`综合 ${fmtMaybe(f.score,1)} / 10`,f.financialSummary?`财务 ${f.financialSummary}`:'财务质量待补充',f.valuationSummary?`估值 ${f.valuationSummary}`:'估值资料待补充'],'查看基本面详情 / Prompt / JSON 导入',body,'var(--purple)','copy-fundamental-prompt','import-fundamental-json')}`;
+  const fd=f.financialData||{};
+  const vd=f.valuationData||{};
+  const companyQuality=inferCompanyQualityLabel(f);
+  const valuationLevel=inferValuationLevelLabel(f);
+  const conclusion=fundamentalCombinedJudgement(companyQuality,valuationLevel);
+  const detail=`${v13WorkspaceAiReviewSummary(stock,['fundamental_review'],'最近基本面复核')}${fundamentalAnalysisPanel(stock,{workspaceDetail:true})}${financialAnalysisFlowPanel()}`;
+  const header=moduleTitleActions('基本面','copy-fundamental-prompt','import-fundamental-json');
+  return `<div class="card" data-fundamental-workspace-summary style="margin-bottom:12px;border-left:4px solid var(--purple)">${header}<div style="margin-top:10px"><div class="card-title">一句话结论</div><div class="text" style="max-width:none;font-weight:800;color:var(--ink)">${esc(formatChineseText(conclusion||'基本面资料待补充'))}</div><div class="card-note" style="margin-top:8px"><b>更新时间</b> · 财报 ${esc(fd.lastUpdated||'—')} · 估值 ${esc(vd.updatedAt||vd.lastUpdated||'—')}</div></div></div>${workspaceDetails('查看详细依据',detail)}`;
 }
 function valuationAllocationWorkspacePanel(stock){
   const total=getEstimatedTotalAssets();
@@ -5037,14 +5142,44 @@ function collectOperationEntryDraft(ctx){
   return {...base,previous_shares:ctx.stock.shares,previous_avg_cost:ctx.stock.avgCost,new_shares:sharesText===''?null:Number(sharesText),new_avg_cost:costText===''?'':Number.isFinite(Number(costText))?Number(costText):costText,operation_date:document.getElementById('operationEntryDate').value,note:document.getElementById('operationEntryNote').value,updated_at:new Date().toISOString()};
 }
 function renderOperationEntryValidation(validation){const box=document.getElementById('operationEntryPreview');if(!box)return;box.innerHTML=`<b>变化判断：</b>${esc(operationChangeLabel(validation.position_change))}${arrSafe(validation.errors).length?`<div class="alert" style="margin-top:8px">${arrSafe(validation.errors).map(esc).join('；')}</div>`:''}${arrSafe(validation.warnings).length?`<div class="card-note" style="margin-top:8px">提醒：${arrSafe(validation.warnings).map(esc).join('；')}</div>`:''}`}
-async function previewOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx||!module.eligible(ctx))return alert('当前标的无法录入操作结果。');const draft=collectOperationEntryDraft(ctx),validation=module.validate(draft,ctx),snapshot=await module.snapshotHash(stock);module.saveDraft(ctx,draft,validation,snapshot);renderOperationEntryValidation(validation);return {ctx,draft,validation,snapshot}}
-async function confirmOperationEntry(stock){const prepared=await previewOperationEntry(stock);if(!prepared||!prepared.validation.business_valid)return alert('录入内容尚未通过校验，不能生成应用请求。');const warningText=arrSafe(prepared.validation.warnings).length?`\n提醒：${arrSafe(prepared.validation.warnings).join('；')}`:'';const message=`二次确认：\n持仓 ${prepared.draft.previous_shares} → ${prepared.draft.new_shares}\n券商成本 ${prepared.draft.previous_avg_cost} → ${prepared.validation.normalized_new_avg_cost}\n操作日期 ${prepared.draft.operation_date}${warningText}\n\n确认后只生成应用请求，不会创建交易、修改现金或立即写入正式持仓。`;if(!confirm(message))return;try{const key=window.OperationEntry.contextKey(prepared.ctx),saved=window.OperationEntry.saved(key),application=await window.OperationEntry.createApplicationRequest(prepared.ctx,saved);window.OperationEntry.markApplicationRequest(key,application);downloadOperationApplicationRequest(application);renderStockDetail();alert('已生成操作应用请求，尚未写入正式持仓。请先执行 dry-run，再显式执行 --apply。')}catch(err){alert('生成失败：'+(err&&err.message?err.message:String(err)))}}
-function startOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;module.abandon(module.contextKey(ctx));renderStockDetail();setTimeout(()=>{const input=document.getElementById('operationEntryNewShares');if(input)input.focus()},0)}
-function abandonOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;if(!confirm('确认放弃本次录入草案？正式持仓不会变化。'))return;module.abandon(module.contextKey(ctx));renderStockDetail()}
+async function previewOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx||!module.eligible(ctx))return alert('当前标的无法录入操作结果。');const draft=collectOperationEntryDraft(ctx),validation=module.validate(draft,ctx),snapshot=await module.snapshotHash(stock);try{await module.saveDraft(ctx,draft,validation,snapshot)}catch(error){criticalWriteFailure(error);return}renderOperationEntryValidation(validation);return {ctx,draft,validation,snapshot}}
+async function confirmOperationEntry(stock){const prepared=await previewOperationEntry(stock);if(!prepared||!prepared.validation.business_valid)return alert('录入内容尚未通过校验，不能生成应用请求。');const warningText=arrSafe(prepared.validation.warnings).length?`\n提醒：${arrSafe(prepared.validation.warnings).join('；')}`:'';const message=`二次确认：\n持仓 ${prepared.draft.previous_shares} → ${prepared.draft.new_shares}\n券商成本 ${prepared.draft.previous_avg_cost} → ${prepared.validation.normalized_new_avg_cost}\n操作日期 ${prepared.draft.operation_date}${warningText}\n\n确认后只生成应用请求，不会创建交易、修改现金或立即写入正式持仓。`;if(!confirm(message))return;try{const key=window.OperationEntry.contextKey(prepared.ctx),saved=window.OperationEntry.saved(key),application=await window.OperationEntry.createApplicationRequest(prepared.ctx,saved);await window.OperationEntry.markApplicationRequest(key,application);downloadOperationApplicationRequest(application);renderStockDetail();alert('已生成操作应用请求，尚未写入正式持仓。请先执行 dry-run，再显式执行 --apply。')}catch(err){criticalWriteFailure(err)}}
+async function startOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail();setTimeout(()=>{const input=document.getElementById('operationEntryNewShares');if(input)input.focus()},0)}
+async function abandonOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;if(!confirm('确认放弃本次录入草案？正式持仓不会变化。'))return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail()}
 function downloadOperationApplicationRequest(application){const blob=new Blob([JSON.stringify(application,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`operation_application_${application.symbol}_${todayDate()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function stockWorkspaceAccordion(stock){
-  const activeTitle={plan:'计划',operation:'操作记录',technical:'技术面',news:'新闻催化',fundamental:'基本面',valuation:'估值/配置',longterm:'长期逻辑'}[detailWorkspace]||'计划';
-  return `<div class="hint" style="margin-bottom:12px"><b>当前工作区：</b>${esc(activeTitle)}。一次只展开一个工作区，默认显示摘要，详情可展开。</div>${stockWorkspaceSection('plan','计划工作区','刷新计划、当前事件摘要、当前有效计划摘要',planWorkspacePanel(stock),'var(--gold)')}${stockWorkspaceSection('operation','操作记录工作区','录入券商最新持仓与成本，不生成交易',operationWorkspacePanel(stock),'var(--seal)')}${stockWorkspaceSection('technical','技术面工作区','技术判断、风险、机会摘要',technicalWorkspacePanel(stock),'var(--teal)')}${stockWorkspaceSection('news','新闻催化工作区','新闻、催化、情绪资金摘要',newsWorkspacePanel(stock),'var(--seal)')}${stockWorkspaceSection('fundamental','基本面工作区','财报复核、财务质量、现金流摘要',fundamentalWorkspacePanel(stock),'var(--purple)')}${stockWorkspaceSection('valuation','估值/配置工作区','估值复核、配置建议、仓位偏离摘要',valuationAllocationWorkspacePanel(stock),'var(--ink2)')}${stockWorkspaceSection('longterm','长期逻辑工作区','长期逻辑、投资备忘录、长期风险摘要',longTermWorkspacePanel(stock),'var(--ink)')}`;
+function aiDiscussionWorkspacePanel(stock){
+  const history=v13AiDecisionReviewDetailPanel(stock);
+  return `<div class="card" style="margin-bottom:12px;border-left:4px solid var(--purple)"><div class="card-title">AI讨论</div><div class="card-note">复制当前标的讨论 Prompt，或查看既有 AI 处理历史。本页面不会自动调用 AI。</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn small" data-detail-action="copy-ai-discussion-prompt" type="button">复制 AI 讨论 Prompt</button></div></div>${history||'<div class="card"><div class="empty">暂无 AI 处理历史。</div></div>'}`;
+}
+const DETAIL_WORKSPACE_META=Object.freeze([
+  {key:'ai',label:'AI讨论'},
+  {key:'plan',label:'计划'},
+  {key:'operation',label:'操作记录'},
+  {key:'technical',label:'技术面'},
+  {key:'news',label:'新闻催化'},
+  {key:'fundamental',label:'基本面'},
+  {key:'valuation',label:'估值/配置'},
+  {key:'longterm',label:'长期逻辑'}
+]);
+function activeWorkspacePanel(stock,key){
+  if(key==='ai')return aiDiscussionWorkspacePanel(stock);
+  if(key==='operation')return operationWorkspacePanel(stock);
+  if(key==='technical')return technicalWorkspacePanel(stock);
+  if(key==='news')return newsWorkspacePanel(stock);
+  if(key==='fundamental')return fundamentalWorkspacePanel(stock);
+  if(key==='valuation')return valuationAllocationWorkspacePanel(stock);
+  if(key==='longterm')return longTermWorkspacePanel(stock);
+  return planWorkspacePanel(stock);
+}
+function stockWorkspaceTabs(stock){
+  const active=normalizeDetailWorkspace(detailWorkspace);
+  if(active!==detailWorkspace)detailWorkspace=active;
+  const tabs=DETAIL_WORKSPACE_META.map(item=>{
+    const selected=item.key===active;
+    return `<button class="workspace-tab${selected?' active':''}" id="workspace-tab-${esc(item.key)}" role="tab" type="button" data-workspace-tab="${esc(item.key)}" aria-selected="${selected?'true':'false'}" aria-controls="workspace-panel" tabindex="${selected?'0':'-1'}">${esc(item.label)}</button>`;
+  }).join('');
+  const anchor=`workspace-${active}`;
+  return `<div class="workspace-tabs-shell"><div class="workspace-tablist" role="tablist" aria-label="标的工作区">${tabs}</div><section class="workspace-tabpanel" id="workspace-panel" role="tabpanel" aria-labelledby="workspace-tab-${esc(active)}" data-workspace-section="${esc(active)}" data-v13-detail-anchor="${esc(anchor)}">${v13TargetReviewReturnBanner(stock,anchor)}${activeWorkspacePanel(stock,active)}</section></div>`;
 }
 function planListHtml(plans,type,cp){
   const arr=v13DisplayActivePlans(plans).filter(p=>v13PlanDisplayCategory(p)===type).sort((a,b)=>Number(b.price||0)-Number(a.price||0));
@@ -5132,7 +5267,7 @@ function closeAnalysisModal(){
   const modal=document.getElementById('analysisModal');
   if(modal)modal.classList.remove('show');
 }
-function saveAnalysisModule(){
+async function saveAnalysisModule(){
   const modal=document.getElementById('analysisModal');
   const stock=state.stocks.find(x=>x.id===modal?.dataset.stockId);
   const key=modal?.dataset.moduleKey;
@@ -5146,7 +5281,7 @@ function saveAnalysisModule(){
   }
   stock.analysisFramework=fw;
   stock.analysisScore=calculateAnalysisScore(fw);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAnalysisModal();
   render();
 }
@@ -5252,7 +5387,7 @@ function closeAiAnalysisImportModal(){
   const modal=document.getElementById('aiAnalysisImportModal');
   if(modal)modal.classList.remove('show');
 }
-function importAiAnalysisJson(){
+async function importAiAnalysisJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   let parsed;
@@ -5261,7 +5396,7 @@ function importAiAnalysisJson(){
   const nextFramework=normalizeAnalysisFramework(parsed.analysisFramework,stock);
   stock.analysisFramework=nextFramework;
   stock.analysisScore=calculateAnalysisScore(nextFramework);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAiAnalysisImportModal();
   render();
   alert(`AI分析导入成功，当前分析评分 ${fmtMaybe(stock.analysisScore,1)}/10。`);
@@ -5468,7 +5603,7 @@ function fallbackCopyAiAssistantPrompt(){
   ta.select();
   try{document.execCommand('copy');alert('提示词已复制。')}catch(e){alert('复制失败，请手动全选复制。')}
 }
-function importAiAssistantJson(){
+async function importAiAssistantJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={strategy:JSON.parse(JSON.stringify(stock.strategy||{})),analysisFramework:JSON.parse(JSON.stringify(stock.analysisFramework||{})),valuationData:JSON.parse(JSON.stringify(stock.valuationData||{})),financialData:JSON.parse(JSON.stringify(stock.financialData||{}))};
@@ -5485,7 +5620,7 @@ function importAiAssistantJson(){
     return;
   }
   normalizeStockAnalysis(stock);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAiAssistantModal();
   render();
   alert(`${result.message} 当前分析评分 ${fmtMaybe(stock.analysisScore,1)}/10。`);
@@ -5531,7 +5666,7 @@ function closeAnalysisInputsModal(){
   const modal=document.getElementById('analysisInputsModal');
   if(modal)modal.classList.remove('show');
 }
-function saveAnalysisInputs(){
+async function saveAnalysisInputs(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const prev=normalizeAnalysisInputs(stock.analysisInputs);
@@ -5552,7 +5687,7 @@ function saveAnalysisInputs(){
   if(next.news!==prev.news)touchDataFreshness(stock,'newsUpdatedAt');
   if(next.technicalObservation!==prev.technicalObservation)touchDataFreshness(stock,'technicalUpdatedAt');
   if(next.personalView!==prev.personalView)touchDataFreshness(stock,'personalViewUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAnalysisInputsModal();
   render();
 }
@@ -5602,7 +5737,7 @@ function closeFinancialSourceModal(){
   const modal=document.getElementById('financialSourceModal');
   if(modal)modal.classList.remove('show');
 }
-function saveFinancialSourceText(openAi=false){
+async function saveFinancialSourceText(openAi=false){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const inputs=normalizeAnalysisInputs(stock.analysisInputs);
@@ -5612,7 +5747,7 @@ function saveFinancialSourceText(openAi=false){
     lastUpdated:new Date().toISOString()
   });
   touchDataFreshness(stock,'financialUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeFinancialSourceModal();
   render();
   if(openAi)openAiAssistantTask('financial');
@@ -5662,7 +5797,7 @@ function closeValuationSourceModal(){
   const modal=document.getElementById('valuationSourceModal');
   if(modal)modal.classList.remove('show');
 }
-function saveValuationSourceText(openAi=false){
+async function saveValuationSourceText(openAi=false){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const inputs=normalizeAnalysisInputs(stock.analysisInputs);
@@ -5672,7 +5807,7 @@ function saveValuationSourceText(openAi=false){
     lastUpdated:new Date().toISOString()
   });
   touchDataFreshness(stock,'valuationUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeValuationSourceModal();
   render();
   if(openAi)openAiAssistantTask('valuation');
@@ -5708,7 +5843,7 @@ function closeTechnicalDataModal(){
   const modal=document.getElementById('technicalDataModal');
   if(modal)modal.classList.remove('show');
 }
-function saveTechnicalData(){
+async function saveTechnicalData(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const current=normalizeTechnicalData(stock.technicalData);
@@ -5723,7 +5858,7 @@ function saveTechnicalData(){
     lastUpdated:new Date().toISOString()
   });
   touchDataFreshness(stock,'technicalUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeTechnicalDataModal();
   render();
 }
@@ -5832,7 +5967,7 @@ function normalizeImportedTechnicalReview(parsed,stock){
   },stock);
   return flatReview;
 }
-function importTechnicalJson(){
+async function importTechnicalJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={technicalData:JSON.parse(JSON.stringify(stock.technicalData||{})),technicalReview:JSON.parse(JSON.stringify(stock.technicalReview||{})),dataFreshness:JSON.parse(JSON.stringify(stock.dataFreshness||{}))};
@@ -5846,7 +5981,7 @@ function importTechnicalJson(){
     touchDataFreshness(stock,'technicalUpdatedAt',stock.technicalReview.shortTermTechnical.priceUpdatedAt||todayDate());
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'technicalReview');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeTechnicalJsonImportModal();
     render();
     alert('技术面 JSON 已导入。九模块技术评分和操作建议未自动修改。');
@@ -5920,19 +6055,19 @@ function importPriceHistoryCsv(){
   input.value='';
   input.click();
 }
-function handlePriceHistoryCsvImport(e){
+async function handlePriceHistoryCsvImport(e){
   const file=e.target.files&&e.target.files[0];
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!file||!stock)return;
   const reader=new FileReader();
-  reader.onload=()=>{
+  reader.onload=async()=>{
     const parsed=parsePriceHistoryCsv(reader.result);
     stock.priceHistory=normalizePriceHistory(parsed.records);
     const result=updateTechnicalDataFromPriceHistory(stock);
     touchDataFreshness(stock,'technicalUpdatedAt');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'technicalReview');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     render();
     const warnings=[...(parsed.warnings||[]),...(result.warnings||[])];
     alert(`历史价格导入完成：成功 ${stock.priceHistory.length} 条，过滤 ${parsed.invalidCount||0} 条，重复日期覆盖 ${parsed.duplicateCount||0} 条。${warnings.length?'\n提醒：'+warnings.slice(0,4).join('；'):''}`);
@@ -5940,18 +6075,18 @@ function handlePriceHistoryCsvImport(e){
   reader.onerror=()=>alert('CSV 读取失败，请确认文件可访问。');
   reader.readAsText(file,'UTF-8');
 }
-function updateTechnicalFromHistoryForDetail(){
+async function updateTechnicalFromHistoryForDetail(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const result=updateTechnicalDataFromPriceHistory(stock);
   touchDataFreshness(stock,'technicalUpdatedAt');
   normalizeStockAnalysis(stock);
   markV13DecisionReviewDirty(stock.id,'technicalReview');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
   alert(`技术数据已从历史价格更新。${result.warnings.length?'\n提醒：'+result.warnings.slice(0,4).join('；'):''}`);
 }
-function applyTechnicalSignalToAnalysis(){
+async function applyTechnicalSignalToAnalysis(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   normalizeStockAnalysis(stock);
@@ -5967,7 +6102,7 @@ function applyTechnicalSignalToAnalysis(){
   });
   stock.analysisFramework=fw;
   stock.analysisScore=calculateAnalysisScore(fw);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
 }
 function ensureValuationDataModal(){
@@ -5998,7 +6133,7 @@ function closeValuationDataModal(){
   const modal=document.getElementById('valuationDataModal');
   if(modal)modal.classList.remove('show');
 }
-function saveValuationData(){
+async function saveValuationData(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const payload={};
@@ -6007,7 +6142,7 @@ function saveValuationData(){
   payload.lastUpdated=new Date().toISOString();
   stock.valuationData=normalizeValuationData(payload);
   touchDataFreshness(stock,'valuationUpdatedAt');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeValuationDataModal();
   render();
 }
@@ -6036,7 +6171,7 @@ function closeValuationImportModal(){
   const modal=document.getElementById('valuationImportModal');
   if(modal)modal.classList.remove('show');
 }
-function importValuationJson(){
+async function importValuationJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={valuationData:JSON.parse(JSON.stringify(stock.valuationData||{})),valuationReview:JSON.parse(JSON.stringify(stock.valuationReview||{})),dataFreshness:JSON.parse(JSON.stringify(stock.dataFreshness||{}))};
@@ -6059,7 +6194,7 @@ function importValuationJson(){
     touchDataFreshness(stock,'valuationUpdatedAt');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'valuationReview');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeValuationImportModal();
     render();
     refreshLongLogicModalIfOpen();
@@ -6071,7 +6206,7 @@ function importValuationJson(){
     alert('导入失败：'+(err&&err.message?err.message:String(err)));
   }
 }
-function applyValuationSignalToAnalysis(){
+async function applyValuationSignalToAnalysis(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   normalizeStockAnalysis(stock);
@@ -6087,7 +6222,7 @@ function applyValuationSignalToAnalysis(){
   });
   stock.analysisFramework=fw;
   stock.analysisScore=calculateAnalysisScore(fw);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
 }
 function ensureAllocationDecisionImportModal(){
@@ -6115,7 +6250,7 @@ function closeAllocationDecisionImportModal(){
   const modal=document.getElementById('allocationDecisionImportModal');
   if(modal)modal.classList.remove('show');
 }
-function importAllocationDecisionJson(){
+async function importAllocationDecisionJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const beforeStrategy=JSON.stringify(normalizeStrategy(stock.strategy,stock));
@@ -6128,7 +6263,7 @@ function importAllocationDecisionJson(){
   stock.strategy=normalizeStrategy(JSON.parse(beforeStrategy),stock);
   normalizeStockAnalysis(stock);
   markV13DecisionReviewDirty(stock.id,'allocationDecision');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAllocationDecisionImportModal();
   render();
   refreshLongLogicModalIfOpen();
@@ -6164,7 +6299,7 @@ function closeFinancialDataModal(){
   const modal=document.getElementById('financialDataModal');
   if(modal)modal.classList.remove('show');
 }
-function saveFinancialData(){
+async function saveFinancialData(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const payload={};
@@ -6177,7 +6312,7 @@ function saveFinancialData(){
   touchDataFreshness(stock,'financialUpdatedAt');
   normalizeStockAnalysis(stock);
   markV13DecisionReviewDirty(stock.id,'financialData');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeFinancialDataModal();
   render();
 }
@@ -6256,7 +6391,7 @@ function applyFundamentalPayload(stock,parsed){
   if(hasValuationData||hasValuationReview)touchDataFreshness(stock,'valuationUpdatedAt');
   return {hasFinancialData,hasFinancialReview,hasValuationData,hasValuationReview};
 }
-function importFundamentalJson(){
+async function importFundamentalJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={
@@ -6273,7 +6408,7 @@ function importFundamentalJson(){
     const flags=applyFundamentalPayload(stock,parsed);
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'fundamentalReview');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeFundamentalImportModal();
     render();
     refreshLongLogicModalIfOpen();
@@ -6323,7 +6458,7 @@ function looksLikeEtfAnalysisPayload(obj){
   const fields=['indexName','indexValuationLevel','historicalPercentile','industryTrend','macroView','constituentQuality','liquidityView','trackingRisk','conclusion','keyPoints','riskFlags','actionHint','score','confidence'];
   return fields.some(k=>Object.prototype.hasOwnProperty.call(obj,k));
 }
-function importEtfAnalysisJson(){
+async function importEtfAnalysisJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={etfAnalysis:JSON.parse(JSON.stringify(stock.etfAnalysis||{})),dataFreshness:JSON.parse(JSON.stringify(stock.dataFreshness||{}))};
@@ -6334,7 +6469,7 @@ function importEtfAnalysisJson(){
     if(!payload||typeof payload!=='object'||Array.isArray(payload))throw new Error('未识别 etfAnalysis。请粘贴 {"etfAnalysis": {...}} 或 etfAnalysis 对象本体。');
     stock.etfAnalysis=normalizeEtfAnalysis({...payload,symbol:payload.symbol||stock.code||stock.symbol||'',updatedAt:payload.updatedAt||todayDate()},stock);
     touchDataFreshness(stock,'etfAnalysisUpdatedAt');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeEtfAnalysisImportModal();
     openStockDetail(stock.id);
     refreshLongLogicModalIfOpen();
@@ -6367,7 +6502,7 @@ function normalizeFinancialReviewImportPayload(parsed){
   }
   return normalizeAiReviewPayload('financialReview',{financialReview:review});
 }
-function importFinancialJson(){
+async function importFinancialJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={
@@ -6392,7 +6527,7 @@ function importFinancialJson(){
     touchDataFreshness(stock,'financialUpdatedAt');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'financialData');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeFinancialImportModal();
     render();
     if(hasData&&hasReview)alert('财报查找 JSON 已导入：financialData 与 financialReview 已更新。九模块评分未自动修改。');
@@ -6405,7 +6540,7 @@ function importFinancialJson(){
     alert('导入失败：'+(err&&err.message?err.message:String(err)));
   }
 }
-function importFinancialIntegratedJson(){
+async function importFinancialIntegratedJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={
@@ -6432,7 +6567,7 @@ function importFinancialIntegratedJson(){
     touchDataFreshness(stock,'financialUpdatedAt');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,'financialData');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     render();
     alert('财报一体化 JSON 已导入：financialData 与 financialReview 已更新。九模块评分和操作建议未自动修改。');
   }catch(err){
@@ -6444,7 +6579,7 @@ function importFinancialIntegratedJson(){
     alert('导入失败：'+(err&&err.message?err.message:String(err)));
   }
 }
-function applyFinancialSignalToAnalysis(){
+async function applyFinancialSignalToAnalysis(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   normalizeStockAnalysis(stock);
@@ -6460,7 +6595,7 @@ function applyFinancialSignalToAnalysis(){
   });
   stock.analysisFramework=fw;
   stock.analysisScore=calculateAnalysisScore(fw);
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   render();
 }
 function isEmptyAnalysisValue(v){return v===undefined||v===null||String(v).trim()===''}
@@ -6543,12 +6678,12 @@ function closeAnalysisTemplateModal(){
   const modal=document.getElementById('analysisTemplateModal');
   if(modal)modal.classList.remove('show');
 }
-function saveAnalysisTemplateApply(){
+async function saveAnalysisTemplateApply(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   const templateKey=document.getElementById('analysisTemplateType').value;
   const overwrite=document.getElementById('analysisTemplateMode').value==='overwrite';
   if(!applyAnalysisTemplate(stock,templateKey,overwrite))return alert('套用失败：模板不存在或标的无效。');
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeAnalysisTemplateModal();
   render();
 }
@@ -6588,7 +6723,7 @@ function openStrategyEditor(){
   modal.classList.add('show');
 }
 function closeStrategyModal(){const modal=document.getElementById('strategyModal');if(modal)modal.classList.remove('show');if(editModalReturnTab==='edit'){detailStockId=null;editModalReturnTab=''}}
-function saveStrategy(){
+async function saveStrategy(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   stock.strategy=normalizeStrategy({
@@ -6607,7 +6742,7 @@ function saveStrategy(){
     notes:document.getElementById('stNotes').value
   },stock);
   const returnTab=editModalReturnTab;
-  saveState();
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
   closeStrategyModal();
   if(returnTab==='edit'){currentTab='edit';detailStockId=null}
   render();
@@ -6934,7 +7069,7 @@ function validateRecentCatalystImportPayload(parsed){
     throw new Error('字段校验错误：eventExplanation.explanationLevel 必须是 full / partial / none / unknown。');
   }
 }
-function importSentimentPayloadFromText(text,options={}){
+async function importSentimentPayloadFromText(text,options={}){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
   const original={
@@ -6993,7 +7128,7 @@ function importSentimentPayloadFromText(text,options={}){
     if(!changed)throw new Error('未识别到可导入字段。情绪资金 JSON 请包含 shortTermSentiment，或包含 marketMood / marketSentiment / fundFlowView / fundFlow / sectorHeat / institutionalView 等字段。');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,options.onlyLongTerm?'longTermLogic':'recentCatalyst');
-    saveState();
+    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     if(options.closeLongTerm)closeLongTermLogicImportModal();
     else closeSentimentImportModal();
     refreshLongLogicModalIfOpen();
@@ -7010,10 +7145,10 @@ function importSentimentPayloadFromText(text,options={}){
     alert('导入失败：'+(err&&err.message?err.message:String(err)));
   }
 }
-function importSentimentReviewJson(){
+async function importSentimentReviewJson(){
   importSentimentPayloadFromText(document.getElementById('sentimentImportText').value);
 }
-function importLongTermLogicJson(){
+async function importLongTermLogicJson(){
   importSentimentPayloadFromText(document.getElementById('longTermLogicImportText').value,{onlyLongTerm:true,closeLongTerm:true,successMessage:'长期逻辑已导入。'});
 }
 function detailResultsArchivePanel(s,cp){
@@ -7186,10 +7321,13 @@ function latestPlanUpdateContext(stock){
 async function generatePlanUpdatePromptForStock(stock){
   const ctx=latestPlanUpdateContext(stock);
   if(!ctx||!window.PlanUpdateDraft.eligible(ctx))return alert('尚未形成有效的计划更新请求。');
+  const readiness=planGenerationGateResult(stock);
+  if(!readiness.canGenerate)return alert(planGenerationBlockedText(readiness));
+  if(!confirmPlanGenerationWarnings(readiness))return;
   try{
     const generatedAt=new Date().toISOString(),text=window.PlanUpdateDraft.prompt(ctx.record.reviewId,stock);
     const snapshot=await window.PlanUpdateDraft.snapshotHash(stock.plans||[]);
-    window.PlanUpdateDraft.savePromptMeta(ctx.request.request_id,ctx.outcome.decision_id,snapshot);
+    await window.PlanUpdateDraft.savePromptMeta(ctx.request.request_id,ctx.outcome.decision_id,snapshot);
     copyText(text,`计划更新 Prompt 已复制。生成时间：${generatedAt}；来源决策：${ctx.outcome.decision_id}。`);
     renderStockDetail();
   }catch(err){alert('生成失败：'+(err&&err.message?err.message:String(err)))}
@@ -7210,6 +7348,8 @@ function ensurePlanUpdateDraftImportModal(){
 let planUpdateDraftModalStockId='';
 function openPlanUpdateDraftImport(stock){
   const ctx=latestPlanUpdateContext(stock);if(!ctx||!window.PlanUpdateDraft.eligible(ctx))return alert('尚未形成有效的计划更新请求。');
+  const readiness=planGenerationGateResult(stock);if(!readiness.canGenerate)return alert(planGenerationBlockedText(readiness));
+  if(!confirmPlanGenerationWarnings(readiness))return;
   planUpdateDraftModalStockId=stock.id;const modal=ensurePlanUpdateDraftImportModal(),saved=window.PlanUpdateDraft.saved(ctx.request.request_id);
   document.getElementById('planUpdateDraftImportMeta').textContent=`标的 ${stock.name||stock.code} · 来源决策 ${ctx.outcome.decision_id} · 草案不会写入正式 plans。`;
   document.getElementById('planUpdateDraftImportText').value=saved&&saved.draft?JSON.stringify(saved.draft,null,2):'';
@@ -7217,12 +7357,14 @@ function openPlanUpdateDraftImport(stock){
 }
 async function validateAndSavePlanUpdateDraft(){
   const stock=state.stocks.find(item=>item.id===planUpdateDraftModalStockId);if(!stock)return;
-  const ctx=latestPlanUpdateContext(stock);let draft;
+  const ctx=latestPlanUpdateContext(stock),readiness=planGenerationGateResult(stock),box=document.getElementById('planUpdateDraftValidation');let draft;
+  if(!readiness.canGenerate){box.textContent=planGenerationBlockedText(readiness);return}
+  if(!confirmPlanGenerationWarnings(readiness)){box.textContent='已取消导入计划草案。';return}
   try{draft=JSON.parse(document.getElementById('planUpdateDraftImportText').value)}catch(err){document.getElementById('planUpdateDraftValidation').textContent='JSON解析失败：'+err.message;return}
-  const validation=window.PlanUpdateDraft.validate(draft,ctx),box=document.getElementById('planUpdateDraftValidation');
+  const validation=window.PlanUpdateDraft.validate(draft,ctx);
   if(validation.errors.length){box.innerHTML=`<div class="alert">校验失败：${validation.errors.map(esc).join('；')}</div>${validation.warnings.length?`<div class="card-note">提醒：${validation.warnings.map(esc).join('；')}</div>`:''}`;return}
   const snapshot=await window.PlanUpdateDraft.snapshotHash(stock.plans||[]);
-  window.PlanUpdateDraft.saveRequestDraft(ctx.request.request_id,draft,validation,snapshot);
+  try{await window.PlanUpdateDraft.saveRequestDraft(ctx.request.request_id,draft,validation,snapshot)}catch(error){criticalWriteFailure(error);return}
   box.innerHTML=`<div class="hint">计划草案已通过校验，尚未写入正式计划。${validation.warnings.length?` 提醒：${validation.warnings.map(esc).join('；')}`:''}</div>`;
   renderStockDetail();
 }
@@ -7240,13 +7382,13 @@ function openPlanUpdateDraftDiff(stock){
   const counts=rows.reduce((out,row)=>(out[row.change]=(out[row.change]||0)+1,out),{}),unitWarnings=arrSafe(saved.validation.warnings).filter(x=>/单位|minTradeUnit|quantity|数量/i.test(x));
   el.innerHTML=`<div class="modal"><h2>计划差异与应用前复核</h2><div class="modal-sub">当前为应用前复核。查看差异不会修改正式计划。</div><div class="chips"><span class="chip tag">保留 ${counts['保留']||0}</span><span class="chip tag">修改 ${counts['修改']||0}</span><span class="chip buy">新增 ${counts['新增']||0}</span><span class="chip sell">归档 ${counts['归档']||0}</span><span class="chip sell">删除建议 ${counts['删除建议']||0}</span></div>${arrSafe(saved.draft.risk_flags).length?`<div class="alert" style="margin-top:10px">风险提示：${arrSafe(saved.draft.risk_flags).map(esc).join('；')}</div>`:''}${unitWarnings.length?`<div class="alert" style="margin-top:10px">数量与交易单位提醒：${unitWarnings.map(esc).join('；')}</div>`:''}<div style="margin-top:10px">${rows.map(card).join('')||'<div class="empty">暂无差异。</div>'}</div><div class="alert" style="margin-top:10px">确认后将修改正式计划，但不会执行交易或改变持仓。浏览器只生成应用请求，仍需本地Python脚本执行。</div><div class="modal-actions"><button class="btn ghost" id="planUpdateDraftAbandon" type="button">放弃本次草案</button><button class="btn ghost" id="planUpdateDiffClose" type="button">关闭</button><button class="btn" id="planUpdateConfirmApplication" type="button">确认应用计划更新</button></div></div>`;el.classList.add('show');document.getElementById('planUpdateDiffClose').addEventListener('click',()=>el.classList.remove('show'));document.getElementById('planUpdateDraftAbandon').addEventListener('click',()=>abandonPlanUpdateDraft(stock,ctx,el));document.getElementById('planUpdateConfirmApplication').addEventListener('click',()=>confirmPlanUpdateApplication(stock,ctx,saved,rows,el));
 }
-function abandonPlanUpdateDraft(stock,ctx,modal){if(!confirm('确认放弃本次计划草案？正式计划不会变化。'))return;window.PlanUpdateDraft.abandon(ctx.request.request_id);modal.classList.remove('show');renderStockDetail()}
+async function abandonPlanUpdateDraft(stock,ctx,modal){if(!confirm('确认放弃本次计划草案？正式计划不会变化。'))return;try{await window.PlanUpdateDraft.abandon(ctx.request.request_id)}catch(error){criticalWriteFailure(error);return}modal.classList.remove('show');renderStockDetail()}
 async function confirmPlanUpdateApplication(stock,ctx,saved,rows,modal){
   if(saved.status!=='pending_confirmation')return alert('当前草案不是待确认状态，无法生成应用请求。');
   const currentHash=await window.PlanUpdateDraft.snapshotHash(stock.plans||[]);if(currentHash!==saved.current_plan_snapshot_hash)return alert('当前计划已变化，请重新生成计划草案。');
   if(!confirm('二次确认：确认后将生成正式计划应用请求，但不会执行交易或改变持仓。是否继续？'))return;
   const now=new Date().toISOString(),application={application_id:`plan_application_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,draft_id:saved.draft.draft_id,source_request_id:ctx.request.request_id,source_decision_id:ctx.outcome.decision_id,symbol:ctx.request.symbol,current_plan_snapshot_hash:currentHash,confirmed_changes:{draft:saved.draft,validation:saved.validation,diff:rows},user_confirmed_at:now,source_draft_status:'pending_confirmation',status:'confirmed_pending_application',created_at:now};
-  window.PlanUpdateDraft.markApplicationRequest(ctx.request.request_id,application);downloadPlanApplicationRequest(application);modal.classList.remove('show');renderStockDetail();alert('已生成计划应用请求，尚未写入正式计划。请先运行 apply_plan_update.py --dry-run，确认后再使用 --apply。');
+  try{await window.PlanUpdateDraft.markApplicationRequest(ctx.request.request_id,application)}catch(error){criticalWriteFailure(error);return}downloadPlanApplicationRequest(application);modal.classList.remove('show');renderStockDetail();alert('已生成计划应用请求，尚未写入正式计划。请先运行 apply_plan_update.py --dry-run，确认后再使用 --apply。');
 }
 function downloadPlanApplicationRequest(application){const blob=new Blob([JSON.stringify(application,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`plan_application_${application.symbol}_${todayDate()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function ensureLongLogicModal(){
@@ -7299,9 +7441,29 @@ function bindStockDetailActions(stock){
   mainEl.querySelectorAll('[data-workspace]').forEach(btn=>btn.addEventListener('click',e=>{
     e.preventDefault();
     e.stopPropagation();
-    detailWorkspace=btn.dataset.workspace||'plan';
+    setDetailWorkspace(btn.dataset.workspace||'plan');
     renderStockDetail();
   }));
+  mainEl.querySelectorAll('[data-workspace-tab]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.preventDefault();
+      setDetailWorkspace(btn.dataset.workspaceTab||'plan');
+      renderStockDetail();
+      const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
+      if(activeTab)activeTab.focus({preventScroll:true});
+    });
+    btn.addEventListener('keydown',e=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+      e.preventDefault();
+      const tabs=DETAIL_WORKSPACE_META.map(item=>item.key);
+      const current=tabs.indexOf(normalizeDetailWorkspace(btn.dataset.workspaceTab));
+      const next=e.key==='Home'?0:(e.key==='End'?tabs.length-1:(current+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length);
+      setDetailWorkspace(tabs[next]);
+      renderStockDetail();
+      const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
+      if(activeTab)activeTab.focus({preventScroll:true});
+    });
+  });
   mainEl.querySelectorAll('[data-detail-action]').forEach(btn=>btn.addEventListener('click',e=>{
     e.preventDefault();
     e.stopPropagation();
@@ -7319,7 +7481,7 @@ function renderStockDetail(){
   const actual=info&&info.actualPct!==null?info.actualPct:null;
   const deviation=info&&info.deviation!==null?`${info.deviation>=0?'+':''}${info.deviation.toFixed(1)}%`:'—';
   document.getElementById('summary').innerHTML=`标的详情 · <strong>${esc(s.name)}</strong> · ${esc(s.role||'—')} · ${esc(s.theme||'—')}`;
-  document.getElementById('main').innerHTML=`<div data-v13-detail-anchor="overview">${detailHeroPanel(s,mv,actual,deviation)}</div>${v13ReviewReturnBanner(s)}${v13AiDecisionReviewDetailPanel(s)}${stockWorkspaceAccordion(s)}`;
+  document.getElementById('main').innerHTML=`<div data-v13-detail-anchor="overview">${detailHeroPanel(s,mv,actual,deviation)}</div>${v13ReviewReturnBanner(s)}${stockWorkspaceTabs(s)}`;
   const backToListBtn=document.getElementById('backToListBtn');
   if(backToListBtn)backToListBtn.addEventListener('click',closeStockDetail);
   document.querySelectorAll('[data-v13-return-review]').forEach(btn=>btn.addEventListener('click',returnToActiveV13Review));

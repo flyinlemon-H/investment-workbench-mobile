@@ -95,6 +95,15 @@ function showStorageInitializationError(error){
   if(main){
     main.dataset.storageState='error';
     main.textContent=`本地数据加载失败（${type}）。未重置或清除任何数据。`;
+    const guidance=document.createElement('p');
+    guidance.textContent='请先重试加载；如仍失败，可从已导出的 JSON 备份恢复。恢复文件会先校验并保存，成功前不会覆盖现有数据。';
+    const retryButton=document.createElement('button');
+    retryButton.type='button';retryButton.className='btn ghost';retryButton.textContent='重试加载';
+    retryButton.addEventListener('click',()=>{void retryStorageRecovery()});
+    const restoreButton=document.createElement('button');
+    restoreButton.type='button';restoreButton.className='btn';restoreButton.textContent='从 JSON 备份恢复';
+    restoreButton.addEventListener('click',()=>{if(typeof importData==='function')importData()});
+    main.appendChild(guidance);main.appendChild(retryButton);main.appendChild(restoreButton);
   }
 }
 function migrationStatusText(record){
@@ -299,19 +308,14 @@ async function refreshShadowMigrationPanel(){
   }
   catch(_error){updateShadowMigrationPanel({status:'failed',sourceKeysPresent:[]})}
 }
-async function bootstrapApplication(){
-  showStorageLoadingShell();
-  try{
-    await StorageManager.initialize();
-    await loadState();
-  }catch(error){
-    showStorageInitializationError(error);
-    return Object.freeze({status:'error',errorType:error&&error.type||'unknown_storage_error'});
-  }
-  if(typeof applyMarketDataBridge==='function')applyMarketDataBridge();
+let applicationServicesStarted=false;
+async function activateLoadedApplication(){
+  if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge();
   const main=document.getElementById('main');
   if(main)main.dataset.storageState='ready';
   render();
+  if(applicationServicesStarted)return Object.freeze({status:'ready'});
+  applicationServicesStarted=true;
   void refreshShadowMigrationPanel();
   if(window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.refreshBridge==='function'){
     void window.AiDecisionReviewReader.refreshBridge().then(refreshed=>{if(refreshed)render()});
@@ -321,8 +325,27 @@ async function bootstrapApplication(){
   if(typeof loadSocialPosts==='function')loadSocialPosts().then(()=>{render();updateSocialDataStatus()});
   return Object.freeze({status:'ready'});
 }
+async function retryStorageRecovery(){
+  showStorageLoadingShell();
+  try{await StorageManager.initialize();await loadState()}
+  catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'unknown_storage_error'})}
+  try{return await activateLoadedApplication()}catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'write_failed'})}
+}
+async function resumeApplicationAfterRecovery(){return activateLoadedApplication()}
+async function bootstrapApplication(){
+  showStorageLoadingShell();
+  try{
+    await StorageManager.initialize();
+    await loadState();
+  }catch(error){
+    showStorageInitializationError(error);
+    return Object.freeze({status:'error',errorType:error&&error.type||'unknown_storage_error'});
+  }
+  try{return await activateLoadedApplication()}catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'write_failed'})}
+}
 const applicationReady=bootstrapApplication();
 window.ApplicationBootstrap=Object.freeze({ready:applicationReady});
+window.StorageRecovery=Object.freeze({retry:retryStorageRecovery,resumeAfterBackup:resumeApplicationAfterRecovery});
 window.ShadowMigrationUi=Object.freeze({
   formatStorageBytes,truncatedChecksum,evaluateShadowCapacity,canStartShadowMigration,shadowPreflightText,shadowReadyText,refresh:refreshShadowMigrationPanel
 });

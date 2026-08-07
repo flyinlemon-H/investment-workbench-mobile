@@ -223,7 +223,6 @@ const DecisionRecordService={
     if(!record||!record.id)return null;
     const records=v13DecisionRecordList(targetState);
     records.push(v13Alpha3Clone(record));
-    if(typeof saveState==='function')saveState();
     return v13Alpha3Clone(record);
   },
   appendFromProcessingResult(processingResult,reviewContext,targetState){
@@ -297,7 +296,6 @@ const DecisionStateService={
     }else{
       states.push(next);
     }
-    if(typeof saveState==='function')saveState();
     return this.getByRecommendation(next.recommendationId,targetState);
   },
   markReviewing(recommendationId,targetState){

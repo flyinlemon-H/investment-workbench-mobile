@@ -85,7 +85,7 @@ function setSocialPosts(data){
   social_posts=arr.map(normalizeSocialPost);
   socialPosts=social_posts;
   socialPostsLoaded=true;
-  if(arr.length&&!socialDataUpdatedAt)socialDataUpdatedAt=new Date().toISOString();
+  if(!socialDataUpdatedAt)socialDataUpdatedAt=new Date().toISOString();
 }
 function setSocialSummary(data){
   const arr=Array.isArray(data)?data:(Array.isArray(data&&data.social_summary)?data.social_summary:[]);
@@ -271,7 +271,7 @@ function handleSocialImport(e){
   const file=e.target.files[0];
   if(!file)return;
   const r=new FileReader();
-  r.onload=ev=>{
+  r.onload=async ev=>{
     try{
       const parsed=JSON.parse(ev.target.result);
       setSocialPosts(parsed);
@@ -282,7 +282,7 @@ function handleSocialImport(e){
         if(matched.length)touchDataFreshness(s,'socialUpdatedAt',today);
         if(matched.some(p=>String(p.platform||'').toLowerCase()==='news'))touchDataFreshness(s,'newsUpdatedAt',today);
       });
-      saveState();
+      await saveState(state,{critical:true});
       updateSocialDataStatus();
       render();
       alert(`社媒数据导入成功：${socialPosts.length} 条帖子。`);

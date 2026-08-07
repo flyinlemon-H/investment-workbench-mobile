@@ -16,6 +16,9 @@
     let initialized=false;
     let initializationPromise=null;
     let indexedDbAvailable=false;
+    let activeSource='localStorage';
+    let sourceMarker=null;
+    let sourceMarkerStatus='missing';
     let revision=0;
     let persistenceStatus='idle';
     let lastError=null;
@@ -24,10 +27,11 @@
     let drainScheduled=false;
     let idleWaiters=[];
     let migrationRunner=null;
+    let draftAdapter=null;
 
     function status(){
       return Object.freeze({
-        activeSource:'localStorage',
+        activeSource,
         revision,
         persistenceStatus,
         indexedDbAvailable,
@@ -39,8 +43,21 @@
       if(initialized)return Promise.resolve(status());
       if(initializationPromise)return initializationPromise;
       initializationPromise=(async()=>{
-        try{await idbAdapter.open();indexedDbAvailable=true}
+        try{
+          await idbAdapter.open();indexedDbAvailable=true;
+          if(typeof idbAdapter.get==='function'){
+            const marker=await idbAdapter.get('meta','active_storage');
+            sourceMarker=marker&&marker.value;
+            if(sourceMarker==='localStorage')sourceMarkerStatus='valid';
+            else if(sourceMarker==='indexeddb')sourceMarkerStatus='indexeddb_not_enabled';
+            else if(sourceMarker!==null&&sourceMarker!==undefined)sourceMarkerStatus='invalid';
+          }
+        }
         catch(_error){indexedDbAvailable=false}
+        activeSource='localStorage';
+        if(!root.drafts)throw storageErrors().create('validation_failed','storageManager.drafts.module');
+        draftAdapter=options.draftAdapter||root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,clone});
+        await draftAdapter.initialize();
         initialized=true;
         return status();
       })();
@@ -49,6 +66,11 @@
 
     async function loadState(){
       if(!initialized)await initialize();
+      if(activeSource==='indexeddb'){
+        const record=await idbAdapter.get('portfolio_state','active');
+        if(!record||!Object.prototype.hasOwnProperty.call(record,'payload'))throw storageErrors().create('read_failed','storageManager.loadState.indexeddb');
+        return cloneState(record.payload);
+      }
       return localAdapter.loadMainState();
     }
 
@@ -98,11 +120,12 @@
         const batch=queue.shift();
         persistenceStatus='saving';
         try{
-          localAdapter.saveMainState(batch.snapshot);
+          if(activeSource==='indexeddb')await idbAdapter.put('portfolio_state',{id:'active',updatedAt:new Date().toISOString(),payload:batch.snapshot});
+          else localAdapter.saveMainState(batch.snapshot);
           revision+=1;
           persistenceStatus='saved';
           lastError=null;
-          const result=Object.freeze({revision,persistedAt:new Date().toISOString(),activeSource:'localStorage'});
+          const result=Object.freeze({revision,persistedAt:new Date().toISOString(),activeSource});
           batch.waiters.forEach(waiter=>waiter.resolve(result));
         }catch(error){
           const normalized=storageErrors().normalize(error,'storageManager.saveState','write_failed');
@@ -141,14 +164,16 @@
       return promise;
     }
 
-    function flush(){
-      if(!draining&&!drainScheduled&&!queue.length)return lastError?Promise.reject(lastError):Promise.resolve(status());
-      return new Promise((resolve,reject)=>idleWaiters.push({resolve,reject}));
+    async function flush(){
+      if(draining||drainScheduled||queue.length)await new Promise((resolve,reject)=>idleWaiters.push({resolve,reject}));
+      else if(lastError)throw lastError;
+      if(draftAdapter)await draftAdapter.flush();
+      return status();
     }
 
     function close(){idbAdapter.close()}
 
-    return Object.freeze({
+    const managerFacade={
       initialize,
       loadState,
       saveState,
@@ -157,17 +182,24 @@
       getShadowMigrationPreflight,
       runShadowMigration,
       clearMigrationStaging,
+      getActiveSource:()=>activeSource,
+      getActiveSourceInfo:()=>Object.freeze({activeSource,markerValue:sourceMarker,markerStatus:sourceMarkerStatus,indexedDbActivationEnabled:false}),
+      getDraft:(kind,id)=>draftAdapter.getDraft(kind,id),
+      saveDraft:(kind,id,payload)=>draftAdapter.saveDraft(kind,id,payload),
+      deleteDraft:(kind,id)=>draftAdapter.deleteDraft(kind,id),
+      listDrafts:kind=>draftAdapter.listDrafts(kind),
       getPersistenceStatus:status,
-      close,
-      activeSource:'localStorage'
-    });
+      close
+    };
+    Object.defineProperty(managerFacade,'activeSource',{enumerable:true,get:()=>activeSource});
+    return Object.freeze(managerFacade);
   }
 
   let singleton=null;
   function defaultManager(){if(!singleton)singleton=create();return singleton}
 
   root.manager=Object.freeze({create,STATUS_VALUES});
-  global.StorageManager=Object.freeze({
+  const globalManager={
     initialize:(...args)=>defaultManager().initialize(...args),
     loadState:(...args)=>defaultManager().loadState(...args),
     saveState:(...args)=>defaultManager().saveState(...args),
@@ -176,8 +208,15 @@
     getShadowMigrationPreflight:(...args)=>defaultManager().getShadowMigrationPreflight(...args),
     runShadowMigration:(...args)=>defaultManager().runShadowMigration(...args),
     clearMigrationStaging:(...args)=>defaultManager().clearMigrationStaging(...args),
+    getActiveSource:()=>defaultManager().getActiveSource(),
+    getActiveSourceInfo:()=>defaultManager().getActiveSourceInfo(),
+    getDraft:(...args)=>defaultManager().getDraft(...args),
+    saveDraft:(...args)=>defaultManager().saveDraft(...args),
+    deleteDraft:(...args)=>defaultManager().deleteDraft(...args),
+    listDrafts:(...args)=>defaultManager().listDrafts(...args),
     getPersistenceStatus:(...args)=>defaultManager().getPersistenceStatus(...args),
-    close:()=>defaultManager().close(),
-    activeSource:'localStorage'
-  });
+    close:()=>defaultManager().close()
+  };
+  Object.defineProperty(globalManager,'activeSource',{enumerable:true,get:()=>defaultManager().getActiveSource()});
+  global.StorageManager=Object.freeze(globalManager);
 })(typeof window!=='undefined'?window:globalThis);

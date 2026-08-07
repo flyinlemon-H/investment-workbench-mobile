@@ -1,7 +1,8 @@
 {
     "manifestVersion":  1,
-    "assetVersion":  "sprint04c-shadow-test-20260803",
-    "dataMode":  "safe empty placeholders + browser localStorage + manual JSON import + user-triggered IndexedDB shadow verification",
+    "sourceCommit":  "53fd582a9faa946b2e49b788388cca04a68a6f42",
+    "assetVersion":  "sprint04c-active-cutover-20260807",
+    "dataMode":  "safe empty placeholders + browser localStorage + IndexedDB cutover release candidate",
     "files":  [
                   {
                       "path":  ".nojekyll",
@@ -54,18 +55,18 @@
                   {
                       "path":  "index.html",
                       "role":  "entrypoint",
-                      "bytes":  40602,
-                      "sha256":  "cfbc69340f20990b230e83fc19656814c07874bd6186e82e23c58487a354839a"
+                      "bytes":  42172,
+                      "sha256":  "ca64958e9b9ce925760f6926996d1779420136a8f63c997797665507475982f7"
                   },
                   {
                       "path":  "social_posts.json",
-                      "role":  "empty social data",
+                      "role":  "safe empty social data",
                       "bytes":  3,
                       "sha256":  "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
                   },
                   {
                       "path":  "social_summary.json",
-                      "role":  "empty social summary",
+                      "role":  "safe empty social data",
                       "bytes":  3,
                       "sha256":  "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
                   },
@@ -96,32 +97,44 @@
                   {
                       "path":  "src/app.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  18494,
-                      "sha256":  "d0a92764c69d4a6bb1fb4396c21a9ded6c888e2fb967cde597d4ced34c3bd3a8"
+                      "bytes":  20706,
+                      "sha256":  "37e280acc84fefa08be284e12f48b9fcc60f608d47b5ed6bdb3861d5afde8a26"
                   },
                   {
                       "path":  "src/import-export.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  4638,
-                      "sha256":  "f3afded4501d7412817d506ed409c4aa5d83f23573af44f5b2d5e802a9d23ed5"
+                      "bytes":  7222,
+                      "sha256":  "de6a3eb4c26dab08050b2e2b5d05801ae89ebe582e1cb5a167ce71f2de41e771"
                   },
                   {
                       "path":  "src/market-data-bridge.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  954,
-                      "sha256":  "504e52a524547461ffe918b2ced434aae8d1f954cbb811f34d9ddaa909fd79c1"
+                      "bytes":  1546,
+                      "sha256":  "c02c745c9528f62d0a515c8fac7259c16fff748d9caf8d0f38b91f3d83e6bcbe"
+                  },
+                  {
+                      "path":  "src/multi-tab-protection.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  10945,
+                      "sha256":  "58487517425e6ff66f837a2fc99c1c6aad4fbf7b4ec9cdc7734183dc4d169ebb"
                   },
                   {
                       "path":  "src/operation-entry.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  11722,
-                      "sha256":  "478fcaf5cbd47dabab4a059c92b5dad02471e72811a053bcd768b442155ac7d2"
+                      "bytes":  12440,
+                      "sha256":  "7be27db476717e581c3895bfd71d3dc4998168a16ca08483404866d2f47dbebe"
+                  },
+                  {
+                      "path":  "src/plan-generation-gate.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  8446,
+                      "sha256":  "f707a6cd4e2f130eb41edfef50f211167ac951e93b355a10e4f94d60f10a9695"
                   },
                   {
                       "path":  "src/plan-update-draft.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  12870,
-                      "sha256":  "0eca31b730a107ff515a219bb36cda7401e8ce9e1f70011c80c8c3d907123b8c"
+                      "bytes":  14026,
+                      "sha256":  "75180767ef32c45f9eef2e7d142edf204b5ae523ff6b7d3bfdf32928230e8b0f"
                   },
                   {
                       "path":  "src/position.js",
@@ -132,26 +145,32 @@
                   {
                       "path":  "src/price-refresh.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  12372,
-                      "sha256":  "f4b5dc31df21ae4c6d19659825fb80e5b5eab111e080c0e541df56273c52f51e"
+                      "bytes":  16223,
+                      "sha256":  "df8d77b60109ddaa21120400b6b724c7688131cb69af28e5d3f779f865969147"
                   },
                   {
                       "path":  "src/rebalance.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  5520,
-                      "sha256":  "2dc19cb22dc58e470b3a923391bc5c822eada68066c84b6a96b74ed93bf1e852"
+                      "bytes":  5751,
+                      "sha256":  "6be26de345f58904baeba2933d3f0c8d0b324e97fe4cf5f072868a3424558798"
                   },
                   {
                       "path":  "src/social.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  17636,
-                      "sha256":  "1d07aac37ad742d8f8754cc50694395f485c26d348c949b596e2dd474a79e8fc"
+                      "bytes":  17952,
+                      "sha256":  "c3569b0f83ad0440278abb89c2a0d7826a8cb042345d74b73d9aee9b83185590"
                   },
                   {
                       "path":  "src/state.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  111998,
-                      "sha256":  "766aad0c10f7afbf582673f59720f93bd6893c1dc3961c31e0567aeb014d5c96"
+                      "bytes":  114618,
+                      "sha256":  "7bb10657cd2d05fcad76c6e90bfb6a90b4df6e959265d394d03d72c99540d12b"
+                  },
+                  {
+                      "path":  "src/storage/draft-adapter.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  4720,
+                      "sha256":  "a75435e1d7963a9b532f6fbfc1d3cd000ebe4bc789759ed680ace2fae325e36e"
                   },
                   {
                       "path":  "src/storage/idb-adapter.js",
@@ -186,8 +205,8 @@
                   {
                       "path":  "src/storage/storage-manager.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  6668,
-                      "sha256":  "53b9e945e4ef480578f298043e399f983c86d0bfdbe883c4bbab27dcda39c62a"
+                      "bytes":  9323,
+                      "sha256":  "7fcf7d074bda0cbca853f6027d943800e770ab0f4b2978bee2a9148cdd2cd473"
                   },
                   {
                       "path":  "src/storage/storage-validation.js",
@@ -198,14 +217,14 @@
                   {
                       "path":  "src/ui-render.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  585595,
-                      "sha256":  "c3b127bd73761c2a236cc46a06b691733c17aad991d1d44adf3ec27c40339775"
+                      "bytes":  609675,
+                      "sha256":  "abed9edf492ce477c3b223fd9c4b4896a9d2ac3ee86ee44fe0ccbb74a1afde9f"
                   },
                   {
                       "path":  "src/v13-alpha3-services.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  13069,
-                      "sha256":  "41b1bd694501f36af7c734d762357e22f41ed9abce7cba08e6eca1919c313c46"
+                      "bytes":  13299,
+                      "sha256":  "41b33ec272beb27ab96e23f0c9fd0a8f251b9eed67b20c6a9c90ce0e0c182b59"
                   },
                   {
                       "path":  "src/v13-core-model.js",

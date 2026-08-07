@@ -162,11 +162,46 @@ async function fetchStockPrice(code,type){
   err.sourceErrors=errs;
   throw err;
 }
+const PRICE_REFRESH_UI_STATUSES=Object.freeze(['idle','refreshing','persisting','success','refresh_failed','persistence_failed']);
+const priceRefreshUiStates=new Map();
+const priceRefreshInFlight=new Map();
+function getPriceRefreshUiState(id){
+  const current=priceRefreshUiStates.get(String(id||''));
+  return current?{...current}:{status:'idle',price:null,source:'',updatedAt:'',savedAt:'',error:''};
+}
+function setPriceRefreshUiState(id,status,detail={}){
+  const normalized=PRICE_REFRESH_UI_STATUSES.includes(status)?status:'idle';
+  const next={status:normalized,price:null,source:'',updatedAt:'',savedAt:'',error:'',...detail};
+  priceRefreshUiStates.set(String(id||''),next);
+  return {...next};
+}
+const PRICE_REFRESH_MUTATED_FIELDS=Object.freeze(['currentPrice','currentValue','priceUpdatedAt','valueUpdatedAt','priceSource','lastUnitPrice','dailyChange','priceHistory','technicalData','dataFreshness']);
+function cloneRefreshValue(value){
+  if(value===undefined)return undefined;
+  return typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value));
+}
+function snapshotPriceRefreshBusinessState(stock){
+  return {
+    stateUpdatedAt:state.updatedAt,
+    fields:Object.fromEntries(PRICE_REFRESH_MUTATED_FIELDS.map(key=>[key,{present:Object.prototype.hasOwnProperty.call(stock,key),value:cloneRefreshValue(stock[key])}]))
+  };
+}
+function restorePriceRefreshBusinessState(stock,snapshot){
+  Object.entries(snapshot.fields).forEach(([key,item])=>{if(item.present)stock[key]=cloneRefreshValue(item.value);else delete stock[key]});
+  state.updatedAt=snapshot.stateUpdatedAt;
+}
 async function refreshOnePrice(id,opts={}){
+  const key=String(id||'');
+  if(priceRefreshInFlight.has(key))return priceRefreshInFlight.get(key);
+  const pending=runPriceRefresh(id,opts);
+  priceRefreshInFlight.set(key,pending);
+  try{return await pending}finally{priceRefreshInFlight.delete(key)}
+}
+async function runPriceRefresh(id,opts={}){
   const s=state.stocks.find(x=>x.id===id);
   if(!s)return {ok:false,name:'未知标的',errors:['标的不存在']};
   const isEtf=s.type==='etf';
-  const fail=(msg,errors=[msg])=>{if(!opts.silent)alert(msg);return {ok:false,name:s.name,errors}};
+  const fail=(msg,errors=[msg])=>{setPriceRefreshUiState(s.id,'refresh_failed',{error:errors.join('；')});render();if(!opts.silent)alert(msg);return {ok:false,name:s.name,status:'refresh_failed',errors}};
   if(isCashRow(s))return fail(`「${s.name}」为现金台账，请通过「编辑」手动维护当前市值。`);
   if(!s.code)return fail(`请先给「${s.name}」填写行情代码。`);
   const valid=validateQuoteCode(s.code,s.type);
@@ -175,9 +210,20 @@ async function refreshOnePrice(id,opts={}){
     const shares=Number(s.shares);
     if(isNaN(shares)||shares<=0)return fail(`「${s.name}」没有填写份额，无法用单价计算市值。请先到编辑界面补充份额。`);
   }
+  const before=snapshotPriceRefreshBusinessState(s);
+  setPriceRefreshUiState(s.id,'refreshing');
+  render();
+  let r;
   try{
-    s.syncStatus='updating';saveState();render();
-    const r=await fetchStockPrice(s.code,s.type);
+    r=await fetchStockPrice(s.code,s.type);
+  }catch(err){
+    const errors=err.sourceErrors||[err.message||String(err)];
+    setPriceRefreshUiState(s.id,'refresh_failed',{error:errors.join('；')});
+    render();
+    if(!opts.silent)alert(`${s.name} ${isEtf?'市值':'价格'}刷新失败，已保留原值。\n\n失败原因：\n${formatSourceErrors(errors)}`);
+    return {ok:false,name:s.name,status:'refresh_failed',errors};
+  }
+  try{
     if(isEtf){
       const shares=Number(s.shares);
       s.currentValue=Number((r.price*shares).toFixed(2));
@@ -193,31 +239,43 @@ async function refreshOnePrice(id,opts={}){
     }
     if(cachePriceHistoryFromRefresh(s,r.price,r.updatedAt))touchDataFreshness(s,'technicalUpdatedAt',r.updatedAt);
     touchDataFreshness(s,'priceUpdatedAt',r.updatedAt);
-    s.syncStatus='success';
-    saveState();render();
-    return {ok:true,name:s.name,source:r.source,price:r.price};
+    setPriceRefreshUiState(s.id,'persisting',{price:r.price,source:r.source,updatedAt:r.updatedAt});
+    render();
+    await saveState(state,{critical:true});
+    const savedAt=new Date().toISOString();
+    setPriceRefreshUiState(s.id,'success',{price:r.price,source:r.source,updatedAt:r.updatedAt,savedAt});
+    render();
+    return {ok:true,name:s.name,status:'success',source:r.source,price:r.price,updatedAt:r.updatedAt,savedAt};
   }catch(err){
-    const errors=err.sourceErrors||[err.message||String(err)];
-    s.syncStatus='failed';s.lastSyncError=errors.join('\n');saveState();render();
-    if(!opts.silent)alert(`${s.name} ${isEtf?'市值':'价格'}刷新失败，已保留原值。\n\n失败原因：\n${formatSourceErrors(errors)}`);
-    return {ok:false,name:s.name,errors};
+    restorePriceRefreshBusinessState(s,before);
+    const error=err&&err.message?err.message:String(err);
+    setPriceRefreshUiState(s.id,'persistence_failed',{price:r.price,source:r.source,updatedAt:r.updatedAt,error});
+    render();
+    if(!opts.silent)alert(`${s.name} 已获取最新${isEtf?'市值':'价格'}，但保存失败。当前仍使用刷新前的数据，请重试。`);
+    return {ok:false,name:s.name,status:'persistence_failed',persistenceFailed:true,errors:[error]};
   }
 }
 function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
 async function fetchFxRate(silent){
   const btn=document.getElementById('fxBtn');
   if(btn)btn.textContent='汇率刷新中...';
+  let r;
   try{
-    const r=await fetchFromYahoo('HKDCNY=X');
+    r=await fetchFromYahoo('HKDCNY=X');
     const rate=Number(Number(r.price).toFixed(4));
     if(!(rate>0)||rate>2)throw new Error('返回汇率数值异常 '+r.price);
-    state.fx={hkdcny:rate,updatedAt:r.updatedAt,source:r.source};
-    saveState();render();
-    return true;
   }catch(err){
     render();
     const errors=err.sourceErrors||[err.message||String(err)];
     if(!silent)alert('HKD→CNY 汇率联网获取失败，仍使用原汇率 '+fxHKD()+'。\n\n原因：\n'+formatSourceErrors(errors)+'\n\n可点击「汇率」按钮手动输入。');
+    return false;
+  }
+  const previous=cloneRefreshValue(state.fx),stateUpdatedAt=state.updatedAt;
+  state.fx={hkdcny:Number(Number(r.price).toFixed(4)),updatedAt:r.updatedAt,source:r.source};
+  try{await saveState(state,{critical:true});render();return true}
+  catch(error){
+    state.fx=previous;state.updatedAt=stateUpdatedAt;render();
+    if(!silent)alert('已获取最新汇率，但保存失败。当前仍使用原汇率，请重试。');
     return false;
   }
 }
@@ -229,8 +287,10 @@ async function onFxClick(){
   if(t===''){await fetchFxRate(false);return}
   const v=Number(t);
   if(isNaN(v)||v<=0||v>2)return alert('汇率数值不合理，请输入 0~2 之间的数字，例如 0.92。');
+  const previous=cloneRefreshValue(state.fx),stateUpdatedAt=state.updatedAt;
   state.fx={hkdcny:Number(v.toFixed(4)),updatedAt:new Date().toISOString().slice(0,10),source:'手动'};
-  saveState();render();
+  try{await saveState(state,{critical:true});render()}
+  catch(error){state.fx=previous;state.updatedAt=stateUpdatedAt;render();alert('汇率保存失败，仍使用原汇率。请重试。')}
 }
 async function refreshAllPrices(){
   const targets=state.stocks.filter(s=>s.code&&!isCashRow(s));

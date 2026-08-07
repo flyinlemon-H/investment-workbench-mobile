@@ -1957,13 +1957,20 @@ function normalizeAlpha3Compatibility(s){s=(s&&typeof s==='object'&&!Array.isArr
 function normalize(s){s=normalizeAlpha3Compatibility(s);if(typeof normalizeV13RuleConfig==='function')s.ruleConfig=normalizeV13RuleConfig(s.ruleConfig||s.rules||s.config||{});if(!s.fx||!(Number(s.fx.hkdcny)>0))s.fx={hkdcny:DEFAULT_HKD_CNY,updatedAt:'',source:'默认'};s.stocks=(s.stocks||[]).map(x=>{if(x.currency===undefined)x.currency='';if(x.currentPrice===undefined)x.currentPrice='';if(x.currentValue===undefined)x.currentValue='';if(x.priceUpdatedAt===undefined)x.priceUpdatedAt='';if(x.valueUpdatedAt===undefined)x.valueUpdatedAt='';if(x.code===undefined)x.code=DEFAULT_CODES[x.id]||'';if(x.priceSource===undefined)x.priceSource='';if(x.trimPct===undefined)x.trimPct='';if(x.trimToPct===undefined)x.trimToPct='';if(x.capPct===undefined)x.capPct='';if(x.syncStatus===undefined)x.syncStatus='';if(x.tradePlan!==undefined&&(!x.tradePlan||typeof x.tradePlan!=='object'||Array.isArray(x.tradePlan)))x.tradePlan=null;if(!x.id)x.id=uid();if(!x.type)x.type='holding';if(!x.role)x.role=x.type==='watching'?'观察仓':'核心仓';if(!x.theme)x.theme='其他';if(!Array.isArray(x.plans))x.plans=[];const refPrice=x.type==='etf'?(Number(x.lastUnitPrice)||((Number(x.currentValue)>0&&Number(x.shares)>0)?Number(x.currentValue)/Number(x.shares):null)):(Number(x.currentPrice)||null);x.plans=x.plans.map(p=>{if(!p.triggerOn)p.triggerOn=inferTriggerOn(refPrice,p.price,p.action);return p});if(!x.thesis)x.thesis=x.notes||'';if(!x.buyRule){const buys=x.plans.filter(p=>(p.action||'buy')==='buy');x.buyRule=buys.map(p=>`${p.price}：${p.note||'加仓'}`).join('；')||'低于目标仓位且逻辑未变时再考虑。'}if(!x.sellRule){const sells=x.plans.filter(p=>p.action==='sell');x.sellRule=sells.map(p=>`${p.price}：${p.note||'减仓'}`).join('；')||(x.type==='etf'?'不设机械止损，只按目标仓位再平衡。':'逻辑破坏、估值过热或仓位超标时处理。')}return normalizeStockAnalysis(x,{ruleConfig:s.ruleConfig})});return s}
 async function loadState(){
   const raw=await StorageManager.loadState();
-  state=raw?normalize(raw):normalize({stocks:[],updatedAt:null});
+  if(typeof createValidatedCandidateSnapshot!=='function')throw {type:'validation_failed',message:'State candidate validation is unavailable.'};
+  const candidate=createValidatedCandidateSnapshot(raw===null?{stocks:[],updatedAt:null}:raw,{touchUpdatedAt:false});
+  state=candidate;
+  if(typeof MultiTabProtection!=='undefined')MultiTabProtection.observeLoadedState(candidate);
   return state;
 }
 function saveState(nextState=state,options={}){
   state=normalize(nextState);
-  state.updatedAt=Date.now();
-  const pending=StorageManager.saveState(state,options);
+  state.updatedAt=Math.max(Date.now(),(Number(state.updatedAt)||0)+1);
+  const snapshot=typeof structuredClone==='function'?structuredClone(state):JSON.parse(JSON.stringify(state));
+  const persist=value=>StorageManager.saveState(value,options);
+  const pending=typeof MultiTabProtection!=='undefined'
+    ?MultiTabProtection.runProtectedSave(snapshot,persist,{critical:options.critical===true})
+    :persist(snapshot);
   void pending.catch(()=>{});
   return pending;
 }

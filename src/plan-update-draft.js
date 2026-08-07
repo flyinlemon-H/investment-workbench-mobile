@@ -1,5 +1,6 @@
 (function(){
   const STORAGE_KEY='v13_plan_update_drafts_v1';
+  const DRAFT_KIND='plan_update';
   const ACTIONS=new Set(['add_review','add','buy','reduce_review','reduce','sell','take_profit','hold_review','hold','observe','risk_review','stop_loss','risk']);
   const STATUSES=new Set(['active','draft','pending_review']);
   const required=['draft_id','source_request_id','source_decision_id','symbol','draft_status','summary','plan_strategy','proposed_plans','plans_to_archive','risk_flags','notes','created_at'];
@@ -13,12 +14,22 @@
   function resolveUnit(stock){const strategy=typeof normalizeStrategy==='function'?normalizeStrategy(stock.strategy,stock):obj(stock.strategy),configured=Number(strategy.minTradeUnit),explicit=Boolean(strategy.minTradeUnitConfirmed===true||String(strategy.minTradeUnitSource||'').trim()),code=symbol(stock.code||stock.symbol);if((configured>1||explicit&&configured>=1))return {value:configured,source:'stock_config',reliable:true};if(code.endsWith('.SS')||code.endsWith('.SZ')||code.endsWith('.SH'))return {value:100,source:'cn_market_default',reliable:true};if(code.endsWith('.HK'))return {value:null,source:'unknown_hk_board_lot',reliable:false};return {value:null,source:'unknown',reliable:false}}
   function stableStringify(value){if(Array.isArray(value))return '['+value.map(stableStringify).join(',')+']';if(value&&typeof value==='object'){return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+stableStringify(value[key])).join(',')+'}'}return JSON.stringify(value)}
   async function snapshotHash(plans){const bytes=new TextEncoder().encode(stableStringify(arr(plans))),hash=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(hash)).map(v=>v.toString(16).padStart(2,'0')).join('')}
-  function load(){try{return obj(JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'))}catch(_){return {}}}
-  function savePromptMeta(requestId,decisionId,snapshot){const all=load(),previous=all[requestId]||{};all[requestId]={...previous,status:previous.draft?'pending_confirmation':'prompt_generated',prompt_generated_at:new Date().toISOString(),prompt_plan_snapshot_hash:snapshot,source_decision_id:decisionId};localStorage.setItem(STORAGE_KEY,JSON.stringify(all));return all[requestId]}
-  function saveRequestDraft(requestId,draft,validation,currentPlanSnapshotHash){const all=load(),previous=all[requestId]||{},now=new Date().toISOString(),snapshot=previous.prompt_plan_snapshot_hash||currentPlanSnapshotHash;all[requestId]={...previous,draft,validation,current_plan_snapshot_hash:snapshot,status:validation.business_valid?'pending_confirmation':'draft_imported',draft_imported_at:now,validation_status:validation.business_valid?'validated':'failed',saved_at:now};localStorage.setItem(STORAGE_KEY,JSON.stringify(all));return all[requestId]}
-  function markApplicationRequest(requestId,application){const all=load(),previous=all[requestId]||{};all[requestId]={...previous,status:'application_request_generated',application_request:application,application_request_generated_at:new Date().toISOString()};localStorage.setItem(STORAGE_KEY,JSON.stringify(all));return all[requestId]}
-  function abandon(requestId){const all=load();delete all[requestId];localStorage.setItem(STORAGE_KEY,JSON.stringify(all))}
-  function saved(requestId){return load()[requestId]||null}
+  function manager(){if(!window.StorageManager)throw new Error('StorageManager is unavailable.');return window.StorageManager}
+  async function persist(requestId,value){
+    const previous=saved(requestId),write=()=>manager().saveDraft(DRAFT_KIND,requestId,value);
+    if(window.MultiTabProtection&&typeof window.MultiTabProtection.runProtectedDraftSave==='function')await window.MultiTabProtection.runProtectedDraftSave(DRAFT_KIND,requestId,previous,value,write);
+    else await write();
+    return value;
+  }
+  async function savePromptMeta(requestId,decisionId,snapshot){const previous=saved(requestId)||{},value={...previous,status:previous.draft?'pending_confirmation':'prompt_generated',prompt_generated_at:new Date().toISOString(),prompt_plan_snapshot_hash:snapshot,source_decision_id:decisionId};return persist(requestId,value)}
+  async function saveRequestDraft(requestId,draft,validation,currentPlanSnapshotHash){const previous=saved(requestId)||{},now=new Date().toISOString(),snapshot=previous.prompt_plan_snapshot_hash||currentPlanSnapshotHash,value={...previous,draft,validation,current_plan_snapshot_hash:snapshot,status:validation.business_valid?'pending_confirmation':'draft_imported',draft_imported_at:now,validation_status:validation.business_valid?'validated':'failed',saved_at:now};return persist(requestId,value)}
+  async function markApplicationRequest(requestId,application){const previous=saved(requestId)||{},value={...previous,status:'application_request_generated',application_request:application,application_request_generated_at:new Date().toISOString()};return persist(requestId,value)}
+  async function abandon(requestId){
+    const previous=saved(requestId),write=()=>manager().deleteDraft(DRAFT_KIND,requestId);
+    if(window.MultiTabProtection&&typeof window.MultiTabProtection.runProtectedDraftSave==='function')await window.MultiTabProtection.runProtectedDraftSave(DRAFT_KIND,requestId,previous,null,write);
+    else await write();
+  }
+  function saved(requestId){return manager().getDraft(DRAFT_KIND,requestId)}
   function context(reviewId,stock){
     const raw=window.AiDecisionReviewReader&&window.AiDecisionReviewReader.planUpdateContextForReview?window.AiDecisionReviewReader.planUpdateContextForReview(reviewId):null;
     if(!raw)return null;
@@ -37,6 +48,8 @@
     const s=stock,strategy=typeof normalizeStrategy==='function'?normalizeStrategy(s.strategy,s):obj(s.strategy);
     const position=typeof getPositionInfo==='function'?getPositionInfo(s,typeof getEstimatedTotalAssets==='function'?getEstimatedTotalAssets():0):null;
     const currentPrice=typeof getComparablePrice==='function'?getComparablePrice(s):(s.currentPrice||s.lastUnitPrice||null);
+    const readiness=window.PlanGenerationGate&&window.PlanGenerationGate.evaluatePlanGenerationReadiness?window.PlanGenerationGate.evaluatePlanGenerationReadiness({stock:s,currentPrice,existingPlans:s.plans}):null;
+    if(readiness&&!readiness.canGenerate)throw new Error('无法生成新版计划：'+readiness.blockingReasons.join('；'));
     const payload={
       generated_at:new Date().toISOString(),source_decision_id:ctx.outcome.decision_id,
       stock:{name:s.name,symbol:s.code||s.symbol,marketType:String(s.code||'').endsWith('.HK')?'HK':(s.type==='etf'?'CN_ETF':'CN'),role:s.role,theme:s.theme,investmentStyle:strategy.investmentStyle},
@@ -46,7 +59,9 @@
       decision_outcome:ctx.outcome,discussion_result:ctx.discussion,user_constraints:arr(ctx.discussion.user_constraints),requested_changes:arr(ctx.request.requested_changes),plan_update_request:ctx.request
     };
     const schema={draft_id:'',source_request_id:ctx.request.request_id,source_decision_id:ctx.request.source_decision_id,symbol:ctx.request.symbol,draft_status:'draft',summary:'',plan_strategy:'',proposed_plans:[{plan_id:null,action_type:'add_review',trigger_price:null,quantity:null,status:'active',priority:1,reason:'',conditions:[],invalidation_conditions:[],source:'ai_plan_update_draft',valid_until:'YYYY-MM-DD'}],plans_to_archive:[],plans_to_delete:[],risk_flags:[],notes:[],created_at:new Date().toISOString()};
-    return ['你是一名谨慎的投资计划草案助手。','只生成计划草案，不输出确定性买卖命令，不自动执行交易，不修改持仓。','quantity不确定时填null；trigger_price无明确依据时填null；必须尊重minTradeUnit。','避免距离现价过远且无实际复核价值的计划；优先保留4～6条真正有效的active plans。','所有JSON引号使用英文双引号。严格输出可解析JSON，不要Markdown或代码块。','','当前上下文：',JSON.stringify(payload,null,2),'','严格输出结构：',JSON.stringify(schema,null,2)].join('\n');
+    const body=['你是一名谨慎的投资计划草案助手。','只生成计划草案，不输出确定性买卖命令，不自动执行交易，不修改持仓。','quantity不确定时填null；trigger_price无明确依据时填null；必须尊重minTradeUnit。','避免距离现价过远且无实际复核价值的计划；优先保留4～6条真正有效的active plans。','所有JSON引号使用英文双引号。严格输出可解析JSON，不要Markdown或代码块。','','当前上下文：',JSON.stringify(payload,null,2),'','严格输出结构：',JSON.stringify(schema,null,2)].join('\n');
+    const warning=readiness&&window.PlanGenerationGate.warningHeader?window.PlanGenerationGate.warningHeader(readiness):'';
+    return warning?warning+'\n'+body:body;
   }
   function validate(draft,ctx){
     const errors=[],warnings=[],d=obj(draft),request=obj(ctx&&ctx.request),stock=ctx&&ctx.stock||{};
@@ -85,5 +100,5 @@
     arr(draft&&draft.proposed_plans).forEach(p=>{const id=planId(p);if(id&&current.has(id)){used.add(id);rows.push({change:JSON.stringify(comparable(current.get(id)))===JSON.stringify(comparable(p))?'保留':'修改',plan_id:id,current:current.get(id),proposed:p})}else rows.push({change:'新增',plan_id:id,current:null,proposed:p})});
     current.forEach((p,id)=>{if(deletes.has(id))rows.push({change:'删除建议',plan_id:id,current:p,proposed:null});else if(archives.has(id))rows.push({change:'归档',plan_id:id,current:p,proposed:null});else if(!used.has(id))rows.push({change:'保留',plan_id:id,current:p,proposed:p})});return rows;
   }
-  window.PlanUpdateDraft={context,eligible,prompt,validate,savePromptMeta,saveRequestDraft,markApplicationRequest,abandon,saved,diff,formalPlan,snapshotHash,stableStringify,resolveUnit,storageKey:STORAGE_KEY};
+  window.PlanUpdateDraft={context,eligible,prompt,validate,savePromptMeta,saveRequestDraft,markApplicationRequest,abandon,saved,diff,formalPlan,snapshotHash,stableStringify,resolveUnit,storageKey:STORAGE_KEY,draftKind:DRAFT_KIND};
 })();
