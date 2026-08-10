@@ -1,7 +1,7 @@
 {
     "manifestVersion":  1,
-    "sourceCommit":  "53fd582a9faa946b2e49b788388cca04a68a6f42",
-    "assetVersion":  "sprint04c-active-cutover-20260807",
+    "sourceCommit":  "f6a3c38b0158f122ce1a68e54ba2b80432e8344a",
+    "assetVersion":  "sprint04c-web-repair-20260810",
     "dataMode":  "safe empty placeholders + browser localStorage + IndexedDB cutover release candidate",
     "files":  [
                   {
@@ -55,8 +55,8 @@
                   {
                       "path":  "index.html",
                       "role":  "entrypoint",
-                      "bytes":  41929,
-                      "sha256":  "49c03d337a9b513d3f3c0b494f8ec927628c1328104a87dbc19cafdd41bb35f1"
+                      "bytes":  42061,
+                      "sha256":  "c23d61f8792bcc2e7358171ff122b18732db46071efcb887a54e65256afe9471"
                   },
                   {
                       "path":  "social_posts.json",
@@ -217,8 +217,8 @@
                   {
                       "path":  "src/ui-render.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  602141,
-                      "sha256":  "85613a323de93370145e613fd9fec56447a3af5f3ed14e5989e76d77f664a484"
+                      "bytes":  601749,
+                      "sha256":  "b817a328065ff91663d0a80bc2ddacc37790ca071f7fa02cd4ade63f679ddcaf"
                   },
                   {
                       "path":  "src/v13-alpha3-services.js",
