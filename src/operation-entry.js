@@ -88,9 +88,36 @@
     const now=new Date().toISOString(),draft=savedItem.draft;
     return {application_id:uuid(),draft_id:draft.draft_id,source_type:draft.source_type,source_request_id:draft.source_request_id,source_decision_id:draft.source_decision_id,source_review_id:draft.source_review_id,symbol:draft.symbol,task_type:sourceType(ctx)==='operation_request'?ctx.record.taskType:'manual_operation',current_position_snapshot_hash:currentHash,previous_shares:draft.previous_shares,new_shares:draft.new_shares,previous_avg_cost:draft.previous_avg_cost,new_avg_cost:validation.normalized_new_avg_cost,operation_date:draft.operation_date,note:draft.note,user_confirmed_at:now,status:'confirmed_pending_application',created_at:now,schema_version:'1.0'};
   }
-  function appliedStatus(ctx){
+  function clone(value){return typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value))}
+  function restore(target,snapshot){Object.keys(target).forEach(key=>delete target[key]);Object.assign(target,clone(snapshot))}
+  function stateStock(appState,ctx){
+    const stocks=arr(appState&&appState.stocks),id=text(ctx&&ctx.stock&&ctx.stock.id),code=symbol(ctx&&ctx.stock&&(ctx.stock.code||ctx.stock.symbol));
+    const matches=stocks.filter(stock=>(id&&text(stock&&stock.id)===id)||symbol(stock&&(stock.code||stock.symbol))===code);
+    const unique=matches.filter((stock,index)=>matches.indexOf(stock)===index);
+    if(unique.length!==1)throw new Error('标的数据异常，无法安全更新正式持仓。');
+    return unique[0];
+  }
+  function directApplyAudit(application,appliedAt){
+    return {audit_id:'operation_direct_'+application.application_id,application_id:application.application_id,draft_id:application.draft_id,source_type:application.source_type,source_request_id:application.source_request_id,source_decision_id:application.source_decision_id,source_review_id:application.source_review_id,symbol:application.symbol,result:'applied',status:'applied',previous_shares:application.previous_shares,new_shares:application.new_shares,previous_avg_cost:application.previous_avg_cost,new_avg_cost:application.new_avg_cost,operation_date:application.operation_date,note:application.note,record_source:'manual_operation_entry',createdAt:application.created_at,updatedAt:appliedAt,created_at:application.created_at,updated_at:appliedAt,applied_at:appliedAt};
+  }
+  async function applyDirectResult(appState,ctx,savedItem,persistState,appliedAt){
+    if(!appState||typeof appState!=='object'||Array.isArray(appState))throw new Error('正式数据状态无效。');
+    if(typeof persistState!=='function')throw new Error('正式保存接口不可用。');
+    const before=clone(appState),application=await createApplicationRequest(ctx,savedItem),target=stateStock(appState,ctx);
+    if(target.shares!==application.previous_shares||!valueEqual(target.avgCost,application.previous_avg_cost))throw new Error('当前持仓已变化，请重新加载最新数据后再试。');
+    const timestamp=appliedAt||new Date().toISOString(),audit=directApplyAudit(application,timestamp);
+    target.shares=application.new_shares;
+    target.avgCost=application.new_avg_cost;
+    target.updatedAt=timestamp;
+    appState.operationApplicationAudits=arr(appState.operationApplicationAudits).filter(item=>item&&item.application_id!==application.application_id).concat([audit]);
+    try{await persistState(appState)}catch(error){restore(appState,before);throw error}
+    return {application,audit};
+  }
+  function appliedStatus(ctx,appState){
     const audit=obj(ctx&&ctx.record&&ctx.record.raw&&ctx.record.raw.operationApplicationAudit);
     if(audit.result==='applied')return {source:'audit',...audit};
+    const localAudits=arr(appState&&appState.operationApplicationAudits).filter(item=>item&&item.result==='applied'&&symbol(item.symbol)===symbol(ctx&&ctx.stock&&(ctx.stock.code||ctx.stock.symbol))).sort((left,right)=>text(right.applied_at||right.updated_at).localeCompare(text(left.applied_at||left.updated_at)));
+    if(localAudits.length)return {source:'state',...localAudits[0]};
     const rows=arr(window.OPERATION_APPLICATION_STATUS&&window.OPERATION_APPLICATION_STATUS.applications),bridge=rows.find(item=>symbol(item&&item.symbol)===symbol(ctx&&ctx.stock&&(ctx.stock.code||ctx.stock.symbol))&&item.status==='applied');
     if(bridge)return {source:'bridge',...bridge};
     const local=saved(contextKey(ctx));
@@ -100,5 +127,5 @@
   function valueEqual(left,right){const ln=left===''||left===null||left===undefined?null:Number(left),rn=right===''||right===null||right===undefined?null:Number(right);return Number.isFinite(ln)&&Number.isFinite(rn)?ln===rn:left===right}
   function zeroCostAllowed(formal,value){if(typeof formal==='string')return value===''||value===null||Number(value)===0;if(formal===null)return value===null||value===''||Number(value)===0;return value===''||value===null||Number(value)===0}
   function uuid(){if(crypto.randomUUID)return crypto.randomUUID();const values=new Uint8Array(16);crypto.getRandomValues(values);values[6]=(values[6]&15)|64;values[8]=(values[8]&63)|128;const hex=Array.from(values).map(v=>v.toString(16).padStart(2,'0')).join('');return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20)}
-  window.OperationEntry={context,manualContext,latestContext,eligible,contextKey,defaultDraft,validate,saveDraft,saved,abandon,snapshotHash,createApplicationRequest,markApplicationRequest,appliedStatus,positionPayload,positionChange,storageKey:STORAGE_KEY,draftKind:DRAFT_KIND};
+  window.OperationEntry={context,manualContext,latestContext,eligible,contextKey,defaultDraft,validate,saveDraft,saved,abandon,snapshotHash,createApplicationRequest,markApplicationRequest,applyDirectResult,directApplyAudit,appliedStatus,positionPayload,positionChange,storageKey:STORAGE_KEY,draftKind:DRAFT_KIND};
 })();
