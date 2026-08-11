@@ -106,11 +106,29 @@ function showStorageInitializationError(error){
     main.appendChild(guidance);main.appendChild(retryButton);main.appendChild(restoreButton);
   }
 }
+function showCutoverRecovery(){
+  const main=document.getElementById('main');
+  if(!main)return;
+  document.querySelectorAll('.tabs button,.toolbar button,#saveBtn').forEach(control=>{control.disabled=true});
+  if(document.body)document.body.dataset.storageRecoveryRequired='true';
+  main.dataset.storageState='recovery_required';
+  main.textContent='本地存储切换未完成。业务页面已锁定，未覆盖或删除 legacy localStorage。';
+  const guidance=document.createElement('p');
+  guidance.textContent='可检查状态后重试激活、明确选择继续使用 legacy 数据，或从最新 JSON 备份恢复。系统不会自动切换数据源。';
+  const retry=document.createElement('button');retry.type='button';retry.className='btn';retry.textContent='重试 IndexedDB 激活';
+  retry.addEventListener('click',async()=>{try{await StorageManager.retryActiveCutover({withExclusiveLock:task=>MultiTabProtection.runExclusiveCutover(task)});location.reload()}catch(_error){showCutoverRecovery()}});
+  const legacy=document.createElement('button');legacy.type='button';legacy.className='btn ghost';legacy.textContent='继续使用 legacy localStorage';
+  legacy.addEventListener('click',async()=>{if(typeof confirm==='function'&&!confirm('确认继续使用保留的 legacy localStorage？不会删除 IndexedDB staging。'))return;try{await StorageManager.recoverUsingLegacy();location.reload()}catch(_error){showCutoverRecovery()}});
+  const restore=document.createElement('button');restore.type='button';restore.className='btn ghost';restore.textContent='从最新 JSON 备份恢复';
+  restore.addEventListener('click',()=>{if(typeof importData==='function')importData()});
+  main.appendChild(guidance);main.appendChild(retry);main.appendChild(legacy);main.appendChild(restore);
+}
 function migrationStatusText(record){
   const status=record&&record.status||'not_started';
   if(status==='copying')return '正在安全复制旧本地数据。当前数据源：localStorage。';
   if(status==='validating')return '正在校验 IndexedDB staging。当前数据源：localStorage。';
   if(status==='ready')return '已完成安全复制与校验，但尚未切换存储。当前数据源：localStorage。';
+  if(status==='completed')return 'IndexedDB 已成为当前数据源；legacy localStorage 已保留为只读回退副本。';
   if(status==='failed')return '安全复制或校验失败，旧 localStorage 数据仍在使用。';
   const detected=Boolean(record&&record.sourceKeysPresent&&record.sourceKeysPresent.length);
   return detected?'检测到旧数据，可以开始 Shadow Verification。当前数据源：localStorage。':'未检测到可供 Shadow Verification 的旧数据。当前数据源：localStorage。';
@@ -137,8 +155,9 @@ function evaluateShadowCapacity(preflight,estimate){
   const free=quota-usage;
   return Object.freeze({available:true,usage,quota,free,required,sufficient:free>=required});
 }
-function canStartShadowMigration(backupConfirmed,capacity,record){
-  return Boolean(backupConfirmed&&capacity&&capacity.sufficient&&record&&record.status!=='ready'&&record.sourceKeysPresent&&record.sourceKeysPresent.length);
+function canStartShadowMigration(backupConfirmed,capacity,record,preflight){
+  const alreadyCurrent=record&&record.status==='ready'&&(!preflight||isCurrentShadowReady(record,preflight));
+  return Boolean(backupConfirmed&&capacity&&capacity.sufficient&&record&&!alreadyCurrent&&record.sourceKeysPresent&&record.sourceKeysPresent.length);
 }
 async function readShadowStorageCapacity(preflight){
   if(!navigator.storage||typeof navigator.storage.estimate!=='function')return evaluateShadowCapacity(preflight,null);
@@ -179,6 +198,18 @@ function shadowReadyText(record){
     `Semantic checksum 摘要：${truncatedChecksum(record&&record.semanticChecksum)||'—'}`,
     '尚未切换存储。请勿删除旧本地数据。'
   ].join('\n');
+}
+function cutoverCompletedText(record){
+  return [
+    '状态：正式存储切换完成',
+    '当前数据源：IndexedDB',
+    `切换时间：${record&&record.completedAt||'—'}`,
+    `Semantic checksum 摘要：${truncatedChecksum(record&&record.semanticChecksum)||'—'}`,
+    'legacy localStorage 已保留为只读回退副本，请勿删除。'
+  ].join('\n');
+}
+function isCurrentShadowReady(record,preflight){
+  return Boolean(record&&record.status==='ready'&&preflight&&preflight.sourceChecksumPrefix&&record.sourceChecksum&&preflight.sourceChecksumPrefix===record.sourceChecksum.slice(0,10));
 }
 function ensureShadowMigrationPanel(){
   let panel=document.getElementById('shadowMigrationPanel');
@@ -224,6 +255,8 @@ function ensureShadowMigrationPanel(){
   clearButton.type='button';
   clearButton.className='btn ghost';
   clearButton.textContent='清理验证副本';
+  const cutoverButton=document.createElement('button');
+  cutoverButton.id='activeStorageCutoverBtn';cutoverButton.type='button';cutoverButton.className='btn';cutoverButton.textContent='切换到 IndexedDB';
   panel.appendChild(guidance);
   panel.appendChild(status);
   panel.appendChild(summary);
@@ -232,13 +265,14 @@ function ensureShadowMigrationPanel(){
   panel.appendChild(button);
   panel.appendChild(cancelButton);
   panel.appendChild(clearButton);
+  panel.appendChild(cutoverButton);
   main.parentNode.insertBefore(panel,main);
   exportButton.addEventListener('click',()=>{if(typeof exportShadowVerificationBackup==='function')exportShadowVerificationBackup()});
   backupCheckbox.addEventListener('change',()=>{shadowMigrationUiState.backupConfirmed=backupCheckbox.checked===true;updateShadowMigrationPanel(shadowMigrationUiState.record)});
   cancelButton.addEventListener('click',()=>{shadowMigrationUiState.backupConfirmed=false;backupCheckbox.checked=false;updateShadowMigrationPanel(shadowMigrationUiState.record)});
   button.addEventListener('click',async()=>{
     await refreshShadowMigrationPreflight();
-    if(!canStartShadowMigration(shadowMigrationUiState.backupConfirmed,shadowMigrationUiState.capacity,shadowMigrationUiState.record))return;
+    if(!canStartShadowMigration(shadowMigrationUiState.backupConfirmed,shadowMigrationUiState.capacity,shadowMigrationUiState.record,shadowMigrationUiState.preflight))return;
     button.disabled=true;
     try{
       const result=await StorageManager.runShadowMigration({onStatus:updateShadowMigrationPanel});
@@ -260,6 +294,17 @@ function ensureShadowMigrationPanel(){
     }catch(error){updateShadowMigrationPanel({status:'failed',errorCode:error&&error.type||'unknown_storage_error'})}
     finally{clearButton.disabled=false}
   });
+  cutoverButton.addEventListener('click',async()=>{
+    if(!shadowMigrationUiState.backupConfirmed||!shadowMigrationUiState.record||shadowMigrationUiState.record.status!=='ready')return;
+    if(typeof confirm==='function'&&!confirm('确认将已校验 staging 原子激活为 IndexedDB 正式数据源？legacy localStorage 将保留且不会删除。'))return;
+    cutoverButton.disabled=true;setShadowMigrationEditLock(true);let completed=false;
+    try{
+      const result=await StorageManager.executeActiveCutover({withExclusiveLock:task=>MultiTabProtection.runExclusiveCutover(task)});
+      updateShadowMigrationPanel({status:'completed',completedAt:result.marker&&result.marker.cutoverAt,validationSummary:result.validationSummary||{},semanticChecksum:result.marker&&result.marker.semanticChecksum});
+      completed=true;render();
+    }catch(_error){showCutoverRecovery()}
+    finally{if(completed)setShadowMigrationEditLock(false)}
+  });
   return panel;
 }
 function setShadowMigrationEditLock(locked){
@@ -277,15 +322,22 @@ function updateShadowMigrationPanel(record){
   const button=panel.querySelector?panel.querySelector('#shadowMigrationBtn'):document.getElementById('shadowMigrationBtn');
   const summary=panel.querySelector?panel.querySelector('#shadowMigrationSummary'):document.getElementById('shadowMigrationSummary');
   const clearButton=panel.querySelector?panel.querySelector('#shadowMigrationClearBtn'):document.getElementById('shadowMigrationClearBtn');
+  const cutoverButton=panel.querySelector?panel.querySelector('#activeStorageCutoverBtn'):document.getElementById('activeStorageCutoverBtn');
   panel.dataset.migrationStatus=record&&record.status||'not_started';
   if(status)status.textContent=migrationStatusText(record);
-  if(summary)summary.textContent=record&&record.status==='ready'?shadowReadyText(record):shadowPreflightText(shadowMigrationUiState.preflight,shadowMigrationUiState.capacity);
+  const currentReady=isCurrentShadowReady(record,shadowMigrationUiState.preflight);
+  if(summary)summary.textContent=record&&record.status==='completed'?cutoverCompletedText(record):(currentReady?shadowReadyText(record):(record&&record.status==='ready'?'staging 已过期，请重新执行安全复制验证。\n'+shadowPreflightText(shadowMigrationUiState.preflight,shadowMigrationUiState.capacity):shadowPreflightText(shadowMigrationUiState.preflight,shadowMigrationUiState.capacity)));
   const running=Boolean(record&&['copying','validating'].includes(record.status));
   setShadowMigrationEditLock(running);
   if(button){
-    button.disabled=Boolean(running||!canStartShadowMigration(shadowMigrationUiState.backupConfirmed,shadowMigrationUiState.capacity,record));
+    button.disabled=Boolean(running||!canStartShadowMigration(shadowMigrationUiState.backupConfirmed,shadowMigrationUiState.capacity,record,shadowMigrationUiState.preflight));
   }
   if(clearButton)clearButton.disabled=Boolean(running||!(record&&['ready','failed'].includes(record.status)));
+  if(cutoverButton){
+    const sourceInfo=StorageManager&&typeof StorageManager.getActiveSourceInfo==='function'?StorageManager.getActiveSourceInfo():{};
+    cutoverButton.hidden=!sourceInfo.indexedDbActivationEnabled||sourceInfo.activeSource==='indexeddb';
+    cutoverButton.disabled=Boolean(running||!shadowMigrationUiState.backupConfirmed||!currentReady);
+  }
 }
 async function refreshShadowMigrationPreflight(){
   if(!StorageManager||typeof StorageManager.getShadowMigrationPreflight!=='function')return;
@@ -327,7 +379,7 @@ async function activateLoadedApplication(){
 }
 async function retryStorageRecovery(){
   showStorageLoadingShell();
-  try{await StorageManager.initialize();await loadState()}
+  try{const initialized=await StorageManager.initialize();if(initialized.storageState==='recovery_required'){showCutoverRecovery();return Object.freeze({status:'recovery_required'})}await loadState()}
   catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'unknown_storage_error'})}
   try{return await activateLoadedApplication()}catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'write_failed'})}
 }
@@ -335,7 +387,8 @@ async function resumeApplicationAfterRecovery(){return activateLoadedApplication
 async function bootstrapApplication(){
   showStorageLoadingShell();
   try{
-    await StorageManager.initialize();
+    const initialized=await StorageManager.initialize();
+    if(initialized.storageState==='recovery_required'){showCutoverRecovery();return Object.freeze({status:'recovery_required'})}
     await loadState();
   }catch(error){
     showStorageInitializationError(error);
@@ -347,5 +400,5 @@ const applicationReady=bootstrapApplication();
 window.ApplicationBootstrap=Object.freeze({ready:applicationReady});
 window.StorageRecovery=Object.freeze({retry:retryStorageRecovery,resumeAfterBackup:resumeApplicationAfterRecovery});
 window.ShadowMigrationUi=Object.freeze({
-  formatStorageBytes,truncatedChecksum,evaluateShadowCapacity,canStartShadowMigration,shadowPreflightText,shadowReadyText,refresh:refreshShadowMigrationPanel
+  formatStorageBytes,truncatedChecksum,evaluateShadowCapacity,canStartShadowMigration,isCurrentShadowReady,shadowPreflightText,shadowReadyText,cutoverCompletedText,showCutoverRecovery,refresh:refreshShadowMigrationPanel
 });

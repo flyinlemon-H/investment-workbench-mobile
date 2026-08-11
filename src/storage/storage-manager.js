@@ -19,6 +19,7 @@
     let activeSource='localStorage';
     let sourceMarker=null;
     let sourceMarkerStatus='missing';
+    let storageState='localstorage_active';
     let revision=0;
     let persistenceStatus='idle';
     let lastError=null;
@@ -27,6 +28,7 @@
     let drainScheduled=false;
     let idleWaiters=[];
     let migrationRunner=null;
+    let cutoverRunner=null;
     let draftAdapter=null;
 
     function status(){
@@ -35,6 +37,7 @@
         revision,
         persistenceStatus,
         indexedDbAvailable,
+        storageState,
         pendingWrites:queue.length+(draining?1:0)
       });
     }
@@ -43,20 +46,22 @@
       if(initialized)return Promise.resolve(status());
       if(initializationPromise)return initializationPromise;
       initializationPromise=(async()=>{
-        try{
-          await idbAdapter.open();indexedDbAvailable=true;
-          if(typeof idbAdapter.get==='function'){
-            const marker=await idbAdapter.get('meta','active_storage');
-            sourceMarker=marker&&marker.value;
-            if(sourceMarker==='localStorage')sourceMarkerStatus='valid';
-            else if(sourceMarker==='indexeddb')sourceMarkerStatus='indexeddb_not_enabled';
-            else if(sourceMarker!==null&&sourceMarker!==undefined)sourceMarkerStatus='invalid';
-          }
+        try{await idbAdapter.open();indexedDbAvailable=true}
+        catch(_error){indexedDbAvailable=false;activeSource='localStorage';storageState='localstorage_active';sourceMarkerStatus='unavailable'}
+        if(indexedDbAvailable){
+          const resolved=await cutover().resolveStartup();
+          sourceMarker=resolved.record||null;
+          sourceMarkerStatus=resolved.markerStatus;
+          storageState=resolved.status;
+          activeSource=resolved.activeSource||'localStorage';
+          revision=Number(resolved.record&&resolved.record.revision)||0;
         }
-        catch(_error){indexedDbAvailable=false}
-        activeSource='localStorage';
+        if(storageState==='recovery_required'){
+          initialized=true;
+          return status();
+        }
         if(!root.drafts)throw storageErrors().create('validation_failed','storageManager.drafts.module');
-        draftAdapter=options.draftAdapter||root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,clone});
+        draftAdapter=options.draftAdapter||root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,assertWriteAllowed:()=>assertWriteAllowed(),persistIndexedDbDraft:(kind,id,payload,remove)=>cutover().persistActiveDraft(kind,id,payload,remove),clone});
         await draftAdapter.initialize();
         initialized=true;
         return status();
@@ -66,6 +71,7 @@
 
     async function loadState(){
       if(!initialized)await initialize();
+      if(storageState==='recovery_required')throw storageErrors().create('validation_failed','storageManager.loadState.recovery_required');
       if(activeSource==='indexeddb'){
         const record=await idbAdapter.get('portfolio_state','active');
         if(!record||!Object.prototype.hasOwnProperty.call(record,'payload'))throw storageErrors().create('read_failed','storageManager.loadState.indexeddb');
@@ -88,6 +94,18 @@
       return migrationRunner;
     }
 
+    function cutover(){
+      if(!root.cutoverV1)throw storageErrors().create('validation_failed','storageManager.cutover.module');
+      if(!cutoverRunner)cutoverRunner=root.cutoverV1.create({
+        localAdapter,idbAdapter,now:options.now,checksumOptions:options.checksumOptions,hooks:options.cutoverHooks,lockManager:options.lockManager
+      });
+      return cutoverRunner;
+    }
+
+    async function assertWriteAllowed(){
+      if(indexedDbAvailable)await cutover().assertWriteAllowed(activeSource);
+    }
+
     async function requireMigrationFoundation(){
       if(!initialized)await initialize();
       if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.migration');
@@ -98,6 +116,31 @@
     async function getShadowMigrationPreflight(){return (await requireMigrationFoundation()).getPreflightSummary()}
     async function runShadowMigration(optionsValue={}){return (await requireMigrationFoundation()).runShadowMigration(optionsValue)}
     async function clearMigrationStaging(){return (await requireMigrationFoundation()).clearStaging()}
+    async function getCutoverStatus(){
+      if(!initialized)await initialize();
+      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.status');
+      return cutover().inspect();
+    }
+    async function executeActiveCutover(optionsValue={}){
+      if(!initialized)await initialize();
+      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.activate');
+      if(activeSource==='indexeddb')return cutover().inspect();
+      await flush();
+      const result=await cutover().activate(optionsValue);
+      activeSource='indexeddb';storageState='indexeddb_active';sourceMarker=result.marker;sourceMarkerStatus='valid';
+      draftAdapter=root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,assertWriteAllowed:()=>assertWriteAllowed(),persistIndexedDbDraft:(kind,id,payload,remove)=>cutover().persistActiveDraft(kind,id,payload,remove),clone});
+      await draftAdapter.initialize();
+      return result;
+    }
+    async function recoverUsingLegacy(){
+      if(!initialized)await initialize();
+      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.legacy');
+      const result=await cutover().useLegacy();
+      activeSource='localStorage';storageState='localstorage_active';sourceMarker=result.marker;sourceMarkerStatus='valid';
+      draftAdapter=root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,assertWriteAllowed:()=>assertWriteAllowed(),persistIndexedDbDraft:(kind,id,payload,remove)=>cutover().persistActiveDraft(kind,id,payload,remove),clone});
+      await draftAdapter.initialize();
+      return result;
+    }
 
     function cloneState(value){
       if(typeof clone!=='function')throw storageErrors().create('validation_failed','storageManager.clone');
@@ -120,7 +163,8 @@
         const batch=queue.shift();
         persistenceStatus='saving';
         try{
-          if(activeSource==='indexeddb')await idbAdapter.put('portfolio_state',{id:'active',updatedAt:new Date().toISOString(),payload:batch.snapshot});
+          await assertWriteAllowed();
+          if(activeSource==='indexeddb')await cutover().persistActiveState(batch.snapshot);
           else localAdapter.saveMainState(batch.snapshot);
           revision+=1;
           persistenceStatus='saved';
@@ -182,8 +226,12 @@
       getShadowMigrationPreflight,
       runShadowMigration,
       clearMigrationStaging,
+      getCutoverStatus,
+      executeActiveCutover,
+      retryActiveCutover:executeActiveCutover,
+      recoverUsingLegacy,
       getActiveSource:()=>activeSource,
-      getActiveSourceInfo:()=>Object.freeze({activeSource,markerValue:sourceMarker,markerStatus:sourceMarkerStatus,indexedDbActivationEnabled:false}),
+      getActiveSourceInfo:()=>Object.freeze({activeSource,storageState,markerValue:sourceMarker&&sourceMarker.value||null,marker:sourceMarker,markerStatus:sourceMarkerStatus,indexedDbActivationEnabled:Boolean(root.cutoverV1)}),
       getDraft:(kind,id)=>draftAdapter.getDraft(kind,id),
       saveDraft:(kind,id,payload)=>draftAdapter.saveDraft(kind,id,payload),
       deleteDraft:(kind,id)=>draftAdapter.deleteDraft(kind,id),
@@ -208,6 +256,10 @@
     getShadowMigrationPreflight:(...args)=>defaultManager().getShadowMigrationPreflight(...args),
     runShadowMigration:(...args)=>defaultManager().runShadowMigration(...args),
     clearMigrationStaging:(...args)=>defaultManager().clearMigrationStaging(...args),
+    getCutoverStatus:(...args)=>defaultManager().getCutoverStatus(...args),
+    executeActiveCutover:(...args)=>defaultManager().executeActiveCutover(...args),
+    retryActiveCutover:(...args)=>defaultManager().retryActiveCutover(...args),
+    recoverUsingLegacy:(...args)=>defaultManager().recoverUsingLegacy(...args),
     getActiveSource:()=>defaultManager().getActiveSource(),
     getActiveSourceInfo:()=>defaultManager().getActiveSourceInfo(),
     getDraft:(...args)=>defaultManager().getDraft(...args),

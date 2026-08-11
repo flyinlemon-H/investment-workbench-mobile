@@ -13,6 +13,8 @@
     const localAdapter=options.localAdapter;
     const idbAdapter=options.idbAdapter;
     const getActiveSource=options.getActiveSource||(()=> 'localStorage');
+    const assertWriteAllowed=options.assertWriteAllowed||(()=>true);
+    const persistIndexedDbDraft=options.persistIndexedDbDraft;
     const clone=options.clone||global.structuredClone;
     const caches={plan_update:new Map(),operation_entry:new Map()};
     let initialized=false;
@@ -87,8 +89,10 @@
       caches[kind].set(id,snapshot);
       return enqueue(async()=>{
         try{
+          await assertWriteAllowed();
           if(getActiveSource()==='indexeddb'){
-            await idbAdapter.put('drafts',{id:canonicalId(kind,id),kind,entityId:id,updatedAt:new Date().toISOString(),payload:cloneValue(snapshot,'draft.save')});
+            if(typeof persistIndexedDbDraft==='function')await persistIndexedDbDraft(kind,id,cloneValue(snapshot,'draft.save'),false);
+            else await idbAdapter.put('drafts',{id:canonicalId(kind,id),kind,entityId:id,updatedAt:new Date().toISOString(),payload:cloneValue(snapshot,'draft.save')});
           }else persistLocal(kind);
           return cloneValue(snapshot,'draft.save');
         }catch(error){throw storageErrors().normalize(error,'draft.save','write_failed')}
@@ -100,7 +104,11 @@
       caches[kind].delete(id);
       return enqueue(async()=>{
         try{
-          if(getActiveSource()==='indexeddb')await idbAdapter.delete('drafts',canonicalId(kind,id));
+          await assertWriteAllowed();
+          if(getActiveSource()==='indexeddb'){
+            if(typeof persistIndexedDbDraft==='function')await persistIndexedDbDraft(kind,id,null,true);
+            else await idbAdapter.delete('drafts',canonicalId(kind,id));
+          }
           else persistLocal(kind);
         }catch(error){throw storageErrors().normalize(error,'draft.delete','write_failed')}
       });

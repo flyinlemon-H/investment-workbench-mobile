@@ -1,7 +1,7 @@
 {
     "manifestVersion":  1,
-    "sourceCommit":  "c368a6ead7bbd54b22f6cfbf63e5145c9ca8aa12",
-    "assetVersion":  "sprint04c-operation-entry-repair-20260810",
+    "sourceCommit":  "8a61c90fa33829efb86cebbab04a722735b12f66",
+    "assetVersion":  "sprint04c-cutover-test-20260811",
     "dataMode":  "safe empty placeholders + browser localStorage + IndexedDB cutover release candidate",
     "files":  [
                   {
@@ -55,8 +55,8 @@
                   {
                       "path":  "index.html",
                       "role":  "entrypoint",
-                      "bytes":  42341,
-                      "sha256":  "a1349877c12b94f50ec03ac2fc538e6db311787e8e363f16b2e67c72eea69929"
+                      "bytes":  42177,
+                      "sha256":  "d47fcfc44d99f9e4de2ca06bdd68c3bb66a0dc4e19130f7ef18fafcf8fc3f9a7"
                   },
                   {
                       "path":  "social_posts.json",
@@ -97,8 +97,8 @@
                   {
                       "path":  "src/app.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  20355,
-                      "sha256":  "e38bbe97823b6dd6702726534f461cb44409bbe42bf714f39ef2bfdc88f9ee6c"
+                      "bytes":  25430,
+                      "sha256":  "bc9ca91ef55c5e52cbb7ef3f1739ffe370d6cfd250c5260b22baa85c5adb86c1"
                   },
                   {
                       "path":  "src/import-export.js",
@@ -115,8 +115,8 @@
                   {
                       "path":  "src/multi-tab-protection.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  10767,
-                      "sha256":  "4b91b66df932836a48b37c52d390c4330875ad018bf3a2df3baee17e789431c8"
+                      "bytes":  11452,
+                      "sha256":  "a590ef727809754c3457f1aa37577631ae4ab74404b8a4d07b1d352f6bb56bb1"
                   },
                   {
                       "path":  "src/operation-entry.js",
@@ -167,10 +167,16 @@
                       "sha256":  "dd303af37a58b0604923416cadaaf25af5cdc5fc072fb4a488ab3ea0d70f48b0"
                   },
                   {
+                      "path":  "src/storage/cutover-v1.js",
+                      "role":  "browser runtime dependency",
+                      "bytes":  16257,
+                      "sha256":  "cb5789242c76c4b2520955ba90223b3708482a58de7b08dae8235c1bc0f0a453"
+                  },
+                  {
                       "path":  "src/storage/draft-adapter.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  4606,
-                      "sha256":  "c28f071cc2bbd04f7be8deddc50ac3c13a4aefb6b6da20095eb681a283a301f2"
+                      "bytes":  5090,
+                      "sha256":  "c1488c93f4261c370afddf40a84e1873a35b416f8f17f2ed9d5424ad27a4cb69"
                   },
                   {
                       "path":  "src/storage/idb-adapter.js",
@@ -187,8 +193,8 @@
                   {
                       "path":  "src/storage/migration-v1.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  15355,
-                      "sha256":  "53849c8bf74619ceaef7490011d02974f0b6c3f966681668d339ee4ce94741c1"
+                      "bytes":  15929,
+                      "sha256":  "e9465528f23ed029c8b3f11fb12b646dbf731cfd92397fafad65dc30c18daa08"
                   },
                   {
                       "path":  "src/storage/storage-checksum.js",
@@ -205,8 +211,8 @@
                   {
                       "path":  "src/storage/storage-manager.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  9101,
-                      "sha256":  "a9f11fb7620504f8c7c748094fe46568bdde565c6c8d394f86ad92f3fd116c83"
+                      "bytes":  12277,
+                      "sha256":  "f61ae9f57c7953b615337621e649e14e6d2d13decb953f0b57a48e8a53c9677b"
                   },
                   {
                       "path":  "src/storage/storage-validation.js",

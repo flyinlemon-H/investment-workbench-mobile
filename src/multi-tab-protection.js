@@ -73,6 +73,7 @@
         peerSeen=true;
         if(baselineKnown&&String(data.revision)!==baselineRevision)markStale();
       }
+      if(data.type==='storage_cutover'){peerSeen=true;markStale()}
       if(data.type==='draft_saved'&&DRAFT_KEYS[data.kind]&&typeof data.id==='string'){
         peerSeen=true;const key=draftResource(data.kind,data.id);
         if(draftBaselines.has(key)&&String(data.revision)!==draftBaselines.get(key))markStale();
@@ -128,6 +129,17 @@
       if(lockManager&&typeof lockManager.request==='function')return lockManager.request(LOCK_NAME,{mode:'exclusive'},operation);
       return operation();
     }
+    function runExclusiveCutover(operation){
+      if(closed||typeof operation!=='function')return Promise.reject(staleError());
+      const guarded=async()=>{
+        assertFresh();
+        const result=await operation();
+        if(channel)try{channel.postMessage({type:'storage_cutover'})}catch(_error){}
+        return result;
+      };
+      if(!lockManager||typeof lockManager.request!=='function')return Promise.reject(staleError());
+      return lockManager.request(LOCK_NAME,{mode:'exclusive'},guarded);
+    }
     async function protectedDraftOperation(kind,id,expected,next,persist){
       assertFresh();
       if(typeof loadCurrentDraft!=='function')throw staleError();
@@ -151,7 +163,7 @@
       if(channel&&typeof channel.close==='function')channel.close();
       if(windowTarget&&typeof windowTarget.removeEventListener==='function')windowTarget.removeEventListener('storage',storageListener);
     }
-    return Object.freeze({observeLoadedState,observeDraft,runProtectedSave,runProtectedDraftSave,assertFresh,markStale,getStatus,receive,close});
+    return Object.freeze({observeLoadedState,observeDraft,runProtectedSave,runProtectedDraftSave,runExclusiveCutover,assertFresh,markStale,getStatus,receive,close});
   }
 
   let singleton=null;
@@ -171,6 +183,7 @@
     observeLoadedState:value=>defaultGuard().observeLoadedState(value),
     runProtectedSave:(...args)=>defaultGuard().runProtectedSave(...args),
     runProtectedDraftSave:(...args)=>defaultGuard().runProtectedDraftSave(...args),
+    runExclusiveCutover:(...args)=>defaultGuard().runExclusiveCutover(...args),
     assertFresh:()=>defaultGuard().assertFresh(),
     getStatus:()=>defaultGuard().getStatus(),
     close:()=>defaultGuard().close()

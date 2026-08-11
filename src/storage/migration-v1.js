@@ -5,7 +5,7 @@
   const MIGRATION_ID='localstorage-to-idb-v1';
   const STATE_STAGING_ID=`staging:migration:${MIGRATION_ID}`;
   const DRAFT_STAGING_PREFIX=`staging:migration:${MIGRATION_ID}:draft:`;
-  const ALLOWED_STATUSES=Object.freeze(['not_started','copying','validating','ready','failed']);
+  const ALLOWED_STATUSES=Object.freeze(['not_started','copying','validating','ready','failed','completed']);
   const STAGING_OVERHEAD_BYTES=64*1024;
 
   function dependency(name){
@@ -63,7 +63,8 @@
     async function getStatus(){
       const existing=await idbAdapter.get('migration',MIGRATION_ID);
       if(existing){
-        if(!ALLOWED_STATUSES.includes(existing.status)||existing.completedAt!==null)throw storageErrors().create('validation_failed','migration.status.record');
+        const completionValid=existing.status==='completed'?typeof existing.completedAt==='string'&&Boolean(existing.completedAt):existing.completedAt===null;
+        if(!ALLOWED_STATUSES.includes(existing.status)||!completionValid)throw storageErrors().create('validation_failed','migration.status.record');
         return Object.freeze({...existing,sourceKeysPresent:Object.freeze([...(existing.sourceKeysPresent||[])])});
       }
       const raw=localAdapter.getRawSnapshot();
@@ -110,6 +111,8 @@
     }
 
     async function clearStaging(){
+      const current=await idbAdapter.get('migration',MIGRATION_ID);
+      if(current&&current.status==='completed')throw storageErrors().create('validation_failed','migration.clear.completed');
       await idbAdapter.runTransaction(['portfolio_state','drafts','migration'],'readwrite',async tx=>{
         await deleteStagingInTransaction(tx);
         await tx.delete('migration',MIGRATION_ID);
@@ -208,6 +211,8 @@
       const onStatus=runOptions.onStatus;
       const context={onStatus,sourceChecksum:'',semanticChecksum:'',sourceKeysPresent:[],startedAt:null};
       try{
+        const existingStatus=await idbAdapter.get('migration',MIGRATION_ID);
+        if(existingStatus&&existingStatus.status==='completed')throw storageErrors().create('validation_failed','migration.shadow.completed');
         const rawBefore=localAdapter.getRawSnapshot();
         context.sourceKeysPresent=sourceKeys(rawBefore);
         if(context.sourceKeysPresent.length===0)return defaultRecord([]);
