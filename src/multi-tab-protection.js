@@ -28,9 +28,11 @@
     return `${serialized.length}:${(first>>>0).toString(16).padStart(8,'0')}:${(second>>>0).toString(16).padStart(8,'0')}`;
   }
   function draftResource(kind,id){return `${kind}:${String(id)}`}
-  function staleError(){
+  function staleError(operation='multiTab.save',errorCode='STALE_TAB'){
     const errors=global.InvestmentStorage&&global.InvestmentStorage.errors;
-    return errors&&typeof errors.create==='function'?errors.create('stale_tab','multiTab.save'):{name:'StorageError',type:'stale_tab',message:'This tab is stale.',operation:'multiTab.save',retryable:false};
+    const error=errors&&typeof errors.create==='function'?errors.create('stale_tab',operation):{name:'StorageError',type:'stale_tab',message:'This tab is stale.',operation,retryable:false};
+    error.errorCode=errorCode;
+    return error;
   }
   function renderConflict(documentRef,reload){
     if(!documentRef||!documentRef.body)return;
@@ -129,16 +131,37 @@
       if(lockManager&&typeof lockManager.request==='function')return lockManager.request(LOCK_NAME,{mode:'exclusive'},operation);
       return operation();
     }
-    function runExclusiveCutover(operation){
-      if(closed||typeof operation!=='function')return Promise.reject(staleError());
+    async function runExclusiveCutover(operation,runOptions={}){
+      if(closed||typeof operation!=='function')throw staleError('multiTab.cutover.input','CUTOVER_LOCK_INVALID');
       const guarded=async()=>{
         assertFresh();
+        if(typeof runOptions.onAcquired==='function')runOptions.onAcquired();
         const result=await operation();
         if(channel)try{channel.postMessage({type:'storage_cutover'})}catch(_error){}
         return result;
       };
-      if(!lockManager||typeof lockManager.request!=='function')return Promise.reject(staleError());
-      return lockManager.request(LOCK_NAME,{mode:'exclusive'},guarded);
+      if(!lockManager||typeof lockManager.request!=='function')throw staleError('multiTab.cutover.lock_unavailable','LOCK_UNAVAILABLE');
+      if(typeof runOptions.onWaiting==='function')runOptions.onWaiting();
+      const timeoutMs=Number.isFinite(Number(runOptions.timeoutMs))&&Number(runOptions.timeoutMs)>0?Number(runOptions.timeoutMs):8000;
+      let timer=null;
+      try{
+        if(typeof global.AbortController==='function'&&typeof global.setTimeout==='function'){
+          const controller=new global.AbortController();
+          timer=global.setTimeout(()=>controller.abort(),timeoutMs);
+          try{return await lockManager.request(LOCK_NAME,{mode:'exclusive',signal:controller.signal},guarded)}
+          catch(error){
+            if(error&&error.name==='AbortError')throw staleError('multiTab.cutover.lock_timeout','LOCK_TIMEOUT');
+            if(!(error instanceof TypeError))throw error;
+          }
+        }
+        return await lockManager.request(LOCK_NAME,{mode:'exclusive',ifAvailable:true},lock=>{
+          if(lock===null)throw staleError('multiTab.cutover.lock_occupied','LOCK_OCCUPIED');
+          return guarded();
+        });
+      }catch(error){
+        if(error&&error.type==='stale_tab')throw error;
+        throw staleError('multiTab.cutover.lock_failed','LOCK_FAILED');
+      }finally{if(timer!==null&&typeof global.clearTimeout==='function')global.clearTimeout(timer)}
     }
     async function protectedDraftOperation(kind,id,expected,next,persist){
       assertFresh();

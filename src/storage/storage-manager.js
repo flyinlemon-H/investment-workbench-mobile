@@ -121,16 +121,28 @@
       if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.status');
       return cutover().inspect();
     }
-    async function executeActiveCutover(optionsValue={}){
-      if(!initialized)await initialize();
-      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.activate');
-      if(activeSource==='indexeddb')return cutover().inspect();
-      await flush();
-      const result=await cutover().activate(optionsValue);
+    async function adoptIndexedDbResult(result){
+      if(!result||result.status!=='indexeddb_active'||result.activeSource!=='indexeddb')throw storageErrors().create('validation_failed','storageManager.cutover.result');
       activeSource='indexeddb';storageState='indexeddb_active';sourceMarker=result.marker;sourceMarkerStatus='valid';
       draftAdapter=root.drafts.create({localAdapter,idbAdapter,getActiveSource:()=>activeSource,assertWriteAllowed:()=>assertWriteAllowed(),persistIndexedDbDraft:(kind,id,payload,remove)=>cutover().persistActiveDraft(kind,id,payload,remove),clone});
       await draftAdapter.initialize();
       return result;
+    }
+    async function executeActiveCutover(optionsValue={}){
+      if(!initialized)await initialize();
+      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.activate');
+      await flush();
+      const result=await cutover().activate(optionsValue);
+      return adoptIndexedDbResult(result);
+    }
+    async function retryActiveCutover(optionsValue={}){
+      if(!initialized)await initialize();
+      if(!indexedDbAvailable)throw storageErrors().create('idb_unavailable','storageManager.cutover.retry');
+      await flush();
+      const persistent=await cutover().inspect();
+      if(!persistent||!['localstorage_active','staging_ready','cutover_in_progress','indexeddb_active','recovery_required'].includes(persistent.status))throw storageErrors().create('validation_failed','storageManager.cutover.retry.status');
+      const result=await cutover().retry(optionsValue);
+      return adoptIndexedDbResult(result);
     }
     async function recoverUsingLegacy(){
       if(!initialized)await initialize();
@@ -228,7 +240,7 @@
       clearMigrationStaging,
       getCutoverStatus,
       executeActiveCutover,
-      retryActiveCutover:executeActiveCutover,
+      retryActiveCutover,
       recoverUsingLegacy,
       getActiveSource:()=>activeSource,
       getActiveSourceInfo:()=>Object.freeze({activeSource,storageState,markerValue:sourceMarker&&sourceMarker.value||null,marker:sourceMarker,markerStatus:sourceMarkerStatus,indexedDbActivationEnabled:Boolean(root.cutoverV1)}),

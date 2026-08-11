@@ -16,6 +16,16 @@
   function nowValue(now){return typeof now==='function'?String(now()):new Date().toISOString()}
   function freeze(value){return Object.freeze({...value})}
   function canonicalDraftId(kind,id){return `draft:${kind}:${encodeURIComponent(id)}`}
+  function codedError(type,operation,errorCode){
+    const error=errors().create(type,operation);
+    error.errorCode=String(errorCode||type||'UNKNOWN_STORAGE_ERROR');
+    return error;
+  }
+  function normalizedError(error,operation,fallbackType,errorCode){
+    const normalized=errors().normalize(error,operation,fallbackType);
+    if(!normalized.errorCode)normalized.errorCode=String(errorCode||normalized.type||'UNKNOWN_STORAGE_ERROR');
+    return normalized;
+  }
   function marker(status,values={}){
     return {
       key:MARKER_KEY,
@@ -74,6 +84,10 @@
       const summary=validation.validateEnvelope(envelope);
       return {envelope,summary,semanticChecksum:await checksum.semanticChecksum(envelope,checksumOptions)};
     }
+    function sameValue(left,right){return checksum.stableSerialize(left)===checksum.stableSerialize(right)}
+    function stagingError(operation){return codedError('validation_failed',operation,'STAGING_STALE')}
+    function activeError(operation){return codedError('validation_failed',operation,'ACTIVE_READBACK_FAILED')}
+    function stateError(operation){return codedError('validation_failed',operation,'CUTOVER_STATE_MISMATCH')}
     async function inspect(){
       const parsed=parseMarker(await idbAdapter.get('meta',MARKER_KEY));
       const migrationRecord=await idbAdapter.get('migration',migration.MIGRATION_ID);
@@ -81,58 +95,91 @@
       return freeze({...parsed,status:effectiveStatus,migrationStatus:migrationRecord&&migrationRecord.status||'not_started',migrationRecord});
     }
     async function verifyReady(){
-      const raw=localAdapter.getRawSnapshot();
-      const sourceChecksum=await checksum.sourceChecksum(raw,keyOrder,checksumOptions);
-      const [migrationRecord,stateRecord,draftRows]=await Promise.all([
-        idbAdapter.get('migration',migration.MIGRATION_ID),
-        idbAdapter.get('portfolio_state',migration.STATE_STAGING_ID),
-        idbAdapter.getAll('drafts')
-      ]);
-      if(!migrationRecord||migrationRecord.status!=='ready'||migrationRecord.completedAt!==null)throw errors().create('validation_failed','cutover.precheck.status');
-      if(migrationRecord.sourceChecksum!==sourceChecksum)throw errors().create('validation_failed','cutover.precheck.source_stale');
-      if(!stateRecord||stateRecord.sourceChecksum!==sourceChecksum||stateRecord.semanticChecksum!==migrationRecord.semanticChecksum)throw errors().create('validation_failed','cutover.precheck.staging');
-      const drafts=reconstruct(draftRows,migration.DRAFT_STAGING_PREFIX);
-      const checked=await envelopeChecksum(stateRecord.payload,drafts);
-      if(checked.semanticChecksum!==migrationRecord.semanticChecksum)throw errors().create('validation_failed','cutover.precheck.semantic');
-      const expected={...migrationRecord.validationSummary};
-      delete expected.sourceChecksumUnchanged;delete expected.semanticChecksumReadback;delete expected.localStorageBytesUnchanged;
-      if(checksum.stableSerialize(checked.summary)!==checksum.stableSerialize(expected))throw errors().create('validation_failed','cutover.precheck.summary');
-      return freeze({migrationRecord,stateRecord,drafts,sourceChecksum,semanticChecksum:checked.semanticChecksum,stagingChecksum:checked.semanticChecksum,validationSummary:checked.summary});
+      try{
+        const raw=localAdapter.getRawSnapshot();
+        const sourceChecksum=await checksum.sourceChecksum(raw,keyOrder,checksumOptions);
+        const [migrationRecord,stateRecord,draftRows]=await Promise.all([
+          idbAdapter.get('migration',migration.MIGRATION_ID),
+          idbAdapter.get('portfolio_state',migration.STATE_STAGING_ID),
+          idbAdapter.getAll('drafts')
+        ]);
+        if(!migrationRecord||migrationRecord.migrationId!==migration.MIGRATION_ID||migrationRecord.status!=='ready'||migrationRecord.completedAt!==null)throw stagingError('cutover.precheck.status');
+        if(migrationRecord.sourceChecksum!==sourceChecksum)throw stagingError('cutover.precheck.source_stale');
+        if(!stateRecord||stateRecord.id!==migration.STATE_STAGING_ID||stateRecord.sourceChecksum!==sourceChecksum||stateRecord.semanticChecksum!==migrationRecord.semanticChecksum)throw stagingError('cutover.precheck.staging');
+        const stagingRows=draftRows.filter(row=>row&&String(row.id||'').startsWith(migration.DRAFT_STAGING_PREFIX));
+        const drafts=reconstruct(stagingRows,migration.DRAFT_STAGING_PREFIX);
+        const checked=await envelopeChecksum(stateRecord.payload,drafts);
+        if(checked.semanticChecksum!==migrationRecord.semanticChecksum)throw stagingError('cutover.precheck.semantic');
+        const expected={...migrationRecord.validationSummary};
+        delete expected.sourceChecksumUnchanged;delete expected.semanticChecksumReadback;delete expected.localStorageBytesUnchanged;
+        if(!sameValue(checked.summary,expected))throw stagingError('cutover.precheck.summary');
+        return freeze({
+          migrationRecord,stateRecord,drafts,stagingRows,sourceChecksum,
+          semanticChecksum:checked.semanticChecksum,stagingChecksum:checked.semanticChecksum,
+          validationSummary:checked.summary
+        });
+      }catch(error){
+        if(error&&error.type==='validation_failed'&&!error.errorCode)error.errorCode='STAGING_STALE';
+        throw error;
+      }
     }
     async function verifyActive(record){
-      const [stateRecord,draftRows,migrationRecord]=await Promise.all([
-        idbAdapter.get('portfolio_state',ACTIVE_STATE_ID),idbAdapter.getAll('drafts'),idbAdapter.get('migration',migration.MIGRATION_ID)
-      ]);
-      if(!stateRecord||!migrationRecord||migrationRecord.status!=='completed')throw errors().create('validation_failed','cutover.active.records');
-      const drafts=reconstruct(draftRows,'draft:');
-      const checked=await envelopeChecksum(stateRecord.payload,drafts);
-      if(checked.semanticChecksum!==record.semanticChecksum||stateRecord.semanticChecksum!==record.semanticChecksum||migrationRecord.semanticChecksum!==record.stagingChecksum)throw errors().create('validation_failed','cutover.active.semantic');
-      return freeze({stateRecord,drafts,migrationRecord,validationSummary:checked.summary});
+      try{
+        const [stateRecord,draftRows,migrationRecord]=await Promise.all([
+          idbAdapter.get('portfolio_state',ACTIVE_STATE_ID),idbAdapter.getAll('drafts'),idbAdapter.get('migration',migration.MIGRATION_ID)
+        ]);
+        if(!record||!stateRecord||stateRecord.id!==ACTIVE_STATE_ID||!migrationRecord||migrationRecord.migrationId!==migration.MIGRATION_ID||migrationRecord.status!=='completed'||!migrationRecord.completedAt)throw activeError('cutover.active.records');
+        const drafts=reconstruct(draftRows.filter(row=>row&&String(row.id||'').startsWith('draft:')),'draft:');
+        const checked=await envelopeChecksum(stateRecord.payload,drafts);
+        if(checked.semanticChecksum!==record.semanticChecksum||stateRecord.semanticChecksum!==record.semanticChecksum||migrationRecord.semanticChecksum!==record.stagingChecksum)throw activeError('cutover.active.semantic');
+        return freeze({stateRecord,drafts,migrationRecord,validationSummary:checked.summary});
+      }catch(error){
+        if(error&&error.type==='validation_failed'&&!error.errorCode)error.errorCode='ACTIVE_READBACK_FAILED';
+        throw error;
+      }
     }
     async function persistActiveState(payload){
-      return idbAdapter.runTransaction(['meta','portfolio_state','drafts'],'readwrite',async tx=>{
-        const parsed=parseMarker(await tx.get('meta',MARKER_KEY));
-        if(parsed.status!=='indexeddb_active')throw errors().create('stale_tab','cutover.persist.state');
-        const drafts=reconstruct(await tx.getAll('drafts'),'draft:');
-        const checked=await envelopeChecksum(payload,drafts);const updatedAt=nowValue(now);
-        await tx.put('portfolio_state',{id:ACTIVE_STATE_ID,schemaVersion:payload&&payload.schemaVersion||null,updatedAt,sourceChecksum:parsed.record.sourceChecksum,semanticChecksum:checked.semanticChecksum,payload});
-        await tx.put('meta',{...parsed.record,semanticChecksum:checked.semanticChecksum,revision:(Number(parsed.record.revision)||0)+1,updatedAt});
-        return freeze({semanticChecksum:checked.semanticChecksum,updatedAt});
+      const [markerRecord,stateRecord,draftRows]=await Promise.all([
+        idbAdapter.get('meta',MARKER_KEY),idbAdapter.get('portfolio_state',ACTIVE_STATE_ID),idbAdapter.getAll('drafts')
+      ]);
+      const parsed=parseMarker(markerRecord);
+      if(parsed.status!=='indexeddb_active'||!stateRecord)throw codedError('stale_tab','cutover.persist.state','ACTIVE_SOURCE_STALE');
+      const drafts=reconstruct(draftRows.filter(row=>row&&String(row.id||'').startsWith('draft:')),'draft:');
+      const checked=await envelopeChecksum(payload,drafts);
+      const updatedAt=nowValue(now);
+      const nextState={id:ACTIVE_STATE_ID,schemaVersion:payload&&payload.schemaVersion||null,updatedAt,sourceChecksum:parsed.record.sourceChecksum,semanticChecksum:checked.semanticChecksum,payload};
+      const nextMarker={...parsed.record,semanticChecksum:checked.semanticChecksum,revision:(Number(parsed.record.revision)||0)+1,updatedAt};
+      await idbAdapter.runTransaction(['meta','portfolio_state'],'readwrite',async tx=>{
+        const [liveMarkerRecord,liveState]=await Promise.all([tx.get('meta',MARKER_KEY),tx.get('portfolio_state',ACTIVE_STATE_ID)]);
+        const live=parseMarker(liveMarkerRecord);
+        if(live.status!=='indexeddb_active'||!liveState||Number(live.record.revision)!==Number(parsed.record.revision)||liveState.semanticChecksum!==stateRecord.semanticChecksum)throw codedError('stale_tab','cutover.persist.state.revision','ACTIVE_REVISION_CHANGED');
+        const writes=[tx.put('portfolio_state',nextState),tx.put('meta',nextMarker)];
+        await Promise.all(writes);
       });
+      return freeze({semanticChecksum:checked.semanticChecksum,updatedAt});
     }
     async function persistActiveDraft(kind,id,payload,remove){
       if(!['plan_update','operation_entry'].includes(kind)||typeof id!=='string'||!id)throw errors().create('validation_failed','cutover.persist.draft.input');
-      return idbAdapter.runTransaction(['meta','portfolio_state','drafts'],'readwrite',async tx=>{
-        const parsed=parseMarker(await tx.get('meta',MARKER_KEY));const stateRecord=await tx.get('portfolio_state',ACTIVE_STATE_ID);
-        if(parsed.status!=='indexeddb_active'||!stateRecord)throw errors().create('stale_tab','cutover.persist.draft');
-        const rows=await tx.getAll('drafts'),drafts=reconstruct(rows,'draft:');
-        if(remove)delete drafts[kind][id];else drafts[kind][id]=payload;
-        const checked=await envelopeChecksum(stateRecord.payload,drafts);const updatedAt=nowValue(now),draftId=canonicalDraftId(kind,id);
-        if(remove)await tx.delete('drafts',draftId);else await tx.put('drafts',{id:draftId,kind,entityId:id,updatedAt,payload});
-        await tx.put('portfolio_state',{...stateRecord,semanticChecksum:checked.semanticChecksum,updatedAt});
-        await tx.put('meta',{...parsed.record,semanticChecksum:checked.semanticChecksum,revision:(Number(parsed.record.revision)||0)+1,updatedAt});
-        return freeze({semanticChecksum:checked.semanticChecksum,updatedAt});
+      const [markerRecord,stateRecord,rows]=await Promise.all([
+        idbAdapter.get('meta',MARKER_KEY),idbAdapter.get('portfolio_state',ACTIVE_STATE_ID),idbAdapter.getAll('drafts')
+      ]);
+      const parsed=parseMarker(markerRecord);
+      if(parsed.status!=='indexeddb_active'||!stateRecord)throw codedError('stale_tab','cutover.persist.draft','ACTIVE_SOURCE_STALE');
+      const drafts=reconstruct(rows.filter(row=>row&&String(row.id||'').startsWith('draft:')),'draft:');
+      if(remove)delete drafts[kind][id];else drafts[kind][id]=payload;
+      const checked=await envelopeChecksum(stateRecord.payload,drafts);
+      const updatedAt=nowValue(now),draftId=canonicalDraftId(kind,id);
+      const nextState={...stateRecord,semanticChecksum:checked.semanticChecksum,updatedAt};
+      const nextMarker={...parsed.record,semanticChecksum:checked.semanticChecksum,revision:(Number(parsed.record.revision)||0)+1,updatedAt};
+      const draftRecord=remove?null:{id:draftId,kind,entityId:id,updatedAt,payload};
+      await idbAdapter.runTransaction(['meta','portfolio_state','drafts'],'readwrite',async tx=>{
+        const [liveMarkerRecord,liveState]=await Promise.all([tx.get('meta',MARKER_KEY),tx.get('portfolio_state',ACTIVE_STATE_ID)]);
+        const live=parseMarker(liveMarkerRecord);
+        if(live.status!=='indexeddb_active'||!liveState||Number(live.record.revision)!==Number(parsed.record.revision)||liveState.semanticChecksum!==stateRecord.semanticChecksum)throw codedError('stale_tab','cutover.persist.draft.revision','ACTIVE_REVISION_CHANGED');
+        const writes=[remove?tx.delete('drafts',draftId):tx.put('drafts',draftRecord),tx.put('portfolio_state',nextState),tx.put('meta',nextMarker)];
+        await Promise.all(writes);
       });
+      return freeze({semanticChecksum:checked.semanticChecksum,updatedAt});
     }
     async function resolveStartup(){
       const parsed=parseMarker(await idbAdapter.get('meta',MARKER_KEY));
@@ -153,14 +200,78 @@
       return locks.request(CUTOVER_LOCK_NAME,{mode:'exclusive'},callback);
     }
     async function setRecovery(precheck,error){
-      const normalized=errors().normalize(error,'cutover.activate','write_failed');
+      const normalized=normalizedError(error,'cutover.activate','write_failed','CUTOVER_RECOVERY_REQUIRED');
       const recovery=marker('recovery_required',{
         migrationId:migration.MIGRATION_ID,sourceChecksum:precheck&&precheck.sourceChecksum,
         semanticChecksum:precheck&&precheck.semanticChecksum,stagingChecksum:precheck&&precheck.stagingChecksum,
-        errorCode:normalized.type,updatedAt:nowValue(now)
+        errorCode:normalized.errorCode,updatedAt:nowValue(now)
       });
-      try{await idbAdapter.put('meta',recovery)}catch(_ignored){}
+      try{await idbAdapter.put('meta',recovery)}
+      catch(markerError){throw codedError(markerError&&markerError.type||'write_failed','cutover.recovery.marker','RECOVERY_MARKER_WRITE_FAILED')}
       throw normalized;
+    }
+    function completedMarker(current,migrationRecord){
+      return marker('indexeddb_active',{
+        migrationId:migration.MIGRATION_ID,
+        cutoverAt:migrationRecord.completedAt,
+        sourceChecksum:migrationRecord.sourceChecksum,
+        semanticChecksum:migrationRecord.semanticChecksum,
+        stagingChecksum:migrationRecord.semanticChecksum,
+        revision:Number(current&&current.record&&current.record.revision)||0,
+        updatedAt:nowValue(now)
+      });
+    }
+    async function finalizeCompleted(current,migrationRecord){
+      if(!migrationRecord||migrationRecord.status!=='completed'||!migrationRecord.completedAt)throw stateError('cutover.retry.completed.migration');
+      const finalMarker=completedMarker(current,migrationRecord);
+      await verifyActive(finalMarker);
+      await idbAdapter.runTransaction(['meta','portfolio_state','migration'],'readwrite',async tx=>{
+        const [liveMarkerRecord,liveState,liveMigration]=await Promise.all([
+          tx.get('meta',MARKER_KEY),tx.get('portfolio_state',ACTIVE_STATE_ID),tx.get('migration',migration.MIGRATION_ID)
+        ]);
+        if(!sameValue(liveMarkerRecord,current.record)||!liveState||liveState.semanticChecksum!==finalMarker.semanticChecksum||!liveMigration||liveMigration.status!=='completed'||liveMigration.semanticChecksum!==finalMarker.stagingChecksum)throw stateError('cutover.retry.completed.changed');
+        await tx.put('meta',finalMarker);
+      });
+      const persisted=parseMarker(await idbAdapter.get('meta',MARKER_KEY));
+      if(persisted.status!=='indexeddb_active')throw activeError('cutover.retry.completed.marker_readback');
+      const verified=await verifyActive(persisted.record);
+      return freeze({status:'indexeddb_active',activeSource:'indexeddb',marker:persisted.record,validationSummary:verified.validationSummary,recovered:true});
+    }
+    async function promote(precheck,current){
+      let inProgress=current&&current.status==='cutover_in_progress'?current.record:null;
+      const startedAt=nowValue(now);
+      if(inProgress){
+        if(inProgress.sourceChecksum!==precheck.sourceChecksum||inProgress.semanticChecksum!==precheck.semanticChecksum||inProgress.stagingChecksum!==precheck.stagingChecksum)throw stateError('cutover.retry.in_progress.checksum');
+      }else{
+        inProgress=marker('cutover_in_progress',{...precheck,migrationId:migration.MIGRATION_ID,updatedAt:startedAt});
+        try{await idbAdapter.put('meta',inProgress)}
+        catch(error){throw normalizedError(error,'cutover.marker.in_progress','write_failed','CUTOVER_IN_PROGRESS_MARKER_WRITE_FAILED')}
+      }
+      if(typeof hooks.afterInProgress==='function')await hooks.afterInProgress(inProgress);
+      const completedAt=nowValue(now);
+      const finalMarker=marker('indexeddb_active',{...precheck,migrationId:migration.MIGRATION_ID,cutoverAt:completedAt,updatedAt:completedAt});
+      try{
+        await idbAdapter.runTransaction(['meta','portfolio_state','drafts','migration'],'readwrite',async tx=>{
+          const [liveMarkerRecord,stagingState,allDrafts,liveMigration]=await Promise.all([
+            tx.get('meta',MARKER_KEY),tx.get('portfolio_state',migration.STATE_STAGING_ID),tx.getAll('drafts'),tx.get('migration',migration.MIGRATION_ID)
+          ]);
+          const liveMarker=parseMarker(liveMarkerRecord);
+          const liveStagingRows=allDrafts.filter(row=>row&&String(row.id||'').startsWith(migration.DRAFT_STAGING_PREFIX));
+          const liveDrafts=reconstruct(liveStagingRows,migration.DRAFT_STAGING_PREFIX);
+          if(liveMarker.status!=='cutover_in_progress'||!liveMarker.record||liveMarker.record.sourceChecksum!==precheck.sourceChecksum||liveMarker.record.semanticChecksum!==precheck.semanticChecksum)throw stateError('cutover.transaction.marker');
+          if(!stagingState||!liveMigration||liveMigration.status!=='ready'||liveMigration.completedAt!==null||!sameValue(stagingState,precheck.stateRecord)||!sameValue(liveDrafts,precheck.drafts)||!sameValue(liveMigration,precheck.migrationRecord))throw stagingError('cutover.transaction.baseline_changed');
+          const writes=[];
+          allDrafts.filter(row=>row&&String(row.id||'').startsWith('draft:')).forEach(row=>writes.push(tx.delete('drafts',row.id)));
+          writes.push(tx.put('portfolio_state',{id:ACTIVE_STATE_ID,schemaVersion:stagingState.schemaVersion||null,updatedAt:completedAt,sourceChecksum:precheck.sourceChecksum,semanticChecksum:precheck.semanticChecksum,payload:stagingState.payload}));
+          for(const kind of ['plan_update','operation_entry'])for(const id of Object.keys(liveDrafts[kind]).sort())writes.push(tx.put('drafts',{id:canonicalDraftId(kind,id),kind,entityId:id,updatedAt:completedAt,payload:liveDrafts[kind][id]}));
+          writes.push(tx.put('migration',{...liveMigration,status:'completed',completedAt,validatedAt:liveMigration.validatedAt,errorCode:null}));
+          writes.push(tx.put('meta',finalMarker));
+          await Promise.all(writes);
+        });
+      }catch(error){throw normalizedError(error,'cutover.transaction.promotion','write_failed','CUTOVER_PROMOTION_FAILED')}
+      if(typeof hooks.afterActivationTransaction==='function')await hooks.afterActivationTransaction(finalMarker);
+      const verified=await verifyActive(finalMarker);
+      return freeze({status:'indexeddb_active',activeSource:'indexeddb',marker:finalMarker,validationSummary:verified.validationSummary});
     }
     async function activate(runOptions={}){
       const exclusive=runOptions.withExclusiveLock||defaultExclusive;
@@ -168,34 +279,38 @@
         let precheck;
         try{
           const current=parseMarker(await idbAdapter.get('meta',MARKER_KEY));
-          if(current.status==='indexeddb_active')return freeze({status:'indexeddb_active',activeSource:'indexeddb',alreadyActive:true,marker:current.record});
-          if(current.status==='cutover_in_progress'||current.markerStatus==='invalid')throw errors().create('validation_failed','cutover.activate.recovery_required');
+          if(current.status==='indexeddb_active'){
+            const verified=await verifyActive(current.record);
+            return freeze({status:'indexeddb_active',activeSource:'indexeddb',alreadyActive:true,marker:current.record,validationSummary:verified.validationSummary});
+          }
+          if(current.status==='cutover_in_progress'||current.status==='recovery_required'||current.markerStatus==='invalid')throw stateError('cutover.activate.recovery_required');
           precheck=await verifyReady();
           if(typeof hooks.afterPrecheck==='function')await hooks.afterPrecheck(precheck);
-          const startedAt=nowValue(now);
-          const inProgress=marker('cutover_in_progress',{...precheck,migrationId:migration.MIGRATION_ID,updatedAt:startedAt});
-          await idbAdapter.put('meta',inProgress);
-          if(typeof hooks.afterInProgress==='function')await hooks.afterInProgress(inProgress);
-          const completedAt=nowValue(now);
-          const finalMarker=marker('indexeddb_active',{...precheck,migrationId:migration.MIGRATION_ID,cutoverAt:completedAt,updatedAt:completedAt});
-          await idbAdapter.runTransaction(['meta','portfolio_state','drafts','migration'],'readwrite',async tx=>{
-            const liveMarker=parseMarker(await tx.get('meta',MARKER_KEY));
-            if(liveMarker.status!=='cutover_in_progress')throw errors().create('validation_failed','cutover.transaction.marker');
-            const stagingState=await tx.get('portfolio_state',migration.STATE_STAGING_ID);
-            const allDrafts=await tx.getAll('drafts');
-            const stagedDrafts=reconstruct(allDrafts,migration.DRAFT_STAGING_PREFIX);
-            const checked=await envelopeChecksum(stagingState&&stagingState.payload,stagedDrafts);
-            if(!stagingState||checked.semanticChecksum!==precheck.semanticChecksum)throw errors().create('validation_failed','cutover.transaction.readback');
-            const deletes=allDrafts.filter(row=>row&&String(row.id||'').startsWith('draft:')).map(row=>tx.delete('drafts',row.id));
-            await Promise.all(deletes);
-            await tx.put('portfolio_state',{id:ACTIVE_STATE_ID,schemaVersion:stagingState.schemaVersion||null,updatedAt:completedAt,sourceChecksum:precheck.sourceChecksum,semanticChecksum:precheck.semanticChecksum,payload:stagingState.payload});
-            for(const kind of ['plan_update','operation_entry'])for(const id of Object.keys(stagedDrafts[kind]).sort())await tx.put('drafts',{id:canonicalDraftId(kind,id),kind,entityId:id,updatedAt:completedAt,payload:stagedDrafts[kind][id]});
-            await tx.put('migration',{...precheck.migrationRecord,status:'completed',completedAt,validatedAt:precheck.migrationRecord.validatedAt,errorCode:null});
-            await tx.put('meta',finalMarker);
-          });
-          if(typeof hooks.afterActivationTransaction==='function')await hooks.afterActivationTransaction(finalMarker);
-          await verifyActive(finalMarker);
-          return freeze({status:'indexeddb_active',activeSource:'indexeddb',marker:finalMarker,validationSummary:precheck.validationSummary});
+          return await promote(precheck,current);
+        }catch(error){return setRecovery(precheck,error)}
+      });
+    }
+    async function retry(runOptions={}){
+      const exclusive=runOptions.withExclusiveLock||defaultExclusive;
+      return exclusive(async()=>{
+        let precheck;
+        try{
+          const current=parseMarker(await idbAdapter.get('meta',MARKER_KEY));
+          const migrationRecord=await idbAdapter.get('migration',migration.MIGRATION_ID);
+          if(current.markerStatus==='invalid')throw stateError('cutover.retry.marker_invalid');
+          if(current.status==='indexeddb_active'){
+            const verified=await verifyActive(current.record);
+            return freeze({status:'indexeddb_active',activeSource:'indexeddb',alreadyActive:true,marker:current.record,validationSummary:verified.validationSummary});
+          }
+          if(migrationRecord&&migrationRecord.status==='completed'){
+            if(!['cutover_in_progress','recovery_required'].includes(current.status))throw stateError('cutover.retry.completed.marker');
+            return await finalizeCompleted(current,migrationRecord);
+          }
+          if(!migrationRecord||migrationRecord.status!=='ready'||migrationRecord.completedAt!==null)throw stagingError('cutover.retry.staging_status');
+          if(!['localstorage_active','cutover_in_progress','recovery_required'].includes(current.status))throw stateError('cutover.retry.state');
+          precheck=await verifyReady();
+          if(typeof hooks.afterPrecheck==='function')await hooks.afterPrecheck(precheck);
+          return await promote(precheck,current);
         }catch(error){return setRecovery(precheck,error)}
       });
     }
@@ -218,7 +333,7 @@
       if(source==='indexeddb'&&parsed.status!=='indexeddb_active')throw errors().create('stale_tab','cutover.write.indexeddb');
       return true;
     }
-    return Object.freeze({inspect,verifyReady,verifyActive,resolveStartup,activate,useLegacy,assertWriteAllowed,persistActiveState,persistActiveDraft,parseMarker});
+    return Object.freeze({inspect,verifyReady,verifyActive,resolveStartup,activate,retry,useLegacy,assertWriteAllowed,persistActiveState,persistActiveDraft,parseMarker});
   }
 
   root.cutoverV1=Object.freeze({create,parseMarker,marker,MARKER_KEY,MARKER_VERSION,ACTIVE_STATE_ID,STATES,CUTOVER_LOCK_NAME});

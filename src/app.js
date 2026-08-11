@@ -106,22 +106,81 @@ function showStorageInitializationError(error){
     main.appendChild(guidance);main.appendChild(retryButton);main.appendChild(restoreButton);
   }
 }
-function showCutoverRecovery(){
+let cutoverRetryInFlight=false;
+let cutoverReloadTimer=null;
+function safeCutoverDiagnostic(value,fallback){
+  const text=typeof value==='string'?value:'';
+  return text&&text.length<=120&&/^[A-Za-z0-9_.:-]+$/.test(text)?text:fallback;
+}
+function cutoverDiagnostic(error){
+  const type=safeCutoverDiagnostic(error&&error.type,'unknown_storage_error');
+  const operation=safeCutoverDiagnostic(error&&error.operation,'cutover.retry');
+  const errorCode=safeCutoverDiagnostic(error&&error.errorCode,type.toUpperCase());
+  return Object.freeze({type,operation,errorCode});
+}
+function showCutoverRecovery(options={}){
   const main=document.getElementById('main');
   if(!main)return;
+  const phase=options.phase||'idle';
+  const busy=phase==='retrying'||phase==='waiting';
   document.querySelectorAll('.tabs button,.toolbar button,#saveBtn').forEach(control=>{control.disabled=true});
   if(document.body)document.body.dataset.storageRecoveryRequired='true';
   main.dataset.storageState='recovery_required';
   main.textContent='本地存储切换未完成。业务页面已锁定，未覆盖或删除 legacy localStorage。';
   const guidance=document.createElement('p');
   guidance.textContent='可检查状态后重试激活、明确选择继续使用 legacy 数据，或从最新 JSON 备份恢复。系统不会自动切换数据源。';
-  const retry=document.createElement('button');retry.type='button';retry.className='btn';retry.textContent='重试 IndexedDB 激活';
-  retry.addEventListener('click',async()=>{try{await StorageManager.retryActiveCutover({withExclusiveLock:task=>MultiTabProtection.runExclusiveCutover(task)});location.reload()}catch(_error){showCutoverRecovery()}});
+  const status=document.createElement('p');status.id='cutoverRecoveryStatus';status.setAttribute('role','status');status.setAttribute('aria-live','assertive');
+  if(phase==='retrying')status.textContent='正在重试 IndexedDB 激活，请勿关闭页面……';
+  else if(phase==='waiting')status.textContent='正在等待独占存储锁，请关闭其它业务标签页后保持当前页面打开……';
+  else if(phase==='success')status.textContent='IndexedDB 已激活。';
+  else if(phase==='failed')status.textContent='IndexedDB 激活失败，数据仍保留在 legacy localStorage。';
+  else status.textContent='尚未重试 IndexedDB 激活。';
+  const diagnostic=document.createElement('p');diagnostic.id='cutoverRecoveryDiagnostic';
+  if(phase==='failed'){
+    const safe=cutoverDiagnostic(options.error);
+    diagnostic.textContent=`type=${safe.type}; operation=${safe.operation}; errorCode=${safe.errorCode}`;
+  }else diagnostic.hidden=true;
+  const retry=document.createElement('button');retry.id='cutoverRecoveryRetryBtn';retry.type='button';retry.className='btn';retry.textContent='重试 IndexedDB 激活';
+  retry.disabled=Boolean(busy||phase==='success'||cutoverRetryInFlight);
+  retry.setAttribute('aria-busy',busy?'true':'false');
+  retry.addEventListener('click',()=>{void retryIndexedDbActivation()});
   const legacy=document.createElement('button');legacy.type='button';legacy.className='btn ghost';legacy.textContent='继续使用 legacy localStorage';
-  legacy.addEventListener('click',async()=>{if(typeof confirm==='function'&&!confirm('确认继续使用保留的 legacy localStorage？不会删除 IndexedDB staging。'))return;try{await StorageManager.recoverUsingLegacy();location.reload()}catch(_error){showCutoverRecovery()}});
+  legacy.disabled=Boolean(busy||phase==='success');
+  legacy.addEventListener('click',async()=>{if(typeof confirm==='function'&&!confirm('确认继续使用保留的 legacy localStorage？不会删除 IndexedDB staging。'))return;try{await StorageManager.recoverUsingLegacy();location.reload()}catch(error){showCutoverRecovery({phase:'failed',error})}});
   const restore=document.createElement('button');restore.type='button';restore.className='btn ghost';restore.textContent='从最新 JSON 备份恢复';
+  restore.disabled=Boolean(busy||phase==='success');
   restore.addEventListener('click',()=>{if(typeof importData==='function')importData()});
-  main.appendChild(guidance);main.appendChild(retry);main.appendChild(legacy);main.appendChild(restore);
+  main.appendChild(guidance);main.appendChild(status);main.appendChild(diagnostic);main.appendChild(retry);main.appendChild(legacy);main.appendChild(restore);
+}
+async function retryIndexedDbActivation(){
+  if(cutoverRetryInFlight)return Object.freeze({status:'ignored',reason:'retry_in_flight'});
+  cutoverRetryInFlight=true;
+  showCutoverRecovery({phase:'retrying'});
+  try{
+    const lockUi={
+      timeoutMs:8000,
+      onWaiting:()=>showCutoverRecovery({phase:'waiting'}),
+      onAcquired:()=>showCutoverRecovery({phase:'retrying'})
+    };
+    const result=await StorageManager.retryActiveCutover({withExclusiveLock:task=>MultiTabProtection.runExclusiveCutover(task,lockUi)});
+    showCutoverRecovery({phase:'success'});
+    if(cutoverReloadTimer!==null&&typeof clearTimeout==='function')clearTimeout(cutoverReloadTimer);
+    if(typeof setTimeout==='function')cutoverReloadTimer=setTimeout(()=>{if(location&&typeof location.reload==='function')location.reload()},700);
+    else if(location&&typeof location.reload==='function')location.reload();
+    return result;
+  }catch(error){
+    cutoverRetryInFlight=false;
+    showCutoverRecovery({phase:'failed',error});
+    return Object.freeze({status:'failed',errorType:cutoverDiagnostic(error).type,errorCode:cutoverDiagnostic(error).errorCode});
+  }
+}
+async function refreshCutoverRecoveryAfterResume(){
+  if(!document.body||document.body.dataset.storageRecoveryRequired!=='true'||cutoverRetryInFlight)return;
+  try{
+    const status=await StorageManager.getCutoverStatus();
+    if(status&&status.status==='indexeddb_active')showCutoverRecovery({phase:'success'});
+    else showCutoverRecovery({phase:'idle'});
+  }catch(error){showCutoverRecovery({phase:'failed',error})}
 }
 function migrationStatusText(record){
   const status=record&&record.status||'not_started';
@@ -302,7 +361,7 @@ function ensureShadowMigrationPanel(){
       const result=await StorageManager.executeActiveCutover({withExclusiveLock:task=>MultiTabProtection.runExclusiveCutover(task)});
       updateShadowMigrationPanel({status:'completed',completedAt:result.marker&&result.marker.cutoverAt,validationSummary:result.validationSummary||{},semanticChecksum:result.marker&&result.marker.semanticChecksum});
       completed=true;render();
-    }catch(_error){showCutoverRecovery()}
+    }catch(error){showCutoverRecovery({phase:'failed',error})}
     finally{if(completed)setShadowMigrationEditLock(false)}
   });
   return panel;
@@ -384,6 +443,20 @@ async function retryStorageRecovery(){
   try{return await activateLoadedApplication()}catch(error){showStorageInitializationError(error);return Object.freeze({status:'error',errorType:error&&error.type||'write_failed'})}
 }
 async function resumeApplicationAfterRecovery(){return activateLoadedApplication()}
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function'){
+  window.addEventListener('pagehide',()=>{if(document.body&&document.body.dataset.storageRecoveryRequired==='true')document.body.dataset.cutoverPageHidden='true'});
+  window.addEventListener('pageshow',()=>{if(document.body)document.body.dataset.cutoverPageHidden='false';void refreshCutoverRecoveryAfterResume()});
+}
+if(typeof document!=='undefined'&&typeof document.addEventListener==='function'){
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden'){
+      if(document.body&&document.body.dataset.storageRecoveryRequired==='true')document.body.dataset.cutoverPageHidden='true';
+      return;
+    }
+    if(document.body)document.body.dataset.cutoverPageHidden='false';
+    void refreshCutoverRecoveryAfterResume();
+  });
+}
 async function bootstrapApplication(){
   showStorageLoadingShell();
   try{
@@ -400,5 +473,6 @@ const applicationReady=bootstrapApplication();
 window.ApplicationBootstrap=Object.freeze({ready:applicationReady});
 window.StorageRecovery=Object.freeze({retry:retryStorageRecovery,resumeAfterBackup:resumeApplicationAfterRecovery});
 window.ShadowMigrationUi=Object.freeze({
-  formatStorageBytes,truncatedChecksum,evaluateShadowCapacity,canStartShadowMigration,isCurrentShadowReady,shadowPreflightText,shadowReadyText,cutoverCompletedText,showCutoverRecovery,refresh:refreshShadowMigrationPanel
+  formatStorageBytes,truncatedChecksum,evaluateShadowCapacity,canStartShadowMigration,isCurrentShadowReady,shadowPreflightText,shadowReadyText,cutoverCompletedText,
+  showCutoverRecovery,retryIndexedDbActivation,refreshCutoverRecoveryAfterResume,cutoverDiagnostic,refresh:refreshShadowMigrationPanel
 });

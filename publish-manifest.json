@@ -1,8 +1,8 @@
 {
     "manifestVersion":  1,
-    "sourceCommit":  "8a61c90fa33829efb86cebbab04a722735b12f66",
-    "assetVersion":  "sprint04c-cutover-test-20260811",
-    "dataMode":  "safe empty placeholders + browser localStorage + IndexedDB cutover release candidate",
+    "sourceCommit":  "9885e53d880367da48e487ef601a20cc31153e25",
+    "assetVersion":  "sprint04c-recovery-retry-repair-20260811",
+    "dataMode":  "safe empty placeholders + browser localStorage + IndexedDB cutover recovery retry repair",
     "files":  [
                   {
                       "path":  ".nojekyll",
@@ -55,8 +55,8 @@
                   {
                       "path":  "index.html",
                       "role":  "entrypoint",
-                      "bytes":  42177,
-                      "sha256":  "d47fcfc44d99f9e4de2ca06bdd68c3bb66a0dc4e19130f7ef18fafcf8fc3f9a7"
+                      "bytes":  42330,
+                      "sha256":  "46074ff3add313e14b421a121e551121cce30279772361b36b4c76e18c396a67"
                   },
                   {
                       "path":  "social_posts.json",
@@ -97,8 +97,8 @@
                   {
                       "path":  "src/app.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  25430,
-                      "sha256":  "bc9ca91ef55c5e52cbb7ef3f1739ffe370d6cfd250c5260b22baa85c5adb86c1"
+                      "bytes":  29771,
+                      "sha256":  "8d5b72cd8073e8e4ee35638403eb8636328ed6f0af39b2b7c62ca665654043cc"
                   },
                   {
                       "path":  "src/import-export.js",
@@ -115,8 +115,8 @@
                   {
                       "path":  "src/multi-tab-protection.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  11452,
-                      "sha256":  "a590ef727809754c3457f1aa37577631ae4ab74404b8a4d07b1d352f6bb56bb1"
+                      "bytes":  12893,
+                      "sha256":  "b58b3f87ca676f12b7c7ccc754f21742439d49e6c70fd90b1b8f398b69f81d7d"
                   },
                   {
                       "path":  "src/operation-entry.js",
@@ -169,8 +169,8 @@
                   {
                       "path":  "src/storage/cutover-v1.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  16257,
-                      "sha256":  "cb5789242c76c4b2520955ba90223b3708482a58de7b08dae8235c1bc0f0a453"
+                      "bytes":  24176,
+                      "sha256":  "db0eebb9b8f81f2693e2d123e991b57408ce4246394ad77e2efe6fa5fe6579e1"
                   },
                   {
                       "path":  "src/storage/draft-adapter.js",
@@ -211,8 +211,8 @@
                   {
                       "path":  "src/storage/storage-manager.js",
                       "role":  "browser runtime dependency",
-                      "bytes":  12277,
-                      "sha256":  "f61ae9f57c7953b615337621e649e14e6d2d13decb953f0b57a48e8a53c9677b"
+                      "bytes":  13085,
+                      "sha256":  "6c9b7fb6ffde55ec68aec68be1f1917d5736de16224c4a4735b63fe1fc6a1311"
                   },
                   {
                       "path":  "src/storage/storage-validation.js",
