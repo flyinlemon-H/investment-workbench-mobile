@@ -1,0 +1,19 @@
+
+  {
+    “technicalReviews”: [
+      {
+        “symbol”: “601138.SS”,
+        “review”: {
+          “trendStatus”: “sideways”,
+          “technicalSummary”: “价格仍位于“前期平台”附近，暂未形成有效突破。”,
+          “riskFlags”: [],
+          “actionHint”: “观察”,
+          “confidence”: “medium”,
+          “finalTechnicalConclusion”: “测试”,
+          “holdHint”: “观察”,
+          “addHint”: “等待”,
+          “reduceHint”: “暂无”
+        }
+      }
+    ]
+  }

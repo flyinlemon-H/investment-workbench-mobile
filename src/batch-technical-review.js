@@ -21,13 +21,128 @@
   const TREND_STATUSES=Object.freeze(['uptrend','downtrend','sideways','recovery','rebound','unclear']);
   const RISK_FLAGS=Object.freeze(['near_previous_high','high_level_rebreakout','high_level_overextension','short_term_volatility','resistance_overhead','gap_risk','trend_weakening','below_ma20','below_ma60','distribution_risk','breakout_failure','volume_divergence','support_breakdown']);
   const V2_REVIEW_FIELDS=Object.freeze(['trendStatus','technicalSummary','riskFlags','actionHint','confidence','finalTechnicalConclusion','holdHint','addHint','reduceHint']);
+  const ERROR_TYPES=Object.freeze({
+    PARSE:'PARSE_ERROR',
+    STRUCTURE:'STRUCTURE_ERROR',
+    COMPLETENESS:'COMPLETENESS_ERROR',
+    VALIDATION:'VALIDATION_ERROR'
+  });
 
   function emptySummary(){
     return {total:0,valid:0,invalid:0,unknown:0,duplicate:0};
   }
 
-  function invalidBatch(code,reason){
-    return {batchStatus:'invalid',summary:emptySummary(),items:[],error:{code,reason}};
+  function invalidBatch(code,reason,type=ERROR_TYPES.VALIDATION,input=null){
+    return {batchStatus:'invalid',summary:emptySummary(),items:[],error:{code,reason,type},errorType:type,input};
+  }
+
+  function stripWrappingMarkdownFence(raw){
+    const trimmed=String(raw??'').trim();
+    const match=trimmed.match(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i);
+    return match?{text:match[1].trim(),removed:true}:{text:trimmed,removed:false};
+  }
+
+  function nextNonWhitespace(text,start){
+    for(let index=start;index<text.length;index++)if(!/\s/.test(text[index]))return text[index];
+    return '';
+  }
+
+  function normalizeStructuralSmartQuotes(text){
+    const stack=[];
+    let rootState='value';
+    let mode='syntax';
+    let stringRole='';
+    let escaped=false;
+    let nestedSmartQuotes=0;
+    let output='';
+
+    const top=()=>stack[stack.length-1]||null;
+    const canStartKey=()=>{const current=top();return Boolean(current&&current.type==='object'&&current.state==='keyOrEnd')};
+    const canStartValue=()=>{const current=top();return current?((current.type==='object'&&current.state==='value')||(current.type==='array'&&current.state==='valueOrEnd')):rootState==='value'};
+    const markValue=()=>{const current=top();if(!current)rootState='end';else current.state='commaOrEnd'};
+    const finishString=()=>{
+      const current=top();
+      if(stringRole==='key'&&current&&current.type==='object')current.state='colon';
+      else markValue();
+      stringRole='';
+    };
+    const smartQuoteCanClose=(index)=>{
+      const next=nextNonWhitespace(text,index+1);
+      if(stringRole==='key')return next===':';
+      const current=top();
+      if(!current)return next==='';
+      return current.type==='object'?(next===','||next==='}'):(next===','||next===']');
+    };
+
+    for(let index=0;index<text.length;index++){
+      const char=text[index];
+      if(mode==='asciiString'){
+        output+=char;
+        if(escaped){escaped=false;continue}
+        if(char==='\\'){escaped=true;continue}
+        if(char==='"'){mode='syntax';finishString()}
+        continue;
+      }
+      if(mode==='smartString'){
+        if(escaped){output+=char;escaped=false;continue}
+        if(char==='\\'){output+=char;escaped=true;continue}
+        if(char==='“'){nestedSmartQuotes+=1;output+=char;continue}
+        if(char==='”'&&nestedSmartQuotes>0){nestedSmartQuotes-=1;output+=char;continue}
+        if(char==='”'&&smartQuoteCanClose(index)){
+          output+='"';mode='syntax';finishString();continue;
+        }
+        output+=char;
+        continue;
+      }
+      if(char==='"'){
+        stringRole=canStartKey()?'key':(canStartValue()?'value':'');
+        mode='asciiString';output+=char;continue;
+      }
+      if(char==='“'&&(canStartKey()||canStartValue())){
+        stringRole=canStartKey()?'key':'value';
+        mode='smartString';nestedSmartQuotes=0;output+='"';continue;
+      }
+      output+=char;
+      if(/\s/.test(char))continue;
+      const current=top();
+      if(char==='{'){
+        if(canStartValue())markValue();
+        stack.push({type:'object',state:'keyOrEnd'});
+      }else if(char==='['){
+        if(canStartValue())markValue();
+        stack.push({type:'array',state:'valueOrEnd'});
+      }else if(char==='}'||char===']'){
+        stack.pop();
+      }else if(char===':'&&current&&current.type==='object'&&current.state==='colon'){
+        current.state='value';
+      }else if(char===','&&current&&current.state==='commaOrEnd'){
+        current.state=current.type==='object'?'keyOrEnd':'valueOrEnd';
+      }else if(canStartValue()){
+        markValue();
+      }
+    }
+    return output;
+  }
+
+  function parseAiBatchJsonInput(raw){
+    const cleaned=stripWrappingMarkdownFence(raw);
+    const input={fenceRemoved:cleaned.removed,smartQuotesDetected:/[“”]/.test(cleaned.text),smartQuoteRecoveryAttempted:false,smartQuotesRecovered:false,normalizations:cleaned.removed?['markdown_fence']:[]};
+    if(!cleaned.text)return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:'JSON 解析失败：输入为空。'}};
+    try{
+      return {ok:true,value:JSON.parse(cleaned.text),input,error:null};
+    }catch(firstError){
+      if(!input.smartQuotesDetected)return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:`JSON 解析失败：${firstError&&firstError.message?firstError.message:String(firstError)}`}};
+      input.smartQuoteRecoveryAttempted=true;
+      const recovered=normalizeStructuralSmartQuotes(cleaned.text);
+      try{
+        const value=JSON.parse(recovered);
+        input.smartQuotesRecovered=true;
+        input.normalizations.push('smart_quotes');
+        return {ok:true,value,input,error:null};
+      }catch(recoveryError){
+        return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:`检测到非标准引号，自动修复失败。JSON 解析失败：${recoveryError&&recoveryError.message?recoveryError.message:String(recoveryError)}`}};
+      }
+    }
   }
 
   function stockSymbol(stock){
@@ -233,25 +348,20 @@
 
   function process(rawJson,stocks,validateTechnicalReview,options={}){
     if(typeof validateTechnicalReview!=='function')return invalidBatch('validator_unavailable','单股 technicalReview validator 不可用。');
-    let envelope;
-    try{
-      const text=String(rawJson??'').trim();
-      if(!text)throw new Error('输入为空。');
-      envelope=JSON.parse(text);
-    }catch(error){
-      return invalidBatch('parse_error',`JSON 解析失败：${error&&error.message?error.message:String(error)}`);
-    }
+    const parsed=parseAiBatchJsonInput(rawJson);
+    if(!parsed.ok)return invalidBatch(parsed.error.code,parsed.error.reason,parsed.error.type,parsed.input);
+    const envelope=parsed.value;
     if(!envelope||typeof envelope!=='object'||Array.isArray(envelope)){
-      return invalidBatch('invalid_top_level','顶层必须是包含 technicalReviews 数组的对象。');
+      return invalidBatch('invalid_top_level','顶层必须是包含 technicalReviews 数组的对象。',ERROR_TYPES.STRUCTURE,parsed.input);
     }
     if(!Object.prototype.hasOwnProperty.call(envelope,'technicalReviews')){
-      return invalidBatch('missing_technical_reviews','顶层缺少 technicalReviews。');
+      return invalidBatch('missing_technical_reviews','顶层缺少 technicalReviews。',ERROR_TYPES.STRUCTURE,parsed.input);
     }
     if(!Array.isArray(envelope.technicalReviews)){
-      return invalidBatch('invalid_technical_reviews','technicalReviews 必须是数组。');
+      return invalidBatch('invalid_technical_reviews','technicalReviews 必须是数组。',ERROR_TYPES.STRUCTURE,parsed.input);
     }
     const topLevelExtra=Object.keys(envelope).filter(key=>key!=='technicalReviews');
-    if(topLevelExtra.length)return invalidBatch('unknown_top_level_fields',`顶层包含未知字段：${topLevelExtra.join(', ')}。`);
+    if(topLevelExtra.length)return invalidBatch('unknown_top_level_fields',`顶层包含未知字段：${topLevelExtra.join(', ')}。`,ERROR_TYPES.STRUCTURE,parsed.input);
     const stockLookup=buildStockIndex(stocks);
     const expectedSymbols=Array.isArray(options.expectedSymbols)?options.expectedSymbols.map(canonicalSymbol).filter((symbol,index,all)=>symbol&&all.indexOf(symbol)===index):[];
     const expectedSet=expectedSymbols.length?new Set(expectedSymbols):null;
@@ -263,7 +373,9 @@
     const summary=summarize(items);
     const batchStatus=summary.total>0&&summary.valid===summary.total&&missingSymbols.length===0?'valid':'invalid';
     items.forEach(item=>{if(item.preview)item.preview.batchStatus=batchStatus});
-    return {batchStatus,summary,items,error:null,completeness:{expected:expectedSymbols.length||detectedSymbols.length,detected:detectedSymbols.length,expectedSymbols,detectedSymbols,missingSymbols}};
+    const completenessFailure=missingSymbols.length>0||items.some(item=>[STATUS.MISSING_SYMBOL,STATUS.UNKNOWN_SYMBOL,STATUS.DUPLICATE_SYMBOL].includes(item.status));
+    const errorType=batchStatus==='valid'?null:(completenessFailure?ERROR_TYPES.COMPLETENESS:ERROR_TYPES.VALIDATION);
+    return {batchStatus,summary,items,error:null,errorType,input:parsed.input,completeness:{expected:expectedSymbols.length||detectedSymbols.length,detected:detectedSymbols.length,expectedSymbols,detectedSymbols,missingSymbols}};
   }
 
   function escapeHtml(value){
@@ -272,13 +384,16 @@
 
   function renderResult(result){
     if(!result)return '';
-    if(result.error)return `<div class="hint"><b>批次无效</b><div class="card-note">${escapeHtml(result.error.reason)}</div></div>`;
+    const titles={[ERROR_TYPES.PARSE]:'JSON 格式有误',[ERROR_TYPES.STRUCTURE]:'结果结构有误',[ERROR_TYPES.COMPLETENESS]:'结果不完整',[ERROR_TYPES.VALIDATION]:'结果校验失败'};
+    if(result.error)return `<div class="hint"><b>${escapeHtml(titles[result.errorType]||'批次无效')}</b><div class="card-note">${escapeHtml(result.error.reason)}</div><div class="card-note">本批次未写入。</div></div>`;
     const s=result.summary;
     const eligible=eligibleEntries(result).length;
     const completeness=result.completeness||{};
     const missing=Array.isArray(completeness.missingSymbols)&&completeness.missingSymbols.length?`<div class="card-note">Missing: ${escapeHtml(completeness.missingSymbols.join(', '))}</div>`:'';
-    const counts=completeness.expected!==undefined?`Expected: ${completeness.expected} · Detected: ${completeness.detected}`:`总计 ${s.total}`;
-    const summary=`<div class="hint"><b>批次状态：${escapeHtml(result.batchStatus)}</b><div class="card-note">${counts} · 可更新 ${eligible} · 有效 ${s.valid} · 无效 ${s.invalid} · 未知 ${s.unknown} · 重复 ${s.duplicate}</div>${missing}${result.batchStatus!=='valid'?'<div class="card-note">本批次未写入。</div>':''}</div>`;
+    const counts=completeness.expected!==undefined?`应有 ${completeness.expected} · 识别 ${completeness.detected}`:`总计 ${s.total}`;
+    const normalized=result.input&&result.input.smartQuotesRecovered?'<div class="card-note">已自动修正非标准引号</div>':'';
+    const heading=result.batchStatus==='valid'?'批次预览通过':(titles[result.errorType]||'批次无效');
+    const summary=`<div class="hint"><b>${escapeHtml(heading)}</b>${normalized}<div class="card-note">${counts} · 可更新 ${eligible} · 有效 ${s.valid} · 无效 ${s.invalid} · 未知 ${s.unknown} · 重复 ${s.duplicate}</div>${missing}${result.batchStatus!=='valid'?'<div class="card-note">本批次未写入。</div>':''}</div>`;
     const items=result.items.map(item=>{
       const title=item.matchedStock&&item.matchedStock.name?`${item.matchedStock.name} · ${item.symbol}`:(item.symbol||`第 ${item.index+1} 项`);
       const preview=item.preview?`<div class="card-note">${escapeHtml(item.preview.summary||'暂无结论摘要')}</div><div class="card-note">趋势 ${escapeHtml(item.preview.trendStatus||'—')} · 周期 ${escapeHtml(item.preview.cyclePosition||'—')}</div>`:'';
@@ -303,7 +418,7 @@
     };
   }
 
-  return {STATUS,TREND_STATUSES,RISK_FLAGS,V2_REVIEW_FIELDS,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
+  return {STATUS,ERROR_TYPES,TREND_STATUSES,RISK_FLAGS,V2_REVIEW_FIELDS,parseAiBatchJsonInput,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
 });
 
 (function(root){
@@ -400,10 +515,17 @@
     const eligible=root.BatchTechnicalReview.eligibleEntries(result).length;
     const inputDetails=document.getElementById('batchTechnicalReviewInputDetails');
     if(inputDetails&&eligible>0)inputDetails.open=false;
-    if(eligible)setStatus(`可更新 ${eligible} 只股票；确认后将一次保存全部变更。`);
-    else if(result.error&&result.error.code==='parse_error')setStatus('返回 JSON 不完整，无法执行批量更新。\n本批次未写入。','error');
-    else if(result.completeness&&result.completeness.missingSymbols.length)setStatus(`AI 返回结果不完整\nExpected: ${result.completeness.expected}\nDetected: ${result.completeness.detected}\nMissing: ${result.completeness.missingSymbols.join(', ')}\n本批次未写入。`,'error');
-    else setStatus('批次校验未通过，本批次未写入。','error');
+    if(eligible)setStatus(`${result.input&&result.input.smartQuotesRecovered?'已自动修正非标准引号\n':''}可更新 ${eligible} 只股票；确认后将一次保存全部变更。`);
+    else if(result.errorType===root.BatchTechnicalReview.ERROR_TYPES.PARSE)setStatus(`JSON 格式有误\n${result.input&&result.input.smartQuoteRecoveryAttempted?'检测到非标准引号，自动修复失败。\n本批次未写入。':'无法解析 AI 结果，本批次未写入。'}`,'error');
+    else if(result.errorType===root.BatchTechnicalReview.ERROR_TYPES.STRUCTURE)setStatus(`结果结构有误\n${result.error&&result.error.reason||'顶层结构不符合批量结果要求。'}\n本批次未写入。`,'error');
+    else if(result.errorType===root.BatchTechnicalReview.ERROR_TYPES.COMPLETENESS){
+      const completeness=result.completeness||{};
+      const missing=Array.isArray(completeness.missingSymbols)?completeness.missingSymbols:[];
+      setStatus(`结果不完整\n应有 ${completeness.expected??0}\n识别 ${completeness.detected??0}\n缺少 ${missing.length}${missing.length?`：${missing.join(', ')}`:''}\n本批次未写入。`,'error');
+    }else{
+      const invalid=result.items&&result.items.find(item=>item.status!==root.BatchTechnicalReview.STATUS.VALID);
+      setStatus(`结果校验失败\n${invalid?`${invalid.symbol||`第 ${invalid.index+1} 项`}：${invalid.reason}`:'字段未通过校验。'}\n本批次未写入。`,'error');
+    }
     setSaving(false);
   }
 

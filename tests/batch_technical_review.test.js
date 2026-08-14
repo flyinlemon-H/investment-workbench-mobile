@@ -207,7 +207,7 @@ test('ambiguous existing stock symbols are not auto-selected',()=>{
 test('rendered preview exposes summary and every failure reason',()=>{
   const result=Batch.process(envelope([item(1),{symbol:'UNKNOWN.SS',technicalReview:{}}]),stocks,singleStockValidator);
   const html=Batch.renderResult(result);
-  assert.match(html,/Expected: 2/);
+  assert.match(html,/应有 2/);
   assert.match(html,/本批次未写入/);
   assert.match(html,/unknown_symbol/);
   assert.match(html,/未找到 exact symbol/);
