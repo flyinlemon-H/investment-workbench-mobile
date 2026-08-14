@@ -364,6 +364,15 @@ function technicalDataFromReview(review,stock={}){
     lastUpdated:r.updatedAt
   });
 }
+function applyTechnicalReviewToStock(stock,normalizedReview){
+  if(!stock||typeof stock!=='object'||Array.isArray(stock))throw new Error('目标股票无效。');
+  stock.technicalReview=normalizeTechnicalReview(normalizedReview,stock);
+  stock.technicalData=technicalDataFromReview(stock.technicalReview,stock);
+  if(!stock.technicalData.symbol)stock.technicalData.symbol=stock.code||stock.symbol||'';
+  touchDataFreshness(stock,'technicalUpdatedAt',stock.technicalReview.shortTermTechnical.priceUpdatedAt||todayDate());
+  normalizeStockAnalysis(stock);
+  return stock;
+}
 const VALUATION_FIELDS=['pe','pb','ps','dividendYield','revenueGrowth','profitGrowth','historicalPeLow','historicalPeMid','historicalPeHigh','historicalPbLow','historicalPbMid','historicalPbHigh','historicalPsLow','historicalPsMid','historicalPsHigh','marketCap','peTtm','forwardPe','evEbitda','historicalPercentile'];
 function defaultValuationData(stock={}){
   return {

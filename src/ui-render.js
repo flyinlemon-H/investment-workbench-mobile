@@ -5965,6 +5965,10 @@ function normalizeImportedTechnicalReview(parsed,stock){
   },stock);
   return flatReview;
 }
+function validateSingleStockTechnicalReview(parsed,stock){
+  try{return {valid:true,normalized:normalizeImportedTechnicalReview(parsed,stock),error:''}}
+  catch(error){return {valid:false,normalized:null,error:error&&error.message?error.message:String(error)}}
+}
 async function importTechnicalJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
   if(!stock)return;
@@ -5973,11 +5977,9 @@ async function importTechnicalJson(){
   try{parsed=extractFirstJsonObject(document.getElementById('technicalJsonImportText').value)}catch(e){alert('导入失败：JSON 无法解析。');return}
   try{
     const payload=(parsed&&typeof parsed==='object'&&parsed.technicalData&&typeof parsed.technicalData==='object')?parsed.technicalData:parsed;
-    stock.technicalReview=normalizeImportedTechnicalReview(payload,stock);
-    stock.technicalData=technicalDataFromReview(stock.technicalReview,stock);
-    if(!stock.technicalData.symbol)stock.technicalData.symbol=stock.code||stock.symbol||'';
-    touchDataFreshness(stock,'technicalUpdatedAt',stock.technicalReview.shortTermTechnical.priceUpdatedAt||todayDate());
-    normalizeStockAnalysis(stock);
+    const validation=validateSingleStockTechnicalReview(payload,stock);
+    if(!validation.valid)throw new Error(validation.error);
+    applyTechnicalReviewToStock(stock,validation.normalized);
     markV13DecisionReviewDirty(stock.id,'technicalReview');
     try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
     closeTechnicalJsonImportModal();
