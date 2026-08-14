@@ -363,7 +363,7 @@ test('commit controller rejects a repeated click while the first save is pending
   assert.equal(controller.pending,false);
 });
 
-test('shared single-stock apply helper preserves unrelated fields and writes derived technical data',()=>{
+test('shared single-stock apply helper preserves unrelated fields without marking AI judgment as fresh technical facts',()=>{
   const stock={
     ...JSON.parse(JSON.stringify(stocks[0])),
     notes:'不得修改',
@@ -377,7 +377,8 @@ test('shared single-stock apply helper preserves unrelated fields and writes der
   assert.equal(stock.technicalReview.finalTechnicalConclusion,'技术结论 1');
   assert.equal(stock.technicalData.symbol,'TEST1.SS');
   assert.equal(stock.technicalData.technicalSummary,'技术摘要 1');
-  assert(stock.dataFreshness.technicalUpdatedAt);
+  assert.equal(stock.dataFreshness.technicalUpdatedAt,'');
+  assert.equal(stock.technicalData.technicalDataStatus,'unavailable');
 });
 
 test('Workbench candidate adapter performs one critical save and returns the adopted state',async()=>{

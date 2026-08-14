@@ -9,16 +9,17 @@ async function applyMarketDataBridge(){
     const currentFetched=String(stock.marketDataFreshness&&stock.marketDataFreshness.fetched_at||'');
     const nextFetched=String(incoming.marketDataFreshness&&incoming.marketDataFreshness.fetched_at||'');
     if(currentFetched&&nextFetched&&currentFetched>=nextFetched)return;
-    previous.push({stock,priceHistory:structuredClone(stock.priceHistory),marketDataFreshness:structuredClone(stock.marketDataFreshness),technicalIndicators:structuredClone(stock.technicalIndicators)});
+    previous.push({stock,priceHistory:structuredClone(stock.priceHistory),marketDataFreshness:structuredClone(stock.marketDataFreshness),technicalIndicators:structuredClone(stock.technicalIndicators),technicalData:structuredClone(stock.technicalData),dataFreshness:structuredClone(stock.dataFreshness)});
     stock.priceHistory=normalizePriceHistory(incoming.priceHistory||[]);
     stock.marketDataFreshness=incoming.marketDataFreshness||{};
     stock.technicalIndicators=incoming.technicalIndicators||{};
+    if(typeof updateTechnicalDataFromPriceHistory==='function')updateTechnicalDataFromPriceHistory(stock);
     changed++;
   });
   if(changed){
     try{await saveState(state,{critical:true})}
     catch(error){
-      previous.forEach(item=>{item.stock.priceHistory=item.priceHistory;item.stock.marketDataFreshness=item.marketDataFreshness;item.stock.technicalIndicators=item.technicalIndicators});
+      previous.forEach(item=>{item.stock.priceHistory=item.priceHistory;item.stock.marketDataFreshness=item.marketDataFreshness;item.stock.technicalIndicators=item.technicalIndicators;item.stock.technicalData=item.technicalData;item.stock.dataFreshness=item.dataFreshness});
       state.updatedAt=stateUpdatedAt;throw error;
     }
   }

@@ -28,15 +28,6 @@ function formatSourceErrors(errors){
   if(!errors||!errors.length)return '无详细错误';
   return errors.map(x=>`- ${x}`).join('\n');
 }
-function cachePriceHistoryFromRefresh(stock,price,date){
-  const p=Number(price);
-  if(!stock||!(p>0))return false;
-  const d=normalizePriceDate(date||new Date().toISOString().slice(0,10));
-  if(!d)return false;
-  stock.priceHistory=normalizePriceHistory([...(Array.isArray(stock.priceHistory)?stock.priceHistory:[]),{date:d,close:p}]);
-  if(typeof updateTechnicalDataFromPriceHistory==='function')updateTechnicalDataFromPriceHistory(stock);
-  return true;
-}
 async function fetchJsonWithFallback(url){
   const endpoints=[
     {name:'直接请求',url},
@@ -237,7 +228,6 @@ async function runPriceRefresh(id,opts={}){
       s.priceSource=r.source;
       s.dailyChange=r.change;
     }
-    if(cachePriceHistoryFromRefresh(s,r.price,r.updatedAt))touchDataFreshness(s,'technicalUpdatedAt',r.updatedAt);
     touchDataFreshness(s,'priceUpdatedAt',r.updatedAt);
     setPriceRefreshUiState(s.id,'persisting',{price:r.price,source:r.source,updatedAt:r.updatedAt});
     render();

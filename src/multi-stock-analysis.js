@@ -84,6 +84,7 @@
     const technicalData=typeof helpers.technicalData==='function'?helpers.technicalData(stock):stock.technicalData;
     const technicalReview=typeof helpers.technicalReview==='function'?helpers.technicalReview(stock):stock.technicalReview;
     const freshness=typeof helpers.dataFreshness==='function'?helpers.dataFreshness(stock):stock.dataFreshness;
+    const technical=clone(technicalData&&typeof technicalData==='object'?technicalData:{});
     return {
       symbol,
       name:text(stock.name),
@@ -95,7 +96,10 @@
       syncStatus:text(stock.syncStatus)||'unknown',
       lastSyncError:text(stock.lastSyncError),
       dataFreshness:clone(freshness&&typeof freshness==='object'?freshness:{}),
-      technicalData:clone(technicalData&&typeof technicalData==='object'?technicalData:{}),
+      technicalAsOf:text(technical.technicalAsOf),
+      latestCompleteBar:text(technical.latestCompleteBar),
+      technicalDataStatus:text(technical.technicalDataStatus)||'unavailable',
+      technicalData:technical,
       previousTechnicalReview:clone(technicalReview&&typeof technicalReview==='object'?technicalReview:{}),
       recentPriceHistory:recentPriceHistory(stock)
     };
@@ -318,6 +322,7 @@
           setStatus(`${progress.result.name||progress.result.symbol}：${mark}`);
         }}
       );
+      if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge();
       await persistPreferences({...preferenceState(),lastSymbols:selectedStocks().map(symbolOf)});
       generateRequest();
       const failures=summary.results.filter(item=>!item.ok);

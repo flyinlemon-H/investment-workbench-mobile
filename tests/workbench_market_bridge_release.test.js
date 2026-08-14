@@ -39,11 +39,13 @@ test('Workbench consumes bridge data through one critical save',async()=>{
     technicalIndicators:{}
   };
   const saves=[];
+  let technicalRefreshes=0;
   const context={
     window:{MARKET_DATA_BRIDGE:{...bridge,stocks:[incoming]}},
     state:{stocks:[stock],updatedAt:'before'},
     structuredClone,
     normalizePriceHistory:rows=>structuredClone(rows),
+    updateTechnicalDataFromPriceHistory:target=>{technicalRefreshes+=1;target.technicalData={technicalAsOf:target.priceHistory.at(-1).date,technicalDataStatus:'fresh'}},
     saveState:async(value,options)=>saves.push({value,options})
   };
   vm.createContext(context);
@@ -51,10 +53,12 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   const changed=await context.applyMarketDataBridge();
   assert.equal(changed,1);
   assert.equal(saves.length,1);
+  assert.equal(technicalRefreshes,1);
   assert.equal(saves[0].options.critical,true);
   assert.equal(stock.priceHistory.at(-1).date,'2026-08-13');
   assert.equal(stock.marketDataFreshness.fetched_at,incoming.marketDataFreshness.fetched_at);
   assert.deepEqual(stock.technicalIndicators,incoming.technicalIndicators);
+  assert.equal(stock.technicalData.technicalAsOf,'2026-08-13');
 });
 
 test('release version cache-busts the bridge and M05A modules',()=>{
