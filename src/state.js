@@ -121,6 +121,10 @@ function defaultTechnicalData(stock={}){
     macd:{dif:null,dea:null,histogram:null},
     volume:null,
     volumeAvg20:null,
+    volumeChangePct:null,
+    volumeStatus:'unavailable',
+    volumeWarning:'',
+    volumeProviderTransition:false,
     trendStatus:'',
     supportLevels:[],
     resistanceLevels:[],
@@ -209,6 +213,10 @@ function normalizeTechnicalData(v){
     macd:{dif:nullableSigned(macdSrc.dif),dea:nullableSigned(macdSrc.dea),histogram:nullableSigned(macdSrc.histogram??macdSrc.hist)},
     volume:nullableNumber(src.volume),
     volumeAvg20:nullableNumber(src.volumeAvg20),
+    volumeChangePct:nullableSigned(src.volumeChangePct),
+    volumeStatus:['comparable','unavailable'].includes(String(src.volumeStatus||''))?String(src.volumeStatus):'unavailable',
+    volumeWarning:String(src.volumeWarning||''),
+    volumeProviderTransition:Boolean(src.volumeProviderTransition),
     trendStatus:String(src.trendStatus||''),
     supportLevels:normalizeTechnicalLevelArray(src.supportLevels),
     resistanceLevels:normalizeTechnicalLevelArray(src.resistanceLevels),
@@ -1089,6 +1097,31 @@ function technicalFreshnessStatus(technicalAsOf,referenceDate=todayDate(),market
   for(let cursor=start+86400000;cursor<=end;cursor+=86400000){const day=new Date(cursor).getUTCDay();if(day!==0&&day!==6)businessDays+=1}
   return businessDays<=3?'fresh':'stale';
 }
+function volumeScaleForProvider(provider,symbol){
+  const source=String(provider||'').trim().toLowerCase();
+  const code=String(symbol||'').trim().toUpperCase();
+  if(source==='yahoo')return 1;
+  if(source==='eastmoney'){
+    if(/\.(SS|SZ)$/.test(code))return 100;
+    if(/\.HK$/.test(code))return 1;
+  }
+  return null;
+}
+function normalizeVolumeComparison(priceHistory,symbol){
+  const rows=normalizePriceHistory(priceHistory).filter(row=>row.is_complete_bar!==false&&Number(row.volume)>0).slice(-20);
+  if(rows.length<10)return {volume:null,volumeAvg20:null,recent5Average:null,previous5Average:null,volumeChangePct:null,volumeStatus:'unavailable',volumeWarning:'insufficient_volume_history',volumeProviderTransition:false};
+  const providers=rows.map(row=>String(row.provider||'').trim().toLowerCase());
+  const providerTransition=new Set(providers).size>1;
+  const normalized=rows.map(row=>{
+    const scale=volumeScaleForProvider(row.provider,symbol);
+    return scale===null?null:Number(row.volume)*scale;
+  });
+  if(normalized.some(value=>!Number.isFinite(value)||value<=0))return {volume:null,volumeAvg20:null,recent5Average:null,previous5Average:null,volumeChangePct:null,volumeStatus:'unavailable',volumeWarning:providerTransition?'provider_scale_mismatch':'unknown_volume_scale',volumeProviderTransition:providerTransition};
+  const average=values=>values.reduce((sum,value)=>sum+value,0)/values.length;
+  const recent=average(normalized.slice(-5)),previous=average(normalized.slice(-10,-5));
+  const volumeChangePct=previous>0?Number(((recent/previous-1)*100).toFixed(2)):null;
+  return {volume:normalized[normalized.length-1],volumeAvg20:Number(average(normalized).toFixed(2)),recent5Average:Number(recent.toFixed(2)),previous5Average:Number(previous.toFixed(2)),volumeChangePct,volumeStatus:'comparable',volumeWarning:'',volumeProviderTransition:providerTransition};
+}
 function updateTechnicalDataFromPriceHistory(stock,options={}){
   if(!stock)return {updated:false,warnings:['标的不存在']};
   stock.priceHistory=normalizePriceHistory(stock);
@@ -1104,6 +1137,8 @@ function updateTechnicalDataFromPriceHistory(stock,options={}){
   const sr=calculateSupportResistance(completeHistory);
   const technicalAsOf=latest?latest.date:'';
   const status=technicalFreshnessStatus(technicalAsOf,options.referenceDate||todayDate(),stock.marketDataFreshness);
+  const volumeFacts=normalizeVolumeComparison(completeHistory,String(stock.code||stock.symbol||td.symbol||''));
+  stock.technicalIndicators={...supplied,volume_change:{recent_5d_average:volumeFacts.recent5Average,previous_5d_average:volumeFacts.previous5Average,change_pct:volumeFacts.volumeChangePct,unit:'shares',status:volumeFacts.volumeStatus,warning:volumeFacts.volumeWarning,provider_transition:volumeFacts.volumeProviderTransition}};
   const warning=status==='stale'?'完整日线技术数据已过期，请降低结论置信度。':(status==='unavailable'?'缺少可用的完整日线技术数据。':(status==='anomaly'?'完整日线日期异常，请勿基于该数据作出量化判断。':''));
   stock.technicalData=normalizeTechnicalData({
     ...td,
@@ -1124,7 +1159,12 @@ function updateTechnicalDataFromPriceHistory(stock,options={}){
       dea:useSupplied?numberOr(suppliedMacd.dea,derivedMacd.dea):derivedMacd.dea,
       histogram:useSupplied?numberOr(suppliedMacd.histogram,derivedMacd.histogram):derivedMacd.histogram
     },
-    volume:latest&&Number.isFinite(Number(latest.volume))?Number(latest.volume):null,
+    volume:volumeFacts.volume,
+    volumeAvg20:volumeFacts.volumeAvg20,
+    volumeChangePct:volumeFacts.volumeChangePct,
+    volumeStatus:volumeFacts.volumeStatus,
+    volumeWarning:volumeFacts.volumeWarning,
+    volumeProviderTransition:volumeFacts.volumeProviderTransition,
     supportPrice:sr.supportPrice,
     resistancePrice:sr.resistancePrice,
     trendNote:td.trendNote,

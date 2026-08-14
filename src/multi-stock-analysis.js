@@ -87,7 +87,7 @@
       macd:clone(td.macd&&typeof td.macd==='object'?td.macd:{dif:null,dea:null,histogram:null}),
       supportLevels:arr(td.supportLevels).slice(0,4),resistanceLevels:arr(td.resistanceLevels).slice(0,4),
       cycle:{lookbackDays:position.lookbackDays??null,high:position.high??null,low:position.low??null,currentPercentile:position.currentPercentile??null,distanceToCycleHighPct:position.distanceToCycleHighPct??null,distanceToCycleLowPct:position.distanceToCycleLowPct??null},
-      volume:td.volume??null,volumeAvg20:td.volumeAvg20??null,volumeStatus:text(td.volumeStatus),volumeWarning:text(td.volumeWarning)
+      volume:td.volume??null,volumeAvg20:td.volumeAvg20??null,volumeChangePct:td.volumeChangePct??null,volumeStatus:text(td.volumeStatus),volumeWarning:text(td.volumeWarning),volumeProviderTransition:Boolean(td.volumeProviderTransition)
     };
   }
 
@@ -157,7 +157,8 @@
       '4. 每项只能包含 symbol 和 review；review 只返回判断，不要返回或重算 currentPrice、priceUpdatedAt、technicalAsOf、MA、MACD、K线或周期数值。',
       '5. trendStatus 只能是 uptrend、downtrend、sideways、recovery、rebound、unclear 之一。',
       '6. technicalDataStatus 为 stale、unavailable 或 anomaly 时，只给条件化结论，并降低 confidence；不要发明缺失事实。',
-      '7. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。riskFlags 必须保持字符串数组。',
+      '7. volumeStatus 为 unavailable 时，不要基于 volumeChangePct 给出量能结论。',
+      '8. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。riskFlags 必须保持字符串数组。',
       '',
       '股票上下文：',
       JSON.stringify(contexts,null,2),
