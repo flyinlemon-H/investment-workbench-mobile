@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "0754945633f730f15a92789543a5e482d703d350",
-  "assetVersion": "m05b-workbench-mobile-20260814",
+  "sourceCommit": "00ab480b11e9465b3577fc747df0ce1ac0b44fc9",
+  "assetVersion": "m05b-hotfix1-workbench-mobile-20260814",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 42548,
-      "sha256": "f9ab466823bbc45bcddae7951b59feb68945ec08701169869a18c4e872af78a0"
+      "bytes": 42843,
+      "sha256": "58dc6c4be2b4dad36de67a5f9227aaba8acd504ac3e21287f46d16dd9b5706ff"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +103,8 @@
     {
       "path": "src/batch-technical-review.js",
       "role": "M05B strict judgment-only batch review runtime",
-      "bytes": 26194,
-      "sha256": "95df67da361dfffa37b88348f083e3de68c60ca84ab127be74da80681ceefbea"
+      "bytes": 26206,
+      "sha256": "26cbe4439f57e1a1aa30fb548c696fb4fb8ab4c3b8b46518baa99afdfcb1d4ca"
     },
     {
       "path": "src/import-export.js",
@@ -121,8 +121,8 @@
     {
       "path": "src/multi-stock-analysis.js",
       "role": "M05B stable daily multi-stock analysis runtime",
-      "bytes": 32421,
-      "sha256": "5a06d45d9044456c233aa670e985c61ab79e25a3c9040884e082ae9bf3232726"
+      "bytes": 33270,
+      "sha256": "1d4cdfea4016d7f21b3f66e1a4bf493b68040bd0831d748a9c1557b6cbb6c437"
     },
     {
       "path": "src/multi-tab-protection.js",
@@ -229,14 +229,20 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "browser runtime dependency",
-      "bytes": 4532,
-      "sha256": "1e41cd2ee766954f81c36cfef71b93f50257afaabf1aeda47ec4a2cd0a5f80dc"
+      "bytes": 4673,
+      "sha256": "b138144b51088f1ac44be5f1327c10b7b8d69ce806fee35ff597265d439123c3"
+    },
+    {
+      "path": "src/symbol-identity.js",
+      "role": "M05B Hotfix 1 canonical symbol identity runtime",
+      "bytes": 922,
+      "sha256": "5aec185676eda4a8f332a8ae7ff97ca920b24bea55e815eee4055452dd4e1309"
     },
     {
       "path": "src/ui-render.js",
       "role": "browser runtime dependency",
-      "bytes": 601299,
-      "sha256": "6fd59df4fdd659950009df6ead45716ddea409855890128c153da5ccbbd67a0f"
+      "bytes": 601718,
+      "sha256": "cfd859131a3e1591c9fa0b66f531c42dce87c030f1fd81560cc810118851e3c6"
     },
     {
       "path": "src/v13-alpha3-services.js",
