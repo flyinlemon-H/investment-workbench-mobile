@@ -1,0 +1,17 @@
+{
+  "stocks": [
+    {"id":"trial-01","code":"601138.SS","name":"工业富联","type":"holding"},
+    {"id":"trial-02","code":"2899.HK","name":"紫金矿业","type":"holding"},
+    {"id":"trial-03","code":"601869.SS","name":"长飞光纤","type":"holding"},
+    {"id":"trial-04","code":"002824.SZ","name":"和胜股份","type":"holding"},
+    {"id":"trial-05","code":"603296.SS","name":"华勤技术","type":"holding"},
+    {"id":"trial-06","code":"605499.SS","name":"东鹏饮料","type":"holding"},
+    {"id":"trial-07","code":"1810.HK","name":"小米集团","type":"holding"},
+    {"id":"trial-08","code":"1357.HK","name":"美图公司","type":"holding"},
+    {"id":"trial-09","code":"159300.SZ","name":"沪深300ETF","type":"etf","shares":100},
+    {"id":"trial-10","code":"510980.SS","name":"上证综指ETF","type":"etf","shares":100},
+    {"id":"trial-11","code":"512400.SS","name":"有色金属ETF","type":"etf","shares":100},
+    {"id":"trial-12","code":"588060.SS","name":"科创50ETF","type":"etf","shares":100}
+  ],
+  "updatedAt": null
+}

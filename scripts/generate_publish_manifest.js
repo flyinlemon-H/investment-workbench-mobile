@@ -11,8 +11,8 @@ const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
-roleByPath.set('src/batch-technical-review.js','M05A batch technical review runtime');
-roleByPath.set('src/multi-stock-analysis.js','M05A multi-stock analysis runtime');
+roleByPath.set('src/batch-technical-review.js','M05B strict judgment-only batch review runtime');
+roleByPath.set('src/multi-stock-analysis.js','M05B stable daily multi-stock analysis runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
@@ -36,7 +36,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05a-workbench-mobile-20260814',
+  assetVersion:'m05b-workbench-mobile-20260814',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };

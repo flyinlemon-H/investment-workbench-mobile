@@ -61,9 +61,9 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   assert.equal(stock.technicalData.technicalAsOf,'2026-08-13');
 });
 
-test('release version cache-busts the bridge and M05A modules',()=>{
+test('M05B release version cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05a-workbench-mobile-20260814';
+  const version='m05b-workbench-mobile-20260814';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/market_data_bridge.js',

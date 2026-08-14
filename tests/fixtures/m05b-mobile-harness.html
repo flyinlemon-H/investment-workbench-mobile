@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>M05B Mobile Trial Harness</title>
+<script>
+fetch('./m05b-mobile-trial.json')
+  .then(response=>response.text())
+  .then(payload=>{
+    localStorage.setItem('portfolio_manual_v502_network_price_20260610',payload);
+    location.replace('/?m05b-mobile-trial=1');
+  });
+</script>

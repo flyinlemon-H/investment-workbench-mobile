@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "9a2a4cd0ff9d473ff286c3a987c54ff225a517c4",
-  "assetVersion": "m05a-workbench-mobile-20260814",
+  "sourceCommit": "0754945633f730f15a92789543a5e482d703d350",
+  "assetVersion": "m05b-workbench-mobile-20260814",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -56,7 +56,7 @@
       "path": "index.html",
       "role": "entrypoint",
       "bytes": 42548,
-      "sha256": "aeda53477a4c8a44f070d5382f1e0c119b0923abd57888ec2daec31140dd61e0"
+      "sha256": "f9ab466823bbc45bcddae7951b59feb68945ec08701169869a18c4e872af78a0"
     },
     {
       "path": "social_posts.json",
@@ -102,9 +102,9 @@
     },
     {
       "path": "src/batch-technical-review.js",
-      "role": "M05A batch technical review runtime",
-      "bytes": 18876,
-      "sha256": "5925db3450037e3461450bdb491314cedfecc34188fb5738b57ee8ff927a847b"
+      "role": "M05B strict judgment-only batch review runtime",
+      "bytes": 26194,
+      "sha256": "95df67da361dfffa37b88348f083e3de68c60ca84ab127be74da80681ceefbea"
     },
     {
       "path": "src/import-export.js",
@@ -115,14 +115,14 @@
     {
       "path": "src/market-data-bridge.js",
       "role": "browser runtime dependency",
-      "bytes": 1520,
-      "sha256": "335dbaeae7a016e853a6b82b4461449085e4b1955dc40d94fe8ce6cc7876db5c"
+      "bytes": 1817,
+      "sha256": "86c32e32f7a2fb436d23064aae5d32478a09d5066766b956d6900361eab26528"
     },
     {
       "path": "src/multi-stock-analysis.js",
-      "role": "M05A multi-stock analysis runtime",
-      "bytes": 17597,
-      "sha256": "9e6a1129da6ab930f023c18f50d3feacf57ba5f2c2bbf011e5915192bafb70ac"
+      "role": "M05B stable daily multi-stock analysis runtime",
+      "bytes": 32421,
+      "sha256": "5a06d45d9044456c233aa670e985c61ab79e25a3c9040884e082ae9bf3232726"
     },
     {
       "path": "src/multi-tab-protection.js",
@@ -157,8 +157,8 @@
     {
       "path": "src/price-refresh.js",
       "role": "browser runtime dependency",
-      "bytes": 15902,
-      "sha256": "4376d46ac9db59e96c0584575aaf025c16271ca1134985ba9a015b06db552185"
+      "bytes": 15328,
+      "sha256": "cce5fa2a613df41d77a03749af560d924fcf5dedd86bdc1145cd20f0e750da86"
     },
     {
       "path": "src/rebalance.js",
@@ -175,8 +175,8 @@
     {
       "path": "src/state.js",
       "role": "browser runtime dependency",
-      "bytes": 113215,
-      "sha256": "ebb84d092ca28aa0c956726e8ee891b2331794c58ebd3c538501721267f5676c"
+      "bytes": 120655,
+      "sha256": "0004ff8b884f447b0e3c5c8840c7951c9bc15bcb81ea221500a17e779866eb96"
     },
     {
       "path": "src/storage/cutover-v1.js",
