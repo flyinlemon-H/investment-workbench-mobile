@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "00ab480b11e9465b3577fc747df0ce1ac0b44fc9",
-  "assetVersion": "m05b-hotfix1-workbench-mobile-20260814",
+  "sourceCommit": "ee119607fe9763ad214cf2529f582ab3261c552e",
+  "assetVersion": "m05b-hotfix2-workbench-mobile-20260814",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -56,7 +56,7 @@
       "path": "index.html",
       "role": "entrypoint",
       "bytes": 42843,
-      "sha256": "58dc6c4be2b4dad36de67a5f9227aaba8acd504ac3e21287f46d16dd9b5706ff"
+      "sha256": "bcb4e0e5f172fda83aa5b26dfeb7808d2d959257dfd335e26c362ec2afc714bb"
     },
     {
       "path": "social_posts.json",
@@ -102,9 +102,9 @@
     },
     {
       "path": "src/batch-technical-review.js",
-      "role": "M05B strict judgment-only batch review runtime",
-      "bytes": 26206,
-      "sha256": "26cbe4439f57e1a1aa30fb548c696fb4fb8ab4c3b8b46518baa99afdfcb1d4ca"
+      "role": "M05B Hotfix 2 robust AI batch JSON parser and review runtime",
+      "bytes": 33008,
+      "sha256": "fee71ef581aa09bad9fb583046f0205fb9b455d7223e4a5e6efae76496b4f7c0"
     },
     {
       "path": "src/import-export.js",
