@@ -148,6 +148,7 @@ function defaultTechnicalData(stock={}){
   };
 }
 const TECHNICAL_CYCLE_POSITIONS=['low_base','early_uptrend','mid_uptrend','high_level_rebreakout','high_level_overextension','distribution_risk','downtrend','unclear'];
+const TECHNICAL_TREND_STATUSES=['uptrend','downtrend','sideways','recovery','rebound','unclear'];
 function normalizePricePosition(v){
   const src=(v&&typeof v==='object')?v:{};
   const nullableNumber=x=>{const n=Number(x);return isFinite(n)?n:null};
@@ -305,7 +306,7 @@ function normalizeTechnicalReview(v,stock={}){
       ma10:nullableNumber(stSrc.ma10)??legacy.ma10,
       ma20:nullableNumber(stSrc.ma20)??(legacy.ma20>0?legacy.ma20:null),
       ma60:nullableNumber(stSrc.ma60)??(legacy.ma60>0?legacy.ma60:null),
-      trendStatus:String(stSrc.trendStatus||legacy.trendStatus||''),
+      trendStatus:enumOr(stSrc.trendStatus||legacy.trendStatus,TECHNICAL_TREND_STATUSES,'unclear'),
       supportLevels:normalizeTechnicalLevelArray(stSrc.supportLevels&&stSrc.supportLevels.length?stSrc.supportLevels:legacy.supportLevels),
       resistanceLevels:normalizeTechnicalLevelArray(stSrc.resistanceLevels&&stSrc.resistanceLevels.length?stSrc.resistanceLevels:legacy.resistanceLevels),
       technicalSummary:String(stSrc.technicalSummary||legacy.technicalSummary||legacy.trendNote||''),

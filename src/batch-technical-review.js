@@ -14,6 +14,9 @@
     MISSING_SYMBOL:'missing_symbol',
     MISSING_TECHNICAL_REVIEW:'missing_technical_review'
   });
+  const TREND_STATUSES=Object.freeze(['uptrend','downtrend','sideways','recovery','rebound','unclear']);
+  const RISK_FLAGS=Object.freeze(['near_previous_high','high_level_rebreakout','high_level_overextension','short_term_volatility','resistance_overhead','gap_risk','trend_weakening','below_ma20','below_ma60','distribution_risk','breakout_failure','volume_divergence','support_breakdown']);
+  const V2_REVIEW_FIELDS=Object.freeze(['trendStatus','technicalSummary','riskFlags','actionHint','confidence','finalTechnicalConclusion','holdHint','addHint','reduceHint']);
 
   function emptySummary(){
     return {total:0,valid:0,invalid:0,unknown:0,duplicate:0};
@@ -25,6 +28,38 @@
 
   function stockSymbol(stock){
     return String(stock&&(stock.code||stock.symbol)||'').trim();
+  }
+
+  function technicalReviewFromJudgment(review,stock){
+    if(!review||typeof review!=='object'||Array.isArray(review))return {valid:false,error:'review 必须是对象。'};
+    const extra=Object.keys(review).filter(key=>!V2_REVIEW_FIELDS.includes(key));
+    if(extra.length)return {valid:false,error:`review 包含程序事实或未知字段：${extra.join(', ')}。`};
+    const trendStatus=String(review.trendStatus||'').trim();
+    if(!TREND_STATUSES.includes(trendStatus))return {valid:false,error:`trendStatus 必须是固定枚举：${TREND_STATUSES.join(', ')}。`};
+    const confidence=String(review.confidence||'').trim();
+    if(!['high','medium','low'].includes(confidence))return {valid:false,error:'confidence 必须是 high、medium 或 low。'};
+    if(!Array.isArray(review.riskFlags)||review.riskFlags.some(flag=>typeof flag!=='string'||!RISK_FLAGS.includes(flag)))return {valid:false,error:'riskFlags 必须只包含受支持的固定枚举。'};
+    for(const key of V2_REVIEW_FIELDS.filter(key=>!['trendStatus','riskFlags','confidence'].includes(key))){
+      if(typeof review[key]!=='string')return {valid:false,error:`review.${key} 必须是字符串。`};
+    }
+    const facts=stock&&stock.technicalData&&typeof stock.technicalData==='object'?stock.technicalData:{};
+    const previous=stock&&stock.technicalReview&&typeof stock.technicalReview==='object'?stock.technicalReview:{};
+    const history=Array.isArray(stock&&stock.priceHistory)?stock.priceHistory.filter(row=>row&&row.is_complete_bar!==false):[];
+    const technicalDataStatus=String(facts.technicalDataStatus||'unavailable');
+    const warning=String(facts.technicalWarning||'')||(technicalDataStatus==='fresh'?'':`technicalDataStatus: ${technicalDataStatus}`);
+    return {valid:true,normalized:{
+      updatedAt:new Date().toISOString(),
+      inputCoverage:{hasRecentKline:history.length>0,hasCycleKline:Boolean(previous.cycleTechnical&&previous.cycleTechnical.dataSource&&previous.cycleTechnical.dataSource!=='none'),cycleDataSource:String(previous.cycleTechnical&&previous.cycleTechnical.dataSource||'program_facts'),warning},
+      shortTermTechnical:{
+        lookbackDays:history.length,price:facts.price??null,priceUpdatedAt:String(facts.technicalAsOf||facts.priceUpdatedAt||''),
+        ma5:facts.ma5??null,ma10:facts.ma10??null,ma20:facts.ma20??null,ma60:facts.ma60??null,
+        trendStatus, supportLevels:Array.isArray(facts.supportLevels)?facts.supportLevels:[],resistanceLevels:Array.isArray(facts.resistanceLevels)?facts.resistanceLevels:[],
+        technicalSummary:review.technicalSummary,riskFlags:review.riskFlags.slice(),actionHint:review.actionHint,confidence
+      },
+      cycleTechnical:previous.cycleTechnical&&typeof previous.cycleTechnical==='object'?previous.cycleTechnical:{lookbackDays:history.length,cyclePosition:'unclear',cycleSummary:'',cycleHigh:null,cycleLow:null,currentPercentile:null,distanceToCycleHighPct:null,distanceToCycleLowPct:null,lastCycleUpdatedAt:String(facts.technicalAsOf||''),dataSource:'program_facts',confidence},
+      priceActionEvent:previous.priceActionEvent&&typeof previous.priceActionEvent==='object'?previous.priceActionEvent:{detected:false,type:'unknown',changePct:null,volumeStatus:'unknown',needsNewsExplanation:false,eventReason:''},
+      finalTechnicalConclusion:review.finalTechnicalConclusion,holdHint:review.holdHint,addHint:review.addHint,reduceHint:review.reduceHint
+    }};
   }
 
   function buildStockIndex(stocks){
@@ -56,24 +91,31 @@
     };
   }
 
-  function classifyItem(item,index,stockLookup,seen,validateTechnicalReview){
-    const base={index,symbol:'',matchedStock:null,status:STATUS.INVALID_ITEM,reason:'',technicalReview:null,preview:null};
+  function classifyItem(item,index,stockLookup,seen,validateTechnicalReview,expectedSet){
+    const base={index,symbol:'',matchedStock:null,status:STATUS.INVALID_ITEM,reason:'',contractVersion:'',technicalReview:null,preview:null};
     if(!item||typeof item!=='object'||Array.isArray(item)){
       return {...base,reason:'Item 必须是对象。'};
     }
     if(typeof item.symbol!=='string'||!item.symbol.trim()){
-      return {...base,status:STATUS.MISSING_SYMBOL,reason:'缺少非空字符串 symbol。',technicalReview:item.technicalReview??null};
+      return {...base,status:STATUS.MISSING_SYMBOL,reason:'缺少非空字符串 symbol。',technicalReview:item.technicalReview??item.review??null};
     }
     const symbol=item.symbol.trim();
     base.symbol=symbol;
-    base.technicalReview=item.technicalReview??null;
-    if(!Object.prototype.hasOwnProperty.call(item,'technicalReview')){
-      return {...base,status:STATUS.MISSING_TECHNICAL_REVIEW,reason:'缺少 technicalReview。'};
-    }
+    const isV2=Object.prototype.hasOwnProperty.call(item,'review');
+    const isV1=Object.prototype.hasOwnProperty.call(item,'technicalReview');
+    if(isV2&&isV1)return {...base,status:STATUS.INVALID_SCHEMA,reason:'每项只能使用 review（V2）或 technicalReview（兼容 V1）其中之一。'};
+    if(!isV2&&!isV1)return {...base,status:STATUS.MISSING_TECHNICAL_REVIEW,reason:'缺少 review。'};
+    const itemExtra=Object.keys(item).filter(key=>!['symbol',isV2?'review':'technicalReview'].includes(key));
+    if(itemExtra.length)return {...base,status:STATUS.INVALID_SCHEMA,reason:`Item 包含未知字段：${itemExtra.join(', ')}。`};
+    base.contractVersion=isV2?'v2':'v1';
+    base.technicalReview=isV2?item.review:item.technicalReview;
     if(seen.has(symbol)){
       return {...base,status:STATUS.DUPLICATE_SYMBOL,reason:`symbol ${symbol} 在本批次中重复。`};
     }
     seen.add(symbol);
+    if(expectedSet&&expectedSet.size&&!expectedSet.has(symbol)){
+      return {...base,status:STATUS.UNKNOWN_SYMBOL,reason:`symbol ${symbol} 不在本次 expected symbols 中。`};
+    }
     if(stockLookup.ambiguous.has(symbol)){
       return {...base,status:STATUS.UNKNOWN_SYMBOL,reason:`现有股票中 symbol ${symbol} 不唯一，无法安全匹配。`};
     }
@@ -84,7 +126,9 @@
     const matchedStock={id:stock.id??null,symbol:stockSymbol(stock),name:String(stock.name||'')};
     let validation;
     try{
-      validation=validateTechnicalReview(item.technicalReview,stock);
+      const contract=isV2?technicalReviewFromJudgment(item.review,stock):{valid:true,normalized:item.technicalReview};
+      if(!contract.valid)validation=contract;
+      else validation=validateTechnicalReview(contract.normalized,stock);
     }catch(error){
       validation={valid:false,error:error&&error.message?error.message:String(error)};
     }
@@ -92,7 +136,7 @@
       return {...base,matchedStock,status:STATUS.INVALID_SCHEMA,reason:String(validation&&validation.error||'technicalReview 未通过单股校验。')};
     }
     const normalized=validation.normalized;
-    return {...base,matchedStock,status:STATUS.VALID,reason:'已通过单股 technicalReview 校验。',technicalReview:normalized,preview:previewFor(stock,symbol,normalized)};
+    return {...base,matchedStock,status:STATUS.VALID,reason:`已通过 Batch Contract ${isV2?'V2':'V1 compatibility'} 和单股校验。`,technicalReview:normalized,preview:previewFor(stock,symbol,normalized)};
   }
 
   function summarize(items){
@@ -117,6 +161,7 @@
   }
 
   function eligibleEntries(result){
+    if(!result||result.batchStatus!=='valid')return [];
     const conflicts=duplicateConflictSymbols(result);
     const items=result&&Array.isArray(result.items)?result.items:[];
     return items.filter(item=>item&&item.status===STATUS.VALID&&!conflicts.has(item.symbol));
@@ -191,7 +236,7 @@
     });
   }
 
-  function process(rawJson,stocks,validateTechnicalReview){
+  function process(rawJson,stocks,validateTechnicalReview,options={}){
     if(typeof validateTechnicalReview!=='function')return invalidBatch('validator_unavailable','单股 technicalReview validator 不可用。');
     let envelope;
     try{
@@ -210,13 +255,20 @@
     if(!Array.isArray(envelope.technicalReviews)){
       return invalidBatch('invalid_technical_reviews','technicalReviews 必须是数组。');
     }
+    const topLevelExtra=Object.keys(envelope).filter(key=>key!=='technicalReviews');
+    if(topLevelExtra.length)return invalidBatch('unknown_top_level_fields',`顶层包含未知字段：${topLevelExtra.join(', ')}。`);
     const stockLookup=buildStockIndex(stocks);
+    const expectedSymbols=Array.isArray(options.expectedSymbols)?options.expectedSymbols.map(symbol=>String(symbol??'').trim()).filter((symbol,index,all)=>symbol&&all.indexOf(symbol)===index):[];
+    const expectedSet=expectedSymbols.length?new Set(expectedSymbols):null;
     const seen=new Set();
-    const items=envelope.technicalReviews.map((item,index)=>classifyItem(item,index,stockLookup,seen,validateTechnicalReview));
+    const items=envelope.technicalReviews.map((item,index)=>classifyItem(item,index,stockLookup,seen,validateTechnicalReview,expectedSet));
+    const detectedSymbols=Array.from(new Set(items.map(item=>item.symbol).filter(Boolean)));
+    const missingSymbols=expectedSymbols.filter(symbol=>!detectedSymbols.includes(symbol));
+    missingSymbols.forEach(symbol=>items.push({index:items.length,symbol,matchedStock:null,status:STATUS.MISSING_SYMBOL,reason:`AI 返回缺少 expected symbol：${symbol}。`,contractVersion:'v2',technicalReview:null,preview:null}));
     const summary=summarize(items);
-    const batchStatus=summary.total>0&&summary.valid===summary.total?'valid':(summary.valid>0?'partial':'invalid');
+    const batchStatus=summary.total>0&&summary.valid===summary.total&&missingSymbols.length===0?'valid':'invalid';
     items.forEach(item=>{if(item.preview)item.preview.batchStatus=batchStatus});
-    return {batchStatus,summary,items,error:null};
+    return {batchStatus,summary,items,error:null,completeness:{expected:expectedSymbols.length||detectedSymbols.length,detected:detectedSymbols.length,expectedSymbols,detectedSymbols,missingSymbols}};
   }
 
   function escapeHtml(value){
@@ -228,7 +280,10 @@
     if(result.error)return `<div class="hint"><b>批次无效</b><div class="card-note">${escapeHtml(result.error.reason)}</div></div>`;
     const s=result.summary;
     const eligible=eligibleEntries(result).length;
-    const summary=`<div class="hint"><b>批次状态：${escapeHtml(result.batchStatus)}</b><div class="card-note">总计 ${s.total} · 可更新 ${eligible} · 有效 ${s.valid} · 无效 ${s.invalid} · 未知 ${s.unknown} · 重复 ${s.duplicate}</div></div>`;
+    const completeness=result.completeness||{};
+    const missing=Array.isArray(completeness.missingSymbols)&&completeness.missingSymbols.length?`<div class="card-note">Missing: ${escapeHtml(completeness.missingSymbols.join(', '))}</div>`:'';
+    const counts=completeness.expected!==undefined?`Expected: ${completeness.expected} · Detected: ${completeness.detected}`:`总计 ${s.total}`;
+    const summary=`<div class="hint"><b>批次状态：${escapeHtml(result.batchStatus)}</b><div class="card-note">${counts} · 可更新 ${eligible} · 有效 ${s.valid} · 无效 ${s.invalid} · 未知 ${s.unknown} · 重复 ${s.duplicate}</div>${missing}${result.batchStatus!=='valid'?'<div class="card-note">本批次未写入。</div>':''}</div>`;
     const items=result.items.map(item=>{
       const title=item.matchedStock&&item.matchedStock.name?`${item.matchedStock.name} · ${item.symbol}`:(item.symbol||`第 ${item.index+1} 项`);
       const preview=item.preview?`<div class="card-note">${escapeHtml(item.preview.summary||'暂无结论摘要')}</div><div class="card-note">趋势 ${escapeHtml(item.preview.trendStatus||'—')} · 周期 ${escapeHtml(item.preview.cyclePosition||'—')}</div>`:'';
@@ -253,7 +308,7 @@
     };
   }
 
-  return {STATUS,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
+  return {STATUS,TREND_STATUSES,RISK_FLAGS,V2_REVIEW_FIELDS,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
 });
 
 (function(root){
@@ -261,6 +316,7 @@
   if(!root||!root.document)return;
 
   let currentPreview=null;
+  let expectedSymbols=[];
   const commitController=root.BatchTechnicalReview.createCommitController();
   const saveCandidateWithRollback=root.BatchTechnicalReview.createWorkbenchCandidateSaver({
     getState:()=>state,
@@ -274,7 +330,7 @@
     modal=document.createElement('div');
     modal.className='modal-bg import-layer';
     modal.id='batchTechnicalReviewModal';
-    modal.innerHTML=`<div class="modal"><h2>批量技术复核</h2><div class="modal-sub">先严格匹配、校验和预览；确认后仅批量更新可应用的技术复核。</div><details class="m05a-batch-input-details" id="batchTechnicalReviewInputDetails" open><summary>Batch JSON 输入（预览后自动收起）</summary><textarea id="batchTechnicalReviewText" aria-label="批量 JSON" style="min-height:260px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[{"symbol":"601138.SS","technicalReview":{}}]}'></textarea></details><div class="modal-actions"><button class="btn ghost" id="batchTechnicalReviewCloseBtn" type="button">关闭</button><button class="btn ghost" id="batchTechnicalReviewPreviewBtn" type="button">解析并预览</button><button class="btn" id="batchTechnicalReviewConfirmBtn" type="button" disabled>确认批量更新</button></div><div id="batchTechnicalReviewStatus" style="margin-top:14px"></div><div id="batchTechnicalReviewResult" style="margin-top:14px"></div></div>`;
+    modal.innerHTML=`<div class="modal"><h2>批量技术复核</h2><div class="modal-sub">先严格匹配、校验和预览；确认后仅批量更新完整且可应用的技术复核。</div><details class="m05a-batch-input-details" id="batchTechnicalReviewInputDetails" open><summary>Batch JSON 输入（预览后自动收起）</summary><textarea id="batchTechnicalReviewText" aria-label="批量 JSON" style="min-height:260px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[{"symbol":"601138.SS","review":{"trendStatus":"sideways"}}]}'></textarea></details><div class="modal-actions"><button class="btn ghost" id="batchTechnicalReviewCloseBtn" type="button">关闭</button><button class="btn ghost" id="batchTechnicalReviewPreviewBtn" type="button">解析并预览</button><button class="btn" id="batchTechnicalReviewConfirmBtn" type="button" disabled>确认批量更新</button></div><div id="batchTechnicalReviewStatus" style="margin-top:14px"></div><div id="batchTechnicalReviewResult" style="margin-top:14px"></div></div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
     document.getElementById('batchTechnicalReviewCloseBtn').addEventListener('click',closeModal);
@@ -316,6 +372,7 @@
   function openModal(){
     const modal=ensureModal();
     currentPreview=null;
+    expectedSymbols=[];
     document.getElementById('batchTechnicalReviewResult').innerHTML='';
     const inputDetails=document.getElementById('batchTechnicalReviewInputDetails');
     if(inputDetails)inputDetails.open=true;
@@ -325,8 +382,9 @@
     setTimeout(()=>document.getElementById('batchTechnicalReviewText').focus(),50);
   }
 
-  function openWithInput(raw){
+  function openWithInput(raw,symbols=[]){
     openModal();
+    expectedSymbols=Array.isArray(symbols)?symbols.slice():[];
     document.getElementById('batchTechnicalReviewText').value=String(raw??'');
     previewBatch();
   }
@@ -341,13 +399,16 @@
     const raw=document.getElementById('batchTechnicalReviewText').value;
     const stocks=(typeof state!=='undefined'&&state&&Array.isArray(state.stocks))?state.stocks:[];
     const validator=typeof validateSingleStockTechnicalReview==='function'?validateSingleStockTechnicalReview:null;
-    const result=root.BatchTechnicalReview.process(raw,stocks,validator);
+    const result=root.BatchTechnicalReview.process(raw,stocks,validator,{expectedSymbols});
     currentPreview=result;
     document.getElementById('batchTechnicalReviewResult').innerHTML=root.BatchTechnicalReview.renderResult(result);
     const eligible=root.BatchTechnicalReview.eligibleEntries(result).length;
     const inputDetails=document.getElementById('batchTechnicalReviewInputDetails');
     if(inputDetails&&eligible>0)inputDetails.open=false;
-    setStatus(eligible?`可更新 ${eligible} 只股票；确认后将一次保存全部变更。`:'No eligible technical reviews to update.');
+    if(eligible)setStatus(`可更新 ${eligible} 只股票；确认后将一次保存全部变更。`);
+    else if(result.error&&result.error.code==='parse_error')setStatus('返回 JSON 不完整，无法执行批量更新。\n本批次未写入。','error');
+    else if(result.completeness&&result.completeness.missingSymbols.length)setStatus(`AI 返回结果不完整\nExpected: ${result.completeness.expected}\nDetected: ${result.completeness.detected}\nMissing: ${result.completeness.missingSymbols.join(', ')}\n本批次未写入。`,'error');
+    else setStatus('批次校验未通过，本批次未写入。','error');
     setSaving(false);
   }
 

@@ -34,6 +34,8 @@ const validReview=index=>({
 });
 const envelope=items=>JSON.stringify({technicalReviews:items});
 const item=(index,review=validReview(index))=>({symbol:`TEST${index}.SS`,technicalReview:review});
+const judgment=index=>({trendStatus:'sideways',technicalSummary:`精简摘要 ${index}`,riskFlags:['near_previous_high'],actionHint:`等待确认 ${index}`,confidence:'medium',finalTechnicalConclusion:`精简结论 ${index}`,holdHint:'继续观察',addHint:'确认后复核',reduceHint:'跌破后复核'});
+const v2Item=index=>({symbol:`TEST${index}.SS`,review:judgment(index)});
 
 test('accepts a two-item valid batch and builds previews',()=>{
   const result=Batch.process(envelope([item(1),item(2)]),stocks,singleStockValidator);
@@ -49,6 +51,47 @@ test('handles a ten-item valid batch',()=>{
   assert.equal(result.summary.total,10);
   assert.equal(result.summary.valid,10);
   assert.equal(result.items.length,10);
+});
+
+test('Batch Contract V2 accepts judgments only and merges program-owned facts',()=>{
+  const target={...stocks[0],priceHistory:[{date:'2026-08-13',close:55,is_complete_bar:true}],technicalData:{price:55,technicalAsOf:'2026-08-13',technicalDataStatus:'fresh',ma5:54,ma10:53,ma20:52,ma60:48,supportLevels:[50],resistanceLevels:[58]}};
+  const result=Batch.process(envelope([{symbol:'TEST1.SS',review:judgment(1)}]),[target],singleStockValidator,{expectedSymbols:['TEST1.SS']});
+  assert.equal(result.batchStatus,'valid');
+  assert.equal(result.items[0].contractVersion,'v2');
+  assert.equal(result.items[0].technicalReview.shortTermTechnical.ma20,52);
+  assert.equal(result.items[0].technicalReview.shortTermTechnical.trendStatus,'sideways');
+  assert.equal(result.items[0].technicalReview.finalTechnicalConclusion,'精简结论 1');
+});
+
+test('Batch Contract V2 rejects program facts and invented machine enums',()=>{
+  const withFact={...judgment(1),ma20:52};
+  const invented={...judgment(2),trendStatus:'strong_bull'};
+  const result=Batch.process(envelope([{symbol:'TEST1.SS',review:withFact},{symbol:'TEST2.SS',review:invented}]),stocks,singleStockValidator,{expectedSymbols:['TEST1.SS','TEST2.SS']});
+  assert.equal(result.batchStatus,'invalid');
+  assert.deepEqual(result.items.map(entry=>entry.status),['invalid_schema','invalid_schema']);
+  assert.deepEqual(Batch.eligibleEntries(result),[]);
+});
+
+test('missing expected symbols invalidate the batch and produce an explicit completeness report',()=>{
+  const result=Batch.process(envelope([v2Item(1),v2Item(2)]),stocks,singleStockValidator,{expectedSymbols:['TEST1.SS','TEST2.SS','TEST3.SS']});
+  assert.equal(result.batchStatus,'invalid');
+  assert.deepEqual(result.completeness,{expected:3,detected:2,expectedSymbols:['TEST1.SS','TEST2.SS','TEST3.SS'],detectedSymbols:['TEST1.SS','TEST2.SS'],missingSymbols:['TEST3.SS']});
+  assert.equal(result.items.at(-1).status,'missing_symbol');
+  assert.deepEqual(Batch.eligibleEntries(result),[]);
+  assert.match(Batch.renderResult(result),/Missing: TEST3\.SS/);
+});
+
+test('V2 response is materially smaller than the compatible V1 response',()=>{
+  const fullV1=index=>({symbol:`TEST${index}.SS`,technicalReview:{
+    updatedAt:'2026-08-14',inputCoverage:{hasRecentKline:true,hasCycleKline:false,cycleDataSource:'current_request',warning:''},
+    shortTermTechnical:{lookbackDays:120,price:55,priceUpdatedAt:'2026-08-13',ma5:54,ma10:53,ma20:52,ma60:48,trendStatus:'sideways',supportLevels:[50],resistanceLevels:[58],technicalSummary:`技术摘要 ${index}`,riskFlags:['near_previous_high'],actionHint:'等待确认',confidence:'medium'},
+    cycleTechnical:{lookbackDays:500,cyclePosition:'unclear',cycleSummary:'',cycleHigh:null,cycleLow:null,currentPercentile:null,distanceToCycleHighPct:null,distanceToCycleLowPct:null,lastCycleUpdatedAt:'',dataSource:'none',confidence:'medium'},
+    priceActionEvent:{detected:false,type:'unknown',changePct:null,volumeStatus:'unknown',needsNewsExplanation:false,eventReason:''},
+    finalTechnicalConclusion:`技术结论 ${index}`,holdHint:'继续观察',addHint:'确认后复核',reduceHint:'跌破后复核'
+  }});
+  const v1=envelope(Array.from({length:10},(_,index)=>fullV1(index+1)));
+  const v2=envelope(Array.from({length:10},(_,index)=>v2Item(index+1)));
+  assert(v2.length<v1.length*.75,`expected V2 ${v2.length} to be below 75% of V1 ${v1.length}`);
 });
 
 test('rejects malformed and empty JSON without preview items',()=>{
@@ -97,7 +140,7 @@ test('reports later duplicate symbols without overwriting the first',()=>{
   const result=Batch.process(envelope([item(1),item(1)]),stocks,singleStockValidator);
   assert.deepEqual(result.items.map(entry=>entry.status),['valid','duplicate_symbol']);
   assert.deepEqual(result.summary,{total:2,valid:1,invalid:0,unknown:0,duplicate:1});
-  assert.equal(result.batchStatus,'partial');
+  assert.equal(result.batchStatus,'invalid');
 });
 
 test('retains every invalid item with one stable classification and reason',()=>{
@@ -122,7 +165,7 @@ test('shows mixed batch failures and consistent summary',()=>{
     {symbol:'TEST2.SS',technicalReview:[]},
     item(1)
   ]),stocks,singleStockValidator);
-  assert.equal(result.batchStatus,'partial');
+  assert.equal(result.batchStatus,'invalid');
   assert.deepEqual(result.summary,{total:4,valid:1,invalid:1,unknown:1,duplicate:1});
   assert.equal(result.items.length,4);
 });
@@ -164,7 +207,8 @@ test('ambiguous existing stock symbols are not auto-selected',()=>{
 test('rendered preview exposes summary and every failure reason',()=>{
   const result=Batch.process(envelope([item(1),{symbol:'UNKNOWN.SS',technicalReview:{}}]),stocks,singleStockValidator);
   const html=Batch.renderResult(result);
-  assert.match(html,/总计 2/);
+  assert.match(html,/Expected: 2/);
+  assert.match(html,/本批次未写入/);
   assert.match(html,/unknown_symbol/);
   assert.match(html,/未找到 exact symbol/);
   assert.doesNotMatch(html,/保存成功|导入成功/);
@@ -231,7 +275,7 @@ test('commits multiple valid entries through one critical save before adopt and 
   assert.deepEqual(fixture.holder.authoritative.portfolioStrategy,{name:'保持不变'});
 });
 
-test('valid entries persist while invalid and unmatched entries are skipped without creating stocks',async()=>{
+test('strict batch rejects mixed valid and invalid entries with zero writes',async()=>{
   const current={stocks:stocks.slice(0,3).map(stock=>JSON.parse(JSON.stringify(stock)))};
   const preview=Batch.process(envelope([
     item(1),
@@ -242,16 +286,16 @@ test('valid entries persist while invalid and unmatched entries are skipped with
   const fixture=commitDeps();
   fixture.holder.authoritative=current;
   const result=await Batch.commit(preview,current,fixture.deps);
-  assert.equal(result.status,'completed');
-  assert.deepEqual(result.summary,{updated:2,skipped:2,warnings:0,failed:0});
-  assert.equal(fixture.holder.saveCalls,1);
+  assert.equal(result.status,'no_eligible');
+  assert.deepEqual(result.summary,{updated:0,skipped:4,warnings:0,failed:0});
+  assert.equal(fixture.holder.saveCalls,0);
   assert.equal(fixture.holder.authoritative.stocks.length,3);
-  assert.equal(fixture.holder.authoritative.stocks[0].technicalReview.finalTechnicalConclusion,'技术结论 1');
+  assert.equal(fixture.holder.authoritative.stocks[0].technicalReview.finalTechnicalConclusion,'原结论 1');
   assert.equal(fixture.holder.authoritative.stocks[1].technicalReview.finalTechnicalConclusion,'原结论 2');
-  assert.equal(fixture.holder.authoritative.stocks[2].technicalReview.finalTechnicalConclusion,'技术结论 3');
+  assert.equal(fixture.holder.authoritative.stocks[2].technicalReview.finalTechnicalConclusion,'原结论 3');
 });
 
-test('persistence keeps exact-symbol protection for similar code and stock-name inputs',async()=>{
+test('exact-symbol violations invalidate the whole batch with zero writes',async()=>{
   const current={stocks:stocks.slice(0,3).map(stock=>JSON.parse(JSON.stringify(stock)))};
   const preview=Batch.process(envelope([
     item(1),
@@ -261,9 +305,9 @@ test('persistence keeps exact-symbol protection for similar code and stock-name 
   const fixture=commitDeps();
   fixture.holder.authoritative=current;
   const result=await Batch.commit(preview,current,fixture.deps);
-  assert.equal(result.status,'completed');
-  assert.deepEqual(result.summary,{updated:1,skipped:2,warnings:0,failed:0});
-  assert.equal(fixture.holder.authoritative.stocks[0].technicalReview.finalTechnicalConclusion,'技术结论 1');
+  assert.equal(result.status,'no_eligible');
+  assert.deepEqual(result.summary,{updated:0,skipped:3,warnings:0,failed:0});
+  assert.equal(fixture.holder.authoritative.stocks[0].technicalReview.finalTechnicalConclusion,'原结论 1');
   assert.equal(fixture.holder.authoritative.stocks[1].technicalReview.finalTechnicalConclusion,'原结论 2');
   assert.equal(fixture.holder.authoritative.stocks[2].technicalReview.finalTechnicalConclusion,'原结论 3');
 });

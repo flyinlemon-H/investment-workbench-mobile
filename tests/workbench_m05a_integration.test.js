@@ -88,7 +88,7 @@ test('INT-03 generates one request for five selected stocks',()=>{
   assert.equal((request.match(/"symbol":/g)||[]).length,6);
 });
 
-test('INT-04 previews three valid, one invalid, and one unknown item with three eligible',()=>{
+test('INT-04 previews mixed failures but keeps the strict batch at zero eligible',()=>{
   const stocks=Array.from({length:4},(_,index)=>stock(index+1));
   const payload={technicalReviews:[
     ...stocks.slice(0,3).map((item,index)=>({symbol:item.code,technicalReview:validReview(index+1)})),
@@ -97,7 +97,8 @@ test('INT-04 previews three valid, one invalid, and one unknown item with three 
   ]};
   const preview=Batch.process(JSON.stringify(payload),stocks,validator);
   assert.deepEqual(preview.summary,{total:5,valid:3,invalid:1,unknown:1,duplicate:0});
-  assert.equal(Batch.eligibleEntries(preview).length,3);
+  assert.equal(preview.batchStatus,'invalid');
+  assert.equal(Batch.eligibleEntries(preview).length,0);
 });
 
 test('INT-07 partial refresh keeps failed stock data and continues',async()=>{

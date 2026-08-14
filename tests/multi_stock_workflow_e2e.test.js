@@ -106,8 +106,10 @@ test('E2E-03 invalid and unmatched AI items are previewed but never saved',async
   assert.equal(preview.summary.unknown,1);
   assert.equal(preview.summary.invalid,1);
   const committed=await commitPreview(preview,current);
-  assert.equal(committed.result.status,'completed');
-  assert.equal(committed.result.summary.updated,2);
+  assert.equal(committed.result.status,'no_eligible');
+  assert.equal(committed.result.summary.updated,0);
+  assert.equal(committed.holder.saveCalls,0);
+  assert.equal(committed.holder.state.stocks[0].technicalReview.finalTechnicalConclusion,'旧结论 1');
   assert.equal(committed.holder.state.stocks[2].technicalReview.finalTechnicalConclusion,'旧结论 3');
 });
 

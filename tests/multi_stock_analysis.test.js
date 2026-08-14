@@ -46,6 +46,8 @@ test('builds one unified request with exact symbols and existing batch schema',(
   assert.match(request,/601138\.SS/);
   assert.match(request,/2899\.HK/);
   assert.match(request,/"technicalReviews"/);
+  assert.match(request,/"review"/);
+  assert.match(request,/AI only judgments|只返回判断/);
   assert.match(request,/每个输入 symbol 必须原样、精确地输出一次/);
   assert.doesNotMatch(request,/"symbol": "无代码"/);
   assert.equal((request.match(/股票上下文：/g)||[]).length,1);
@@ -92,6 +94,7 @@ test('browser integration exposes one-copy and one-paste path into batch preview
   assert.match(source,/已复制 ✓/);
   assert.match(source,/document\.execCommand\('copy'\)!==true/);
   assert.match(source,/multiStockRequestDetails/);
+  assert.match(source,/openWithInput\(raw,selectedStocks\(\)\.map\(symbolOf\)\)/);
   assert.match(batch,/openWithInput/);
   assert.match(batch,/Batch JSON 输入（预览后自动收起）/);
   assert.match(batch,/inputDetails\.open=false/);

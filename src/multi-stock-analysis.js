@@ -10,12 +10,12 @@
   const OUTPUT_EXAMPLE={
     technicalReviews:[{
       symbol:'EXACT.SYMBOL',
-      technicalReview:{
-        updatedAt:'YYYY-MM-DD',
-        inputCoverage:{hasRecentKline:true,hasCycleKline:false,cycleDataSource:'current_request',warning:''},
-        shortTermTechnical:{lookbackDays:120,price:null,priceUpdatedAt:'YYYY-MM-DD',ma5:null,ma10:null,ma20:null,ma60:null,trendStatus:'',supportLevels:[],resistanceLevels:[],technicalSummary:'',riskFlags:[],actionHint:'',confidence:'medium'},
-        cycleTechnical:{lookbackDays:500,cyclePosition:'unclear',cycleSummary:'',cycleHigh:null,cycleLow:null,currentPercentile:null,distanceToCycleHighPct:null,distanceToCycleLowPct:null,lastCycleUpdatedAt:'',dataSource:'none',confidence:'medium'},
-        priceActionEvent:{detected:false,type:'',changePct:null,volumeStatus:'',needsNewsExplanation:false,eventReason:''},
+      review:{
+        trendStatus:'sideways',
+        technicalSummary:'',
+        riskFlags:[],
+        actionHint:'',
+        confidence:'medium',
         finalTechnicalConclusion:'',holdHint:'',addHint:'',reduceHint:''
       }
     }]
@@ -116,10 +116,10 @@
       '1. 只输出严格 JSON；不要 Markdown、代码围栏或解释。',
       '2. 顶层必须只有 technicalReviews 数组。',
       '3. 每个输入 symbol 必须原样、精确地输出一次；禁止名称匹配、大小写变换、前后缀猜测或新增股票。',
-      '4. 每项只能包含 symbol 和 technicalReview。',
-      '5. 使用输入中的最新价格、技术数据、近期价格历史与新鲜度；数据不足时在 inputCoverage.warning 明确说明，不要编造。',
-      '6. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。',
-      '7. 数组字段必须保持数组；未知数字使用 null，未知文本使用空字符串。',
+      '4. 每项只能包含 symbol 和 review；review 只返回判断，不要返回或重算 currentPrice、priceUpdatedAt、technicalAsOf、MA、MACD、K线或周期数值。',
+      '5. trendStatus 只能是 uptrend、downtrend、sideways、recovery、rebound、unclear 之一。',
+      '6. technicalDataStatus 为 stale、unavailable 或 anomaly 时，只给条件化结论，并降低 confidence；不要发明缺失事实。',
+      '7. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。riskFlags 必须保持字符串数组。',
       '',
       '股票上下文：',
       JSON.stringify(contexts,null,2),
@@ -387,7 +387,7 @@
       setStatus('批量预览功能不可用。');return;
     }
     closeModal();
-    root.BatchTechnicalReviewUI.openWithInput(raw);
+    root.BatchTechnicalReviewUI.openWithInput(raw,selectedStocks().map(symbolOf));
   }
 
   function openModal(){
