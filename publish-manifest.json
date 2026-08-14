@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "ee119607fe9763ad214cf2529f582ab3261c552e",
-  "assetVersion": "m05b-hotfix2-workbench-mobile-20260814",
+  "sourceCommit": "5103d206ff49f2dc65904de48d5ffa7ba18fe082",
+  "assetVersion": "m05b-hotfix3-workbench-mobile-20260814",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -56,7 +56,7 @@
       "path": "index.html",
       "role": "entrypoint",
       "bytes": 42843,
-      "sha256": "bcb4e0e5f172fda83aa5b26dfeb7808d2d959257dfd335e26c362ec2afc714bb"
+      "sha256": "11cc92feed077a1710cc157dd4f4114fb049f04cbee91166574fa22512ddd207"
     },
     {
       "path": "social_posts.json",
@@ -102,9 +102,9 @@
     },
     {
       "path": "src/batch-technical-review.js",
-      "role": "M05B Hotfix 2 robust AI batch JSON parser and review runtime",
-      "bytes": 33008,
-      "sha256": "fee71ef581aa09bad9fb583046f0205fb9b455d7223e4a5e6efae76496b4f7c0"
+      "role": "M05B Hotfix 3 authoritative batch contract, validation, and parser runtime",
+      "bytes": 33493,
+      "sha256": "ab21cf1ceaf3d5fdbcad315da1a1f30790b9fd70889479aae6dfb9a05420cb0a"
     },
     {
       "path": "src/import-export.js",
@@ -120,9 +120,9 @@
     },
     {
       "path": "src/multi-stock-analysis.js",
-      "role": "M05B stable daily multi-stock analysis runtime",
-      "bytes": 33270,
-      "sha256": "1d4cdfea4016d7f21b3f66e1a4bf493b68040bd0831d748a9c1557b6cbb6c437"
+      "role": "M05B Hotfix 3 contract-aligned multi-stock prompt runtime",
+      "bytes": 34594,
+      "sha256": "66b9e38de26ffaaa2ebcc1db0c805f277e991485348324a5ffc1a6c6c4f8cff6"
     },
     {
       "path": "src/multi-tab-protection.js",
