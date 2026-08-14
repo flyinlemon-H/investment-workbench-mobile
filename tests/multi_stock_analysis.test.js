@@ -17,6 +17,30 @@ test('selectable stocks exclude cash and missing symbols',()=>{
   assert.deepEqual(Multi.selectableStocks(stocks).map(stock=>stock.id),['a','b']);
 });
 
+test('M05B selection memory prefers last exact symbols and never normalizes case',()=>{
+  const preferences={
+    lastSymbols:['2899.HK','601138.ss','UNKNOWN.SS','2899.HK'],
+    defaultGroupId:'core',
+    groups:[{id:'core',name:'核心关注',symbols:['601138.SS']}]
+  };
+  const normalized=Multi.normalizePreferences(preferences,stocks);
+  assert.deepEqual(normalized.lastSymbols,['2899.HK']);
+  assert.deepEqual(Multi.initialSelection(preferences,stocks),['2899.HK']);
+});
+
+test('M05B default group is used only when there is no last selection',()=>{
+  const preferences={defaultGroupId:'core',groups:[{id:'core',name:'核心关注',symbols:['601138.SS','2899.HK']}]};
+  assert.deepEqual(Multi.initialSelection(preferences,stocks),['601138.SS','2899.HK']);
+  assert.deepEqual(Multi.initialSelection({},stocks),[]);
+});
+
+test('M05B fixed groups save and delete exact available symbols',()=>{
+  const saved=Multi.saveGroup({}, {id:'watch',name:'观察组合',symbols:['601138.SS','601138.ss','2899.HK']},stocks);
+  assert.deepEqual(saved.groups,[{id:'watch',name:'观察组合',symbols:['601138.SS','2899.HK']}]);
+  const selected={...saved,defaultGroupId:'watch'};
+  assert.deepEqual(Multi.deleteGroup(selected,'watch',stocks),{lastSymbols:[],defaultGroupId:'',groups:[]});
+});
+
 test('builds one unified request with exact symbols and existing batch schema',()=>{
   const request=Multi.buildRequest(stocks);
   assert.match(request,/601138\.SS/);
@@ -61,6 +85,13 @@ test('browser integration exposes one-copy and one-paste path into batch preview
   assert.match(source,/max-height:100dvh/);
   assert.match(source,/min-height:44px/);
   assert.match(source,/统一分析请求已准备（通常无需展开）/);
+  assert.match(source,/multiStockSelectAllBtn/);
+  assert.match(source,/multiStockClearAllBtn/);
+  assert.match(source,/保存当前组合/);
+  assert.match(source,/BATCH_WARNING_THRESHOLD=10/);
+  assert.match(source,/已复制 ✓/);
+  assert.match(source,/document\.execCommand\('copy'\)!==true/);
+  assert.match(source,/multiStockRequestDetails/);
   assert.match(batch,/openWithInput/);
   assert.match(batch,/Batch JSON 输入（预览后自动收起）/);
   assert.match(batch,/inputDetails\.open=false/);
