@@ -1,28 +1,38 @@
 (function(root,factory){
   const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
-  const api=factory(identity);
+  const batchTechnicalReview=typeof module==='object'&&module.exports?require('./batch-technical-review.js'):root&&root.BatchTechnicalReview;
+  const api=factory(identity,batchTechnicalReview);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.MultiStockAnalysis=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,BatchTechnicalReview){
   'use strict';
 
   if(!SymbolIdentity||typeof SymbolIdentity.canonicalSymbol!=='function')throw new Error('SymbolIdentity helper 不可用。');
 
   const BATCH_WARNING_THRESHOLD=10;
 
-  const OUTPUT_EXAMPLE={
-    technicalReviews:[{
-      symbol:'EXACT.SYMBOL',
-      review:{
-        trendStatus:'sideways',
-        technicalSummary:'',
-        riskFlags:[],
-        actionHint:'',
-        confidence:'medium',
-        finalTechnicalConclusion:'',holdHint:'',addHint:'',reduceHint:''
-      }
-    }]
-  };
+  function batchContract(){
+    const value=BatchTechnicalReview&&BatchTechnicalReview.contract;
+    const valid=value&&Object.isFrozen(value)&&['trendStatuses','riskFlags','confidenceLevels'].every(key=>Array.isArray(value[key])&&value[key].length&&Object.isFrozen(value[key]));
+    if(!valid)throw new Error('Batch contract unavailable：无法生成 AI 请求。');
+    return value;
+  }
+
+  function outputExample(contract=batchContract()){
+    return {
+      technicalReviews:[{
+        symbol:'EXACT.SYMBOL',
+        review:{
+          trendStatus:contract.trendStatuses[0],
+          technicalSummary:'',
+          riskFlags:[contract.riskFlags[0]],
+          actionHint:'',
+          confidence:contract.confidenceLevels[0],
+          finalTechnicalConclusion:'',holdHint:'',addHint:'',reduceHint:''
+        }
+      }]
+    };
+  }
 
   function text(value){return String(value??'').trim()}
   function symbolOf(stock){return text(stock&&(stock.code||stock.symbol))}
@@ -168,6 +178,7 @@
   function buildRequest(stocks,helpers={}){
     const selected=selectableStocks(stocks);
     if(selected.length<2)throw new Error('请至少选择两只有股票代码的股票。');
+    const contract=batchContract();
     const contexts=selected.map(stock=>stockContext(stock,helpers));
     return [
       '你是一名严谨的股票技术分析助理。请一次完成下面全部股票的技术复核。',
@@ -177,16 +188,21 @@
       '2. 顶层必须只有 technicalReviews 数组。',
       '3. 每个输入 symbol 必须精确输出一次；字母大小写差异可接受，但禁止名称匹配、前后缀猜测或新增股票。',
       '4. 每项只能包含 symbol 和 review；review 只返回判断，不要返回或重算 currentPrice、priceUpdatedAt、technicalAsOf、MA、MACD、K线或周期数值。',
-      '5. trendStatus 只能是 uptrend、downtrend、sideways、recovery、rebound、unclear 之一。',
-      '6. technicalDataStatus 为 stale、unavailable 或 anomaly 时，只给条件化结论，并降低 confidence；不要发明缺失事实。',
-      '7. volumeStatus 为 unavailable 时，不要基于 volumeChangePct 给出量能结论。',
-      '8. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。riskFlags 必须保持字符串数组。',
+      `5. trendStatus 固定枚举：${contract.trendStatuses.join(', ')}。只能从中选择一个值。`,
+      `6. confidence 固定枚举：${contract.confidenceLevels.join(', ')}。只能从中选择一个值。`,
+      '7. technicalDataStatus 为 stale、unavailable 或 anomaly 时，只给条件化结论，并降低 confidence；不要发明缺失事实。',
+      '8. volumeStatus 为 unavailable 时，不要基于 volumeChangePct 给出量能结论。',
+      '9. riskFlags 必须为字符串数组。',
+      `10. riskFlags 固定枚举：${contract.riskFlags.join(', ')}。每个元素只能从中选择。`,
+      '11. 禁止自创、翻译、改写、组合或同义替换新的 riskFlag。',
+      '12. 如无适用项，返回 []。无法由固定 riskFlag 表达的风险，写入 technicalSummary 或 finalTechnicalConclusion。',
+      '13. 结论使用简体中文；只给条件化复核，不给确定性买卖指令。',
       '',
       '股票上下文：',
       JSON.stringify(contexts,null,2),
       '',
       '严格输出结构示例（用输入股票逐项替换示例项）：',
-      JSON.stringify(OUTPUT_EXAMPLE,null,2)
+      JSON.stringify(outputExample(contract),null,2)
     ].join('\n');
   }
 
@@ -221,7 +237,9 @@
     };
   }
 
-  return {BATCH_WARNING_THRESHOLD,OUTPUT_EXAMPLE,selectableStocks,normalizePreferences,initialSelection,saveGroup,deleteGroup,recentPriceHistory,compactTechnicalFacts,compactPreviousJudgment,derivedFeatures,requestMetrics,stockContext,buildRequest,refreshSelectedStocks};
+  const api={BATCH_WARNING_THRESHOLD,batchContract,outputExample,selectableStocks,normalizePreferences,initialSelection,saveGroup,deleteGroup,recentPriceHistory,compactTechnicalFacts,compactPreviousJudgment,derivedFeatures,requestMetrics,stockContext,buildRequest,refreshSelectedStocks};
+  Object.defineProperty(api,'OUTPUT_EXAMPLE',{enumerable:true,get:()=>outputExample()});
+  return api;
 });
 
 (function(root){

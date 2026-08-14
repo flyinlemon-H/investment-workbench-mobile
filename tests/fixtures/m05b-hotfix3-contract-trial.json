@@ -1,0 +1,16 @@
+{
+  "stocks": [
+    {"symbol":"601138.SS","riskFlags":["near_previous_high","resistance_overhead"]},
+    {"symbol":"2899.HK","riskFlags":["short_term_volatility"]},
+    {"symbol":"601869.SS","riskFlags":["high_level_rebreakout"]},
+    {"symbol":"002824.SZ","riskFlags":["high_level_overextension"]},
+    {"symbol":"603296.SS","riskFlags":[]},
+    {"symbol":"605499.SS","riskFlags":["gap_risk"]},
+    {"symbol":"1810.HK","riskFlags":["trend_weakening"]},
+    {"symbol":"1357.HK","riskFlags":["below_ma20"]},
+    {"symbol":"159300.SZ","riskFlags":["below_ma60"]},
+    {"symbol":"510980.SS","riskFlags":["distribution_risk"]},
+    {"symbol":"512400.SS","riskFlags":["breakout_failure","volume_divergence"]},
+    {"symbol":"588060.SS","riskFlags":["support_breakdown"]}
+  ]
+}

@@ -20,6 +20,12 @@
   });
   const TREND_STATUSES=Object.freeze(['uptrend','downtrend','sideways','recovery','rebound','unclear']);
   const RISK_FLAGS=Object.freeze(['near_previous_high','high_level_rebreakout','high_level_overextension','short_term_volatility','resistance_overhead','gap_risk','trend_weakening','below_ma20','below_ma60','distribution_risk','breakout_failure','volume_divergence','support_breakdown']);
+  const CONFIDENCE_LEVELS=Object.freeze(['high','medium','low']);
+  const contract=Object.freeze({
+    trendStatuses:TREND_STATUSES,
+    riskFlags:RISK_FLAGS,
+    confidenceLevels:CONFIDENCE_LEVELS
+  });
   const V2_REVIEW_FIELDS=Object.freeze(['trendStatus','technicalSummary','riskFlags','actionHint','confidence','finalTechnicalConclusion','holdHint','addHint','reduceHint']);
   const ERROR_TYPES=Object.freeze({
     PARSE:'PARSE_ERROR',
@@ -156,8 +162,10 @@
     const trendStatus=String(review.trendStatus||'').trim();
     if(!TREND_STATUSES.includes(trendStatus))return {valid:false,error:`trendStatus 必须是固定枚举：${TREND_STATUSES.join(', ')}。`};
     const confidence=String(review.confidence||'').trim();
-    if(!['high','medium','low'].includes(confidence))return {valid:false,error:'confidence 必须是 high、medium 或 low。'};
-    if(!Array.isArray(review.riskFlags)||review.riskFlags.some(flag=>typeof flag!=='string'||!RISK_FLAGS.includes(flag)))return {valid:false,error:'riskFlags 必须只包含受支持的固定枚举。'};
+    if(!CONFIDENCE_LEVELS.includes(confidence))return {valid:false,error:`confidence 必须是固定枚举：${CONFIDENCE_LEVELS.join(', ')}。`};
+    if(!Array.isArray(review.riskFlags))return {valid:false,error:'riskFlags 必须是字符串数组。'};
+    const invalidRiskFlags=[...new Set(review.riskFlags.filter(flag=>typeof flag!=='string'||!RISK_FLAGS.includes(flag)).map(flag=>typeof flag==='string'?flag:(JSON.stringify(flag)??String(flag))))];
+    if(invalidRiskFlags.length)return {valid:false,error:`riskFlags 包含不支持的枚举：${invalidRiskFlags.join(', ')}。`};
     for(const key of V2_REVIEW_FIELDS.filter(key=>!['trendStatus','riskFlags','confidence'].includes(key))){
       if(typeof review[key]!=='string')return {valid:false,error:`review.${key} 必须是字符串。`};
     }
@@ -418,7 +426,7 @@
     };
   }
 
-  return {STATUS,ERROR_TYPES,TREND_STATUSES,RISK_FLAGS,V2_REVIEW_FIELDS,parseAiBatchJsonInput,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
+  return {STATUS,ERROR_TYPES,TREND_STATUSES,RISK_FLAGS,CONFIDENCE_LEVELS,contract,V2_REVIEW_FIELDS,parseAiBatchJsonInput,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
 });
 
 (function(root){
