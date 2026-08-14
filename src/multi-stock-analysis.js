@@ -70,11 +70,48 @@
     return {...normalized,defaultGroupId:normalized.defaultGroupId===id?'':normalized.defaultGroupId,groups:normalized.groups.filter(group=>group.id!==id)};
   }
 
-  function recentPriceHistory(stock,limit=120){
+  function recentPriceHistory(stock,limit=30){
     return arr(stock&&stock.priceHistory).map(row=>({
       date:text(row&&row.date),
       close:Number(row&&row.close)
     })).filter(row=>row.date&&Number.isFinite(row.close)&&row.close>0).slice(-Math.max(1,limit));
+  }
+
+  function compactTechnicalFacts(technicalData){
+    const td=technicalData&&typeof technicalData==='object'?technicalData:{};
+    const position=td.pricePosition&&typeof td.pricePosition==='object'?td.pricePosition:{};
+    return {
+      latestCompleteBar:text(td.latestCompleteBar),technicalAsOf:text(td.technicalAsOf),technicalDataStatus:text(td.technicalDataStatus)||'unavailable',technicalWarning:text(td.technicalWarning),
+      completeDayClose:Number.isFinite(Number(td.price))?Number(td.price):null,
+      ma5:Number.isFinite(Number(td.ma5))?Number(td.ma5):null,ma10:Number.isFinite(Number(td.ma10))?Number(td.ma10):null,ma20:Number.isFinite(Number(td.ma20))?Number(td.ma20):null,ma60:Number.isFinite(Number(td.ma60))?Number(td.ma60):null,
+      macd:clone(td.macd&&typeof td.macd==='object'?td.macd:{dif:null,dea:null,histogram:null}),
+      supportLevels:arr(td.supportLevels).slice(0,4),resistanceLevels:arr(td.resistanceLevels).slice(0,4),
+      cycle:{lookbackDays:position.lookbackDays??null,high:position.high??null,low:position.low??null,currentPercentile:position.currentPercentile??null,distanceToCycleHighPct:position.distanceToCycleHighPct??null,distanceToCycleLowPct:position.distanceToCycleLowPct??null},
+      volume:td.volume??null,volumeAvg20:td.volumeAvg20??null,volumeStatus:text(td.volumeStatus),volumeWarning:text(td.volumeWarning)
+    };
+  }
+
+  function compactPreviousJudgment(technicalReview){
+    const review=technicalReview&&typeof technicalReview==='object'?technicalReview:{};
+    const shortTerm=review.shortTermTechnical&&typeof review.shortTermTechnical==='object'?review.shortTermTechnical:{};
+    return {
+      trendStatus:text(shortTerm.trendStatus),technicalSummary:text(shortTerm.technicalSummary),riskFlags:arr(shortTerm.riskFlags).slice(0,8),actionHint:text(shortTerm.actionHint),confidence:text(shortTerm.confidence),
+      finalTechnicalConclusion:text(review.finalTechnicalConclusion),holdHint:text(review.holdHint),addHint:text(review.addHint),reduceHint:text(review.reduceHint)
+    };
+  }
+
+  function derivedFeatures(history,facts){
+    const rows=arr(history),last=rows.length?Number(rows[rows.length-1].close):null;
+    const change=days=>rows.length>days&&Number(rows[rows.length-1-days].close)>0?Number(((last/Number(rows[rows.length-1-days].close)-1)*100).toFixed(2)):null;
+    const distance=ma=>last>0&&Number(ma)>0?Number(((last/Number(ma)-1)*100).toFixed(2)):null;
+    const closes=rows.map(row=>Number(row.close)).filter(value=>Number.isFinite(value)&&value>0);
+    return {change5dPct:change(5),change20dPct:change(20),distanceToMa20Pct:distance(facts.ma20),distanceToMa60Pct:distance(facts.ma60),recentHigh:closes.length?Math.max(...closes):null,recentLow:closes.length?Math.min(...closes):null};
+  }
+
+  function requestMetrics(request){
+    const value=String(request??'');
+    const bytes=typeof TextEncoder==='function'?new TextEncoder().encode(value).length:unescape(encodeURIComponent(value)).length;
+    return {characters:value.length,bytes,kilobytes:Number((bytes/1024).toFixed(1))};
   }
 
   function stockContext(stock,helpers={}){
@@ -85,6 +122,8 @@
     const technicalReview=typeof helpers.technicalReview==='function'?helpers.technicalReview(stock):stock.technicalReview;
     const freshness=typeof helpers.dataFreshness==='function'?helpers.dataFreshness(stock):stock.dataFreshness;
     const technical=clone(technicalData&&typeof technicalData==='object'?technicalData:{});
+    const facts=compactTechnicalFacts(technical);
+    const history=recentPriceHistory(stock,facts.technicalDataStatus==='fresh'?30:45);
     return {
       symbol,
       name:text(stock.name),
@@ -93,15 +132,14 @@
       theme:text(stock.theme),
       currentPrice:Number.isFinite(Number(currentPrice))&&Number(currentPrice)>0?Number(currentPrice):null,
       priceUpdatedAt:text(stock.priceUpdatedAt||stock.valueUpdatedAt||(freshness&&freshness.priceUpdatedAt)),
-      syncStatus:text(stock.syncStatus)||'unknown',
-      lastSyncError:text(stock.lastSyncError),
-      dataFreshness:clone(freshness&&typeof freshness==='object'?freshness:{}),
+      realtimeFreshness:{priceUpdatedAt:text(stock.priceUpdatedAt||stock.valueUpdatedAt||(freshness&&freshness.priceUpdatedAt))},
       technicalAsOf:text(technical.technicalAsOf),
       latestCompleteBar:text(technical.latestCompleteBar),
       technicalDataStatus:text(technical.technicalDataStatus)||'unavailable',
-      technicalData:technical,
-      previousTechnicalReview:clone(technicalReview&&typeof technicalReview==='object'?technicalReview:{}),
-      recentPriceHistory:recentPriceHistory(stock)
+      technicalFacts:facts,
+      previousJudgment:compactPreviousJudgment(technicalReview),
+      derivedFeatures:derivedFeatures(history,facts),
+      recentCompleteDailyCloses:history
     };
   }
 
@@ -160,7 +198,7 @@
     };
   }
 
-  return {BATCH_WARNING_THRESHOLD,OUTPUT_EXAMPLE,selectableStocks,normalizePreferences,initialSelection,saveGroup,deleteGroup,recentPriceHistory,stockContext,buildRequest,refreshSelectedStocks};
+  return {BATCH_WARNING_THRESHOLD,OUTPUT_EXAMPLE,selectableStocks,normalizePreferences,initialSelection,saveGroup,deleteGroup,recentPriceHistory,compactTechnicalFacts,compactPreviousJudgment,derivedFeatures,requestMetrics,stockContext,buildRequest,refreshSelectedStocks};
 });
 
 (function(root){
@@ -257,6 +295,43 @@
     }));
   }
 
+  function compactTechnicalFacts(technicalData){
+    const td=technicalData&&typeof technicalData==='object'?technicalData:{};
+    const position=td.pricePosition&&typeof td.pricePosition==='object'?td.pricePosition:{};
+    return {
+      latestCompleteBar:text(td.latestCompleteBar),technicalAsOf:text(td.technicalAsOf),technicalDataStatus:text(td.technicalDataStatus)||'unavailable',technicalWarning:text(td.technicalWarning),
+      completeDayClose:Number.isFinite(Number(td.price))?Number(td.price):null,
+      ma5:Number.isFinite(Number(td.ma5))?Number(td.ma5):null,ma10:Number.isFinite(Number(td.ma10))?Number(td.ma10):null,ma20:Number.isFinite(Number(td.ma20))?Number(td.ma20):null,ma60:Number.isFinite(Number(td.ma60))?Number(td.ma60):null,
+      macd:clone(td.macd&&typeof td.macd==='object'?td.macd:{dif:null,dea:null,histogram:null}),
+      supportLevels:arr(td.supportLevels).slice(0,4),resistanceLevels:arr(td.resistanceLevels).slice(0,4),
+      cycle:{lookbackDays:position.lookbackDays??null,high:position.high??null,low:position.low??null,currentPercentile:position.currentPercentile??null,distanceToCycleHighPct:position.distanceToCycleHighPct??null,distanceToCycleLowPct:position.distanceToCycleLowPct??null},
+      volume:td.volume??null,volumeAvg20:td.volumeAvg20??null,volumeStatus:text(td.volumeStatus),volumeWarning:text(td.volumeWarning)
+    };
+  }
+
+  function compactPreviousJudgment(technicalReview){
+    const review=technicalReview&&typeof technicalReview==='object'?technicalReview:{};
+    const shortTerm=review.shortTermTechnical&&typeof review.shortTermTechnical==='object'?review.shortTermTechnical:{};
+    return {
+      trendStatus:text(shortTerm.trendStatus),technicalSummary:text(shortTerm.technicalSummary),riskFlags:arr(shortTerm.riskFlags).slice(0,8),actionHint:text(shortTerm.actionHint),confidence:text(shortTerm.confidence),
+      finalTechnicalConclusion:text(review.finalTechnicalConclusion),holdHint:text(review.holdHint),addHint:text(review.addHint),reduceHint:text(review.reduceHint)
+    };
+  }
+
+  function derivedFeatures(history,facts){
+    const rows=arr(history),last=rows.length?Number(rows[rows.length-1].close):null;
+    const change=days=>rows.length>days&&Number(rows[rows.length-1-days].close)>0?Number(((last/Number(rows[rows.length-1-days].close)-1)*100).toFixed(2)):null;
+    const distance=ma=>last>0&&Number(ma)>0?Number(((last/Number(ma)-1)*100).toFixed(2)):null;
+    const closes=rows.map(row=>Number(row.close)).filter(value=>Number.isFinite(value)&&value>0);
+    return {change5dPct:change(5),change20dPct:change(20),distanceToMa20Pct:distance(facts.ma20),distanceToMa60Pct:distance(facts.ma60),recentHigh:closes.length?Math.max(...closes):null,recentLow:closes.length?Math.min(...closes):null};
+  }
+
+  function requestMetrics(request){
+    const value=String(request??'');
+    const bytes=typeof TextEncoder==='function'?new TextEncoder().encode(value).length:unescape(encodeURIComponent(value)).length;
+    return {characters:value.length,bytes,kilobytes:Number((bytes/1024).toFixed(1))};
+  }
+
   function escHtml(value){return String(value??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
   function escAttr(value){return escHtml(value).replace(/"/g,'&quot;')}
   function selectedStocks(){return defaults().filter(stock=>selectedSymbols.has(symbolOf(stock)))}
@@ -338,7 +413,9 @@
     try{
       const request=root.MultiStockAnalysis.buildRequest(selectedStocks(),helpers());
       document.getElementById('multiStockRequestText').value=request;
-      setStatus(`已生成 1 个统一请求，包含 ${selectedStocks().length} 只股票。`);
+      const metrics=root.MultiStockAnalysis.requestMetrics(request);
+      const warning=selectedStocks().length>root.MultiStockAnalysis.BATCH_WARNING_THRESHOLD||metrics.kilobytes>80?'\n本次请求较长；仍可继续，建议确认 AI 返回包含全部 exact symbols。':'';
+      setStatus(`已生成 1 个统一请求，包含 ${selectedStocks().length} 只股票。\n请求长度约 ${metrics.kilobytes} KB / ${metrics.characters} characters。${warning}`);
       return request;
     }catch(error){
       document.getElementById('multiStockRequestText').value='';

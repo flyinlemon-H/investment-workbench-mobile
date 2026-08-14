@@ -56,9 +56,11 @@ test('builds one unified request with exact symbols and existing batch schema',(
 test('request context includes technical data, freshness, and recent price history',()=>{
   const request=Multi.buildRequest(stocks.slice(0,2));
   assert.match(request,/"ma20": 52/);
-  assert.match(request,/"technicalUpdatedAt": "2026-08-14"/);
+  assert.match(request,/"technicalFacts"/);
+  assert.match(request,/"realtimeFreshness"/);
   assert.match(request,/"close": 55/);
-  assert.match(request,/"previousTechnicalReview"/);
+  assert.match(request,/"previousJudgment"/);
+  assert.doesNotMatch(request,/"previousTechnicalReview"/);
 });
 
 test('requires at least two exact-symbol stocks',()=>{
@@ -69,10 +71,55 @@ test('requires at least two exact-symbol stocks',()=>{
 test('recent history is bounded and invalid rows are omitted',()=>{
   const history=Array.from({length:130},(_,index)=>({date:`d${index}`,close:index+1}));
   history.push({date:'bad',close:null});
-  const recent=Multi.recentPriceHistory({priceHistory:history},120);
-  assert.equal(recent.length,120);
-  assert.equal(recent[0].close,11);
+  const recent=Multi.recentPriceHistory({priceHistory:history});
+  assert.equal(recent.length,30);
+  assert.equal(recent[0].close,101);
   assert.equal(recent.at(-1).close,130);
+});
+
+function richStock(index,status='fresh'){
+  const history=Array.from({length:120},(_,row)=>({date:`2026-${String(Math.floor(row/28)+1).padStart(2,'0')}-${String(row%28+1).padStart(2,'0')}`,close:20+row+index}));
+  return {
+    id:`rich-${index}`,code:`RICH${index}.SS`,name:`丰富标的 ${index}`,type:'holding',role:'核心仓',theme:'测试',currentPrice:150+index,priceUpdatedAt:'2026-08-14',priceHistory:history,
+    dataFreshness:{priceUpdatedAt:'2026-08-14',technicalUpdatedAt:'2026-08-13',newsUpdatedAt:'2026-08-01',financialUpdatedAt:'2026-06-30'},
+    technicalData:{price:139+index,latestCompleteBar:'2026-08-13',technicalAsOf:'2026-08-13',technicalDataStatus:status,technicalWarning:status==='fresh'?'':'stale fixture',ma5:137,ma10:134,ma20:129,ma60:109,macd:{dif:2,dea:1.5,histogram:1},supportLevels:[120,125],resistanceLevels:[145],pricePosition:{lookbackDays:120,high:145,low:20,currentPercentile:90},technicalSummary:'重复的旧摘要不应进入 facts'},
+    technicalReview:{updatedAt:'2026-08-01',inputCoverage:{warning:'旧覆盖详情'},shortTermTechnical:{trendStatus:'sideways',technicalSummary:'旧判断摘要',riskFlags:['near_previous_high'],actionHint:'等待',confidence:'medium',ma5:1,ma10:2,ma20:3,ma60:4},cycleTechnical:{cycleSummary:'很长的旧周期对象'},finalTechnicalConclusion:'旧结论',holdHint:'持有提示',addHint:'加仓提示',reduceHint:'减仓提示'}
+  };
+}
+
+test('P3 fresh context uses 30 complete closes and stale context adapts to 45',()=>{
+  const fresh=Multi.stockContext(richStock(1,'fresh'));
+  const stale=Multi.stockContext(richStock(2,'stale'));
+  assert.equal(fresh.recentCompleteDailyCloses.length,30);
+  assert.equal(stale.recentCompleteDailyCloses.length,45);
+  assert.equal(fresh.technicalFacts.ma20,129);
+  assert.equal(fresh.previousJudgment.finalTechnicalConclusion,'旧结论');
+  assert.equal(fresh.previousJudgment.updatedAt,undefined);
+  assert.equal(fresh.technicalFacts.technicalSummary,undefined);
+});
+
+test('P3 ten-stock request is materially smaller than the M05A context shape',()=>{
+  const sample=Array.from({length:10},(_,index)=>richStock(index+1));
+  const request=Multi.buildRequest(sample);
+  const legacyContexts=sample.map(stock=>({
+    symbol:stock.code,name:stock.name,type:stock.type,role:stock.role,theme:stock.theme,currentPrice:stock.currentPrice,priceUpdatedAt:stock.priceUpdatedAt,syncStatus:'unknown',lastSyncError:'',
+    dataFreshness:stock.dataFreshness,technicalData:stock.technicalData,previousTechnicalReview:stock.technicalReview,recentPriceHistory:stock.priceHistory
+  }));
+  const legacy=JSON.stringify(legacyContexts,null,2);
+  assert(request.length<legacy.length*.65,`expected ${request.length} to be below 65% of legacy ${legacy.length}`);
+  assert.match(request,/不要返回或重算 currentPrice/);
+});
+
+test('P3 generates a visible-size request for twenty stocks without a tokenizer dependency',()=>{
+  const request=Multi.buildRequest(Array.from({length:20},(_,index)=>richStock(index+1)));
+  const metrics=Multi.requestMetrics(request);
+  assert(metrics.characters>0);
+  assert(metrics.bytes>=metrics.characters);
+  assert(metrics.kilobytes>0);
+  assert.equal((request.match(/"symbol":/g)||[]).length,21);
+  const source=fs.readFileSync(path.resolve(__dirname,'../src/multi-stock-analysis.js'),'utf8');
+  assert.match(source,/请求长度约/);
+  assert.doesNotMatch(source,/tokenizer|tiktoken/i);
 });
 
 test('browser integration exposes one-copy and one-paste path into batch preview',()=>{
