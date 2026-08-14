@@ -41,11 +41,13 @@ test('index keeps Workbench storage ordering and adds M05A modules at the narrow
 test('390x844 workflow keeps touch targets, readable inputs, and scrollable full-screen modals',()=>{
   const source=read('src/multi-stock-analysis.js');
   const fixture=read('tests/fixtures/mobile-390.html');
+  const html=read('index.html');
   assert.match(fixture,/#mobileFrame\{[^}]*width:390px;height:844px/);
   assert.match(source,/#multiStockAnalysisModal button,#batchTechnicalReviewModal button\{min-height:44px\}/);
   assert.match(source,/#multiStockAnalysisModal textarea,#batchTechnicalReviewModal textarea\{font-size:16px!important\}/);
   assert.match(source,/height:100dvh/);
   assert.match(source,/overflow-y:auto/);
+  assert.match(html,/@media\(max-width:768px\)\{\.workspace-tablist\{display:flex;[^}]*overflow-x:auto/);
 });
 
 test('Workbench saveState architecture remains intact and shared technical helpers are wired',()=>{

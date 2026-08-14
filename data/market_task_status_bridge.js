@@ -1,14 +1,1 @@
-window.MARKET_TASK_STATUS = {
-  generated_at: "",
-  task_exists: false,
-  task_name: "",
-  enabled: false,
-  schedule: "",
-  next_run_time: "",
-  last_run_time: "",
-  last_task_result: null,
-  script_path: "",
-  latest_log_path: "",
-  latest_data_trade_date: "",
-  latest_run: null
-};
+window.MARKET_TASK_STATUS = {"generated_at":"2026-08-14T11:58:40.7774459+08:00","task_exists":true,"task_name":"InvestmentWorkbench-DailyMarketUpdate","enabled":true,"schedule":"62 2026-07-13T16:30:00+08:00","next_run_time":"2026-08-14T16:30:00.0000000+08:00","last_run_time":"2026-08-13T16:30:00.0000000+08:00","last_task_result":0,"script_path":"E:\\users\\kaka\\onedrive\\文档\\投资分析程序\\scripts\\run_daily_market_update.ps1","latest_log_path":"E:\\users\\kaka\\onedrive\\文档\\投资分析程序\\data\\logs\\market_data\\market_update_20260813_163001.log","latest_data_trade_date":"2026-08-13","latest_run":{"log_path":"E:\\users\\kaka\\onedrive\\文档\\投资分析程序\\data\\logs\\market_data\\market_update_20260813_163001.log","bridge_status":"","exit_code":0,"started_at":"2026-08-13T16:30:01.3477576+08:00","latest_trade_date":"","failed":0,"write_status":"","success":0,"symbols":0,"finished_at":"2026-08-13T16:30:04.9719288+08:00","status":"success","error":""}};
