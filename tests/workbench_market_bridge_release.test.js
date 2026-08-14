@@ -61,11 +61,12 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   assert.equal(stock.technicalData.technicalAsOf,'2026-08-13');
 });
 
-test('M05B release version cache-busts the bridge and Workbench modules',()=>{
+test('M05B Hotfix 1 release version cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05b-workbench-mobile-20260814';
+  const version='m05b-hotfix1-workbench-mobile-20260814';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'src/symbol-identity.js',
     'data/market_data_bridge.js',
     'data/market_task_status_bridge.js',
     'src/market-data-bridge.js',

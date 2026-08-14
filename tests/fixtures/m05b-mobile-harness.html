@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <title>M05B Mobile Trial Harness</title>
 <script>
-fetch('./m05b-mobile-trial.json')
+fetch('./m05b-mobile-trial.json?hotfix1=1')
   .then(response=>response.text())
   .then(payload=>{
     localStorage.setItem('portfolio_manual_v502_network_price_20260610',payload);

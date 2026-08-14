@@ -17,15 +17,15 @@ test('selectable stocks exclude cash and missing symbols',()=>{
   assert.deepEqual(Multi.selectableStocks(stocks).map(stock=>stock.id),['a','b']);
 });
 
-test('M05B selection memory prefers last exact symbols and never normalizes case',()=>{
+test('M05B selection memory resolves case-only variants to available stock symbols',()=>{
   const preferences={
     lastSymbols:['2899.HK','601138.ss','UNKNOWN.SS','2899.HK'],
     defaultGroupId:'core',
     groups:[{id:'core',name:'核心关注',symbols:['601138.SS']}]
   };
   const normalized=Multi.normalizePreferences(preferences,stocks);
-  assert.deepEqual(normalized.lastSymbols,['2899.HK']);
-  assert.deepEqual(Multi.initialSelection(preferences,stocks),['2899.HK']);
+  assert.deepEqual(normalized.lastSymbols,['2899.HK','601138.SS']);
+  assert.deepEqual(Multi.initialSelection(preferences,stocks),['2899.HK','601138.SS']);
 });
 
 test('M05B default group is used only when there is no last selection',()=>{
@@ -48,7 +48,7 @@ test('builds one unified request with exact symbols and existing batch schema',(
   assert.match(request,/"technicalReviews"/);
   assert.match(request,/"review"/);
   assert.match(request,/AI only judgments|只返回判断/);
-  assert.match(request,/每个输入 symbol 必须原样、精确地输出一次/);
+  assert.match(request,/字母大小写差异可接受/);
   assert.doesNotMatch(request,/"symbol": "无代码"/);
   assert.equal((request.match(/股票上下文：/g)||[]).length,1);
 });
@@ -63,7 +63,7 @@ test('request context includes technical data, freshness, and recent price histo
   assert.doesNotMatch(request,/"previousTechnicalReview"/);
 });
 
-test('requires at least two exact-symbol stocks',()=>{
+test('requires at least two stocks with symbols',()=>{
   assert.throws(()=>Multi.buildRequest(stocks.slice(0,1)),/至少选择两只/);
   assert.throws(()=>Multi.buildRequest(stocks.slice(2)),/至少选择两只/);
 });
@@ -126,14 +126,17 @@ test('browser integration exposes one-copy and one-paste path into batch preview
   const source=fs.readFileSync(path.resolve(__dirname,'../src/multi-stock-analysis.js'),'utf8');
   const batch=fs.readFileSync(path.resolve(__dirname,'../src/batch-technical-review.js'),'utf8');
   const html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
-  assert.match(source,/复制统一请求/);
-  assert.match(source,/AI 返回的 Batch JSON/);
+  assert.match(source,/刷新并生成/);
+  assert.match(source,/复制给 AI/);
+  assert.match(source,/粘贴 AI 结果/);
+  assert.match(source,/预览结果/);
   assert.match(source,/BatchTechnicalReviewUI\.openWithInput/);
   assert.match(source,/multiStockAnalysisQuickBtn/);
   assert.match(source,/m05aMobileStyles/);
   assert.match(source,/max-height:100dvh/);
   assert.match(source,/min-height:44px/);
-  assert.match(source,/统一分析请求已准备（通常无需展开）/);
+  assert.match(source,/AI 分析请求已准备/);
+  assert.doesNotMatch(source,/复制统一请求|查看统一结果/);
   assert.match(source,/multiStockSelectAllBtn/);
   assert.match(source,/multiStockClearAllBtn/);
   assert.match(source,/保存当前组合/);
@@ -143,7 +146,8 @@ test('browser integration exposes one-copy and one-paste path into batch preview
   assert.match(source,/multiStockRequestDetails/);
   assert.match(source,/openWithInput\(raw,selectedStocks\(\)\.map\(symbolOf\)\)/);
   assert.match(batch,/openWithInput/);
-  assert.match(batch,/Batch JSON 输入（预览后自动收起）/);
+  assert.match(batch,/JSON 输入（预览后自动收起）/);
+  assert.match(batch,/批量保存/);
   assert.match(batch,/inputDetails\.open=false/);
   assert.match(html,/src\/multi-stock-analysis\.js/);
 });

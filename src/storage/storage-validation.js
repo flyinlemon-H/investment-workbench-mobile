@@ -16,7 +16,10 @@
   }
   function array(value){return Array.isArray(value)?value:[]}
   function countNested(rows,key){return rows.reduce((sum,row)=>sum+array(row&&row[key]).length,0)}
-  function canonicalSymbol(stock){return String(stock&&((stock.symbol||stock.code)||'')).trim().toUpperCase()}
+  function canonicalSymbol(stock){
+    if(!global.SymbolIdentity||typeof global.SymbolIdentity.stockSymbol!=='function')throw new Error('SymbolIdentity must load before storage-validation.js.');
+    return global.SymbolIdentity.stockSymbol(stock);
+  }
   function isExemptIdentityRow(stock){
     const type=String(stock&&stock.type||'').trim().toLowerCase();
     const objectType=String(stock&&stock.objectType||'').trim().toLowerCase();

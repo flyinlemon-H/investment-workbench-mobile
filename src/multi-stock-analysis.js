@@ -1,9 +1,12 @@
 (function(root,factory){
-  const api=factory();
+  const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
+  const api=factory(identity);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.MultiStockAnalysis=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity){
   'use strict';
+
+  if(!SymbolIdentity||typeof SymbolIdentity.canonicalSymbol!=='function')throw new Error('SymbolIdentity helper 不可用。');
 
   const BATCH_WARNING_THRESHOLD=10;
 
@@ -23,6 +26,7 @@
 
   function text(value){return String(value??'').trim()}
   function symbolOf(stock){return text(stock&&(stock.code||stock.symbol))}
+  function canonicalSymbol(value){return SymbolIdentity.canonicalSymbol(value)}
   function clone(value){return JSON.parse(JSON.stringify(value))}
   function arr(value){return Array.isArray(value)?value:[]}
   function isCash(stock){return text(stock&&stock.type).toLowerCase()==='cash'||(!symbolOf(stock)&&/现金/.test(text(stock&&stock.name)))}
@@ -31,14 +35,32 @@
     return arr(stocks).filter(stock=>symbolOf(stock)&&!isCash(stock));
   }
 
-  function exactAvailableSymbols(stocks){
-    return new Set(selectableStocks(stocks).map(symbolOf));
+  function availableSymbols(stocks){
+    const index=new Map(),ambiguous=new Set();
+    selectableStocks(stocks).forEach(stock=>{
+      const canonical=canonicalSymbol(symbolOf(stock));
+      if(index.has(canonical))ambiguous.add(canonical);
+      else index.set(canonical,symbolOf(stock));
+    });
+    ambiguous.forEach(symbol=>index.delete(symbol));
+    return index;
   }
 
   function normalizePreferences(value,stocks=[]){
     const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
-    const available=exactAvailableSymbols(stocks);
-    const keep=symbols=>arr(symbols).map(text).filter((symbol,index,all)=>symbol&&all.indexOf(symbol)===index&&(!available.size||available.has(symbol)));
+    const scoped=selectableStocks(stocks).length>0;
+    const available=availableSymbols(stocks);
+    const keep=symbols=>{
+      const seen=new Set();
+      return arr(symbols).map(text).map(symbol=>{
+        const canonical=canonicalSymbol(symbol);
+        if(!canonical||seen.has(canonical))return '';
+        const resolved=scoped?available.get(canonical):symbol;
+        if(!resolved)return '';
+        seen.add(canonical);
+        return resolved;
+      }).filter(Boolean);
+    };
     const groups=arr(source.groups).map(group=>({
       id:text(group&&group.id),
       name:text(group&&group.name),
@@ -116,7 +138,7 @@
 
   function stockContext(stock,helpers={}){
     const symbol=symbolOf(stock);
-    if(!symbol)throw new Error('分析股票缺少 exact symbol。');
+    if(!symbol)throw new Error('分析股票缺少股票代码。');
     const currentPrice=typeof helpers.currentPrice==='function'?helpers.currentPrice(stock):(stock.currentPrice||stock.lastUnitPrice||null);
     const technicalData=typeof helpers.technicalData==='function'?helpers.technicalData(stock):stock.technicalData;
     const technicalReview=typeof helpers.technicalReview==='function'?helpers.technicalReview(stock):stock.technicalReview;
@@ -145,7 +167,7 @@
 
   function buildRequest(stocks,helpers={}){
     const selected=selectableStocks(stocks);
-    if(selected.length<2)throw new Error('请至少选择两只有 exact symbol 的股票。');
+    if(selected.length<2)throw new Error('请至少选择两只有股票代码的股票。');
     const contexts=selected.map(stock=>stockContext(stock,helpers));
     return [
       '你是一名严谨的股票技术分析助理。请一次完成下面全部股票的技术复核。',
@@ -153,7 +175,7 @@
       '输出要求：',
       '1. 只输出严格 JSON；不要 Markdown、代码围栏或解释。',
       '2. 顶层必须只有 technicalReviews 数组。',
-      '3. 每个输入 symbol 必须原样、精确地输出一次；禁止名称匹配、大小写变换、前后缀猜测或新增股票。',
+      '3. 每个输入 symbol 必须精确输出一次；字母大小写差异可接受，但禁止名称匹配、前后缀猜测或新增股票。',
       '4. 每项只能包含 symbol 和 review；review 只返回判断，不要返回或重算 currentPrice、priceUpdatedAt、technicalAsOf、MA、MACD、K线或周期数值。',
       '5. trendStatus 只能是 uptrend、downtrend、sideways、recovery、rebound、unclear 之一。',
       '6. technicalDataStatus 为 stale、unavailable 或 anomaly 时，只给条件化结论，并降低 confidence；不要发明缺失事实。',
@@ -267,7 +289,7 @@
     modal=document.createElement('div');
     modal.className='modal-bg import-layer';
     modal.id='multiStockAnalysisModal';
-    modal.innerHTML=`<div class="modal"><h2>今日多股分析</h2><div class="modal-sub">1 选择股票 · 2 刷新并生成 · 3 一次复制 / 粘贴 · 4 预览并一次保存</div><div id="multiStockSelection"></div><details class="m05a-request-details" id="multiStockRequestDetails"><summary>统一分析请求已准备（通常无需展开）</summary><textarea id="multiStockRequestText" aria-label="统一分析请求" readonly style="min-height:220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px"></textarea></details><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn ghost" id="multiStockCloseBtn" type="button">关闭</button><button class="btn ghost" id="multiStockRefreshBtn" type="button">刷新并生成请求</button><button class="btn" id="multiStockCopyBtn" type="button">复制统一请求</button></div><div class="form-row" style="margin-top:16px"><label for="multiStockResultText">粘贴 AI 返回的统一 Batch JSON</label><textarea id="multiStockResultText" style="min-height:180px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[...]}'></textarea></div><div class="modal-actions"><button class="btn" id="multiStockPreviewBtn" type="button">查看统一结果</button></div><div class="card-note" id="multiStockStatus" role="status" aria-live="polite" style="white-space:pre-line;margin-top:10px"></div></div>`;
+    modal.innerHTML=`<div class="modal"><h2>今日多股分析</h2><div class="modal-sub">1 选择股票 · 2 刷新并生成 · 3 复制 / 粘贴 · 4 预览并保存</div><div id="multiStockSelection"></div><details class="m05a-request-details" id="multiStockRequestDetails"><summary>AI 分析请求已准备</summary><textarea id="multiStockRequestText" aria-label="AI 分析请求" readonly style="min-height:220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px"></textarea></details><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn ghost" id="multiStockCloseBtn" type="button">关闭</button><button class="btn ghost" id="multiStockRefreshBtn" type="button">刷新并生成</button><button class="btn" id="multiStockCopyBtn" type="button">复制给 AI</button></div><div class="form-row" style="margin-top:16px"><label for="multiStockResultText">粘贴 AI 结果</label><div class="card-note">粘贴 AI 返回的 JSON 分析结果</div><textarea id="multiStockResultText" style="min-height:180px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[...]}'></textarea></div><div class="modal-actions"><button class="btn" id="multiStockPreviewBtn" type="button">预览结果</button></div><div class="card-note" id="multiStockStatus" role="status" aria-live="polite" style="white-space:pre-line;margin-top:10px"></div></div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
     document.getElementById('multiStockCloseBtn').addEventListener('click',closeModal);
@@ -403,11 +425,11 @@
       generateRequest();
       const failures=summary.results.filter(item=>!item.ok);
       const details=failures.map(item=>`- ${item.name||item.symbol}：${item.errors.join('；')||'刷新失败，已保留旧数据'}`).join('\n');
-      setStatus(`批量刷新完成：成功 ${summary.successCount}，失败 ${summary.failureCount}。${details?'\n失败项未覆盖原数据：\n'+details:''}\n统一请求已按最新可用数据重新生成。`);
+      setStatus(`批量刷新完成：成功 ${summary.successCount}，失败 ${summary.failureCount}。${details?'\n失败项未覆盖原数据：\n'+details:''}\nAI 分析请求已按最新可用数据重新生成。`);
       return summary;
     }finally{
       controls.forEach(control=>{control.disabled=false});
-      if(button)button.textContent='刷新并生成请求';
+      if(button)button.textContent='刷新并生成';
     }
   }
   function generateRequest(){
@@ -415,8 +437,8 @@
       const request=root.MultiStockAnalysis.buildRequest(selectedStocks(),helpers());
       document.getElementById('multiStockRequestText').value=request;
       const metrics=root.MultiStockAnalysis.requestMetrics(request);
-      const warning=selectedStocks().length>root.MultiStockAnalysis.BATCH_WARNING_THRESHOLD||metrics.kilobytes>80?'\n本次请求较长；仍可继续，建议确认 AI 返回包含全部 exact symbols。':'';
-      setStatus(`已生成 1 个统一请求，包含 ${selectedStocks().length} 只股票。\n请求长度约 ${metrics.kilobytes} KB / ${metrics.characters} characters。${warning}`);
+      const warning=selectedStocks().length>root.MultiStockAnalysis.BATCH_WARNING_THRESHOLD||metrics.kilobytes>80?'\n本次请求较长；仍可继续，请确认 AI 返回了全部股票。':'';
+      setStatus(`AI 分析请求已生成，包含 ${selectedStocks().length} 只股票。\n请求长度约 ${metrics.kilobytes} KB / ${metrics.characters} 字符。${warning}`);
       return request;
     }catch(error){
       document.getElementById('multiStockRequestText').value='';
@@ -430,7 +452,7 @@
     if(copyFeedbackTimer)clearTimeout(copyFeedbackTimer);
     if(button)button.textContent=label;
     setStatus(message);
-    copyFeedbackTimer=setTimeout(()=>{if(button)button.textContent='复制统一请求'},2200);
+    copyFeedbackTimer=setTimeout(()=>{if(button)button.textContent='复制给 AI'},2200);
   }
   async function copyRequest(){
     const request=generateRequest();
@@ -440,7 +462,7 @@
     try{
       if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')throw new Error('clipboard_unavailable');
       await navigator.clipboard.writeText(request);
-      showCopyFeedback('已复制 ✓','统一请求已复制，可以直接粘贴给 AI。');
+      showCopyFeedback('已复制 ✓','AI 分析请求已复制，可以直接粘贴给 AI。');
     }catch(_error){fallbackCopy()}
   }
 
@@ -449,7 +471,7 @@
     field.focus();field.select();
     try{
       if(typeof document.execCommand!=='function'||document.execCommand('copy')!==true)throw new Error('fallback_failed');
-      showCopyFeedback('已复制 ✓','统一请求已复制，可以直接粘贴给 AI。');
+      showCopyFeedback('已复制 ✓','AI 分析请求已复制，可以直接粘贴给 AI。');
     }catch(_){
       const details=document.getElementById('multiStockRequestDetails');
       if(details)details.open=true;
@@ -460,7 +482,7 @@
 
   function previewResult(){
     const raw=document.getElementById('multiStockResultText').value.trim();
-    if(!raw){setStatus('请先粘贴 AI 返回的 Batch JSON。');return}
+    if(!raw){setStatus('请先粘贴 AI 结果。');return}
     if(!root.BatchTechnicalReviewUI||typeof root.BatchTechnicalReviewUI.openWithInput!=='function'){
       setStatus('批量预览功能不可用。');return;
     }

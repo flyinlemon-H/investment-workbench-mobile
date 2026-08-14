@@ -1,9 +1,13 @@
 (function(root,factory){
-  const api=factory();
+  const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
+  const api=factory(identity);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BatchTechnicalReview=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity){
   'use strict';
+
+  if(!SymbolIdentity||typeof SymbolIdentity.canonicalSymbol!=='function')throw new Error('SymbolIdentity helper 不可用。');
+  const canonicalSymbol=SymbolIdentity.canonicalSymbol;
 
   const STATUS=Object.freeze({
     VALID:'valid',
@@ -63,16 +67,7 @@
   }
 
   function buildStockIndex(stocks){
-    const index=new Map();
-    const ambiguous=new Set();
-    (Array.isArray(stocks)?stocks:[]).forEach(stock=>{
-      const symbol=stockSymbol(stock);
-      if(!symbol)return;
-      if(index.has(symbol))ambiguous.add(symbol);
-      else index.set(symbol,stock);
-    });
-    ambiguous.forEach(symbol=>index.delete(symbol));
-    return {index,ambiguous};
+    return SymbolIdentity.buildStockIndex(stocks);
   }
 
   function previewFor(stock,symbol,review){
@@ -99,7 +94,7 @@
     if(typeof item.symbol!=='string'||!item.symbol.trim()){
       return {...base,status:STATUS.MISSING_SYMBOL,reason:'缺少非空字符串 symbol。',technicalReview:item.technicalReview??item.review??null};
     }
-    const symbol=item.symbol.trim();
+    const symbol=canonicalSymbol(item.symbol);
     base.symbol=symbol;
     const isV2=Object.prototype.hasOwnProperty.call(item,'review');
     const isV1=Object.prototype.hasOwnProperty.call(item,'technicalReview');
@@ -178,7 +173,7 @@
     const candidate=cloneState(currentState);
     const lookup=buildStockIndex(candidate.stocks);
     eligible.forEach(entry=>{
-      const stock=lookup.index.get(entry.symbol);
+      const stock=lookup.index.get(canonicalSymbol(entry.symbol));
       if(!stock||lookup.ambiguous.has(entry.symbol))throw new Error(`candidate 中无法 exact match symbol：${entry.symbol}。`);
       applyTechnicalReview(stock,entry.technicalReview);
     });
@@ -258,7 +253,7 @@
     const topLevelExtra=Object.keys(envelope).filter(key=>key!=='technicalReviews');
     if(topLevelExtra.length)return invalidBatch('unknown_top_level_fields',`顶层包含未知字段：${topLevelExtra.join(', ')}。`);
     const stockLookup=buildStockIndex(stocks);
-    const expectedSymbols=Array.isArray(options.expectedSymbols)?options.expectedSymbols.map(symbol=>String(symbol??'').trim()).filter((symbol,index,all)=>symbol&&all.indexOf(symbol)===index):[];
+    const expectedSymbols=Array.isArray(options.expectedSymbols)?options.expectedSymbols.map(canonicalSymbol).filter((symbol,index,all)=>symbol&&all.indexOf(symbol)===index):[];
     const expectedSet=expectedSymbols.length?new Set(expectedSymbols):null;
     const seen=new Set();
     const items=envelope.technicalReviews.map((item,index)=>classifyItem(item,index,stockLookup,seen,validateTechnicalReview,expectedSet));
@@ -330,7 +325,7 @@
     modal=document.createElement('div');
     modal.className='modal-bg import-layer';
     modal.id='batchTechnicalReviewModal';
-    modal.innerHTML=`<div class="modal"><h2>批量技术复核</h2><div class="modal-sub">先严格匹配、校验和预览；确认后仅批量更新完整且可应用的技术复核。</div><details class="m05a-batch-input-details" id="batchTechnicalReviewInputDetails" open><summary>Batch JSON 输入（预览后自动收起）</summary><textarea id="batchTechnicalReviewText" aria-label="批量 JSON" style="min-height:260px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[{"symbol":"601138.SS","review":{"trendStatus":"sideways"}}]}'></textarea></details><div class="modal-actions"><button class="btn ghost" id="batchTechnicalReviewCloseBtn" type="button">关闭</button><button class="btn ghost" id="batchTechnicalReviewPreviewBtn" type="button">解析并预览</button><button class="btn" id="batchTechnicalReviewConfirmBtn" type="button" disabled>确认批量更新</button></div><div id="batchTechnicalReviewStatus" style="margin-top:14px"></div><div id="batchTechnicalReviewResult" style="margin-top:14px"></div></div>`;
+    modal.innerHTML=`<div class="modal"><h2>批量技术复核</h2><div class="modal-sub">先严格匹配、校验和预览；确认后仅批量更新完整且可应用的技术复核。</div><details class="m05a-batch-input-details" id="batchTechnicalReviewInputDetails" open><summary>JSON 输入（预览后自动收起）</summary><textarea id="batchTechnicalReviewText" aria-label="批量 JSON" style="min-height:260px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"technicalReviews":[{"symbol":"601138.SS","review":{"trendStatus":"sideways"}}]}'></textarea></details><div class="modal-actions"><button class="btn ghost" id="batchTechnicalReviewCloseBtn" type="button">关闭</button><button class="btn ghost" id="batchTechnicalReviewPreviewBtn" type="button">解析并预览</button><button class="btn" id="batchTechnicalReviewConfirmBtn" type="button" disabled>批量保存</button></div><div id="batchTechnicalReviewStatus" style="margin-top:14px"></div><div id="batchTechnicalReviewResult" style="margin-top:14px"></div></div>`;
     document.body.appendChild(modal);
     modal.addEventListener('click',event=>{if(event.target===modal)closeModal()});
     document.getElementById('batchTechnicalReviewCloseBtn').addEventListener('click',closeModal);
@@ -355,7 +350,7 @@
     const previewButton=document.getElementById('batchTechnicalReviewPreviewBtn');
     if(confirmButton){
       confirmButton.disabled=saving||!currentPreview||root.BatchTechnicalReview.eligibleEntries(currentPreview).length===0;
-      confirmButton.textContent=saving?'保存中…':'确认批量更新';
+      confirmButton.textContent=saving?'保存中…':'批量保存';
     }
     if(previewButton)previewButton.disabled=saving;
   }

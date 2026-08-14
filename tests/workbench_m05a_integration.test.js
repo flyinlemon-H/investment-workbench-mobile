@@ -24,7 +24,9 @@ test('INT-01/02 preserves the eight-tab detail workspace and session preference 
 
 test('index keeps Workbench storage ordering and adds M05A modules at the narrow seam',()=>{
   const html=read('index.html');
+  const symbolIdentity=html.indexOf('src/symbol-identity.js');
   const storage=html.indexOf('src/storage/storage-manager.js');
+  const storageValidation=html.indexOf('src/storage/storage-validation.js');
   const multiTab=html.indexOf('src/multi-tab-protection.js');
   const state=html.indexOf('src/state.js');
   const ui=html.indexOf('src/ui-render.js');
@@ -32,7 +34,7 @@ test('index keeps Workbench storage ordering and adds M05A modules at the narrow
   const multi=html.indexOf('src/multi-stock-analysis.js');
   const price=html.indexOf('src/price-refresh.js');
   const app=html.indexOf('src/app.js');
-  assert(storage>=0&&storage<multiTab&&multiTab<state);
+  assert(symbolIdentity>=0&&symbolIdentity<storageValidation&&storageValidation<storage&&storage<multiTab&&multiTab<state);
   assert(ui>=0&&ui<batch&&batch<multi&&multi<price&&price<app);
   assert.match(html,/id="batchTechnicalReviewBtn"/);
   assert.doesNotMatch(html,/m05a-mobile-analysis-20260814/);
@@ -47,7 +49,8 @@ test('390x844 workflow keeps touch targets, readable inputs, and scrollable full
   assert.match(source,/#multiStockAnalysisModal textarea,#batchTechnicalReviewModal textarea\{font-size:16px!important\}/);
   assert.match(source,/height:100dvh/);
   assert.match(source,/overflow-y:auto/);
-  assert.match(html,/@media\(max-width:768px\)\{\.workspace-tablist\{display:flex;[^}]*overflow-x:auto/);
+  assert.match(html,/@media\(max-width:768px\)\{\.workspace-tablist\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);[^}]*overflow:visible/);
+  assert.match(html,/\.workspace-tab\{min-width:0;width:100%;min-height:44px/);
 });
 
 test('Workbench saveState architecture remains intact and shared technical helpers are wired',()=>{

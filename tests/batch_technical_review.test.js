@@ -113,13 +113,13 @@ test('rejects invalid top-level shapes',()=>{
   for(const [raw,code] of cases)assert.equal(Batch.process(raw,stocks,singleStockValidator).error.code,code);
 });
 
-test('uses exact stock symbols and never name or case fallback',()=>{
+test('uses canonical stock symbols while never falling back to names',()=>{
   const result=Batch.process(envelope([
     item(1),
     {symbol:'test2.ss',technicalReview:validReview(2)},
     {symbol:'测试标的 3',technicalReview:validReview(3)}
   ]),stocks,singleStockValidator);
-  assert.deepEqual(result.items.map(entry=>entry.status),['valid','unknown_symbol','unknown_symbol']);
+  assert.deepEqual(result.items.map(entry=>entry.status),['valid','valid','unknown_symbol']);
   assert.equal(result.items[0].matchedStock.symbol,'TEST1.SS');
 });
 
@@ -218,7 +218,7 @@ test('persistence UI exposes explicit confirmation and critical candidate save',
   const source=fs.readFileSync(path.resolve(__dirname,'../src/batch-technical-review.js'),'utf8');
   const html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
   assert.match(source,/解析并预览/);
-  assert.match(source,/确认批量更新/);
+  assert.match(source,/批量保存/);
   assert.match(source,/saveState\(candidate,options\)/);
   assert.match(source,/critical:true/);
   assert.doesNotMatch(source,/localStorage\s*\.|indexedDB\s*\./);
@@ -295,11 +295,11 @@ test('strict batch rejects mixed valid and invalid entries with zero writes',asy
   assert.equal(fixture.holder.authoritative.stocks[2].technicalReview.finalTechnicalConclusion,'原结论 3');
 });
 
-test('exact-symbol violations invalidate the whole batch with zero writes',async()=>{
+test('non-case symbol violations invalidate the whole batch with zero writes',async()=>{
   const current={stocks:stocks.slice(0,3).map(stock=>JSON.parse(JSON.stringify(stock)))};
   const preview=Batch.process(envelope([
     item(1),
-    {symbol:'test2.ss',technicalReview:validReview(2)},
+    {symbol:'TEST2.SZ',technicalReview:validReview(2)},
     {symbol:'测试标的 3',technicalReview:validReview(3)}
   ]),current.stocks,singleStockValidator);
   const fixture=commitDeps();

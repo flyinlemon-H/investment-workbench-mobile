@@ -1,10 +1,10 @@
 {
   "stocks": [
-    {"id":"trial-01","code":"601138.SS","name":"工业富联","type":"holding"},
-    {"id":"trial-02","code":"2899.HK","name":"紫金矿业","type":"holding"},
-    {"id":"trial-03","code":"601869.SS","name":"长飞光纤","type":"holding"},
+    {"id":"trial-01","code":"601138.ss","name":"工业富联","type":"holding"},
+    {"id":"trial-02","code":"2899.hk","name":"紫金矿业","type":"holding"},
+    {"id":"trial-03","code":"601869.ss","name":"长飞光纤","type":"holding"},
     {"id":"trial-04","code":"002824.SZ","name":"和胜股份","type":"holding"},
-    {"id":"trial-05","code":"603296.SS","name":"华勤技术","type":"holding"},
+    {"id":"trial-05","code":"603296.ss","name":"华勤技术","type":"holding"},
     {"id":"trial-06","code":"605499.SS","name":"东鹏饮料","type":"holding"},
     {"id":"trial-07","code":"1810.HK","name":"小米集团","type":"holding"},
     {"id":"trial-08","code":"1357.HK","name":"美图公司","type":"holding"},

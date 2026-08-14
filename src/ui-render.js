@@ -3083,7 +3083,35 @@ function renderPlanEditor(){document.getElementById('buyRows').innerHTML=tempBuy
 function planRow(p,i,type){return `<tr><td><input type="number" step="any" value="${esc(p.price??'')}" data-type="${type}" data-index="${i}" data-field="price"></td><td><input type="number" step="any" value="${esc(p.shares??'')}" data-type="${type}" data-index="${i}" data-field="shares"></td><td><input type="text" value="${esc(p.note??'')}" data-type="${type}" data-index="${i}" data-field="note"></td><td><button class="link-btn danger" type="button" data-type="${type}" data-remove="${i}">删除</button></td></tr>`}
 function addPlan(type){(type==='buy'?tempBuy:tempSell).push({id:uid(),action:type,price:'',shares:'',note:''});renderPlanEditor()}
 function collect(currentPrice){const clean=(a,action)=>a.map(p=>{const price=Number(p.price);const shares=Number(p.shares);return {id:p.id||uid(),action,price,shares,note:String(p.note||'').trim(),triggerOn:p.triggerOn||inferTriggerOn(currentPrice,price,action)}}).filter(p=>!isNaN(p.price)&&p.price>0&&!isNaN(p.shares)&&p.shares>0);return [...clean(tempBuy,'buy'),...(formType==='watching'?[]:clean(tempSell,'sell'))]}
-async function save(){const name=document.getElementById('fName').value.trim();if(!name)return alert('请填写名称');const costRaw=document.getElementById('fCost').value,targetRaw=document.getElementById('fTarget').value,currentPriceRaw=document.getElementById('fCurrentPrice').value,currentValueRaw=document.getElementById('fCurrentValue').value;const old=editingId?state.stocks.find(x=>x.id===editingId):null;const oldPrice=old?String(old.currentPrice??''):'';const oldValue=old?String(old.currentValue??''):'';const today=todayDate();const nextPrice=currentPriceRaw===''?'':parseFloat(currentPriceRaw);const nextValue=currentValueRaw===''?'':parseFloat(currentValueRaw);const priceChanged=currentPriceRaw!=='' && String(nextPrice)!==oldPrice;const valueChanged=currentValueRaw!=='' && String(nextValue)!==oldValue;const payload={type:formType,name,code:document.getElementById('fCode').value.trim(),currency:document.getElementById('fCurrency').value,shares:parseFloat(document.getElementById('fShares').value)||0,avgCost:costRaw===''?'':parseFloat(costRaw),targetPct:targetRaw===''?'':parseFloat(targetRaw),trimPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrim').value),trimToPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrimTo').value),capPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fCap').value),currentPrice:nextPrice,currentValue:nextValue,priceUpdatedAt:priceChanged?today:(old?.priceUpdatedAt||''),valueUpdatedAt:valueChanged?today:(old?.valueUpdatedAt||''),role:document.getElementById('fRole').value,theme:document.getElementById('fTheme').value,thesis:document.getElementById('fThesis').value.trim(),sellRule:document.getElementById('fSellRule').value.trim(),notes:document.getElementById('fNotes').value.trim(),plans:collect(formType==='etf'?(Number(old?.lastUnitPrice)||((Number(document.getElementById('fShares').value)>0&&Number(nextValue)>0)?Number(nextValue)/Number(document.getElementById('fShares').value):null)):nextPrice),updatedAt:Date.now()};payload.dataFreshness=normalizeDataFreshness(old&&old.dataFreshness);if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);payload.analysisScore=calculateAnalysisScore(payload.analysisFramework);if(editingId){const s=state.stocks.find(x=>x.id===editingId);if(s)Object.assign(s,payload)}else state.stocks.push({id:uid(),...payload,createdAt:Date.now()});const returnTab=editModalReturnTab;currentTab=returnTab==='edit'?'edit':formType;try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}closeModal();render()}
+async function save(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name)return alert('请填写名称');
+  const code=window.SymbolIdentity.canonicalSymbol(document.getElementById('fCode').value);
+  if(code){
+    const otherStocks=(state.stocks||[]).filter(stock=>stock.id!==editingId);
+    const lookup=window.SymbolIdentity.buildStockIndex(otherStocks);
+    if(lookup.index.has(code)||lookup.ambiguous.has(code))return alert(`股票代码 ${code} 已存在，请不要重复新建。`);
+  }
+  const costRaw=document.getElementById('fCost').value,targetRaw=document.getElementById('fTarget').value,currentPriceRaw=document.getElementById('fCurrentPrice').value,currentValueRaw=document.getElementById('fCurrentValue').value;
+  const old=editingId?state.stocks.find(x=>x.id===editingId):null;
+  const oldPrice=old?String(old.currentPrice??''):'';
+  const oldValue=old?String(old.currentValue??''):'';
+  const today=todayDate();
+  const nextPrice=currentPriceRaw===''?'':parseFloat(currentPriceRaw);
+  const nextValue=currentValueRaw===''?'':parseFloat(currentValueRaw);
+  const priceChanged=currentPriceRaw!=='' && String(nextPrice)!==oldPrice;
+  const valueChanged=currentValueRaw!=='' && String(nextValue)!==oldValue;
+  const payload={type:formType,name,code,currency:document.getElementById('fCurrency').value,shares:parseFloat(document.getElementById('fShares').value)||0,avgCost:costRaw===''?'':parseFloat(costRaw),targetPct:targetRaw===''?'':parseFloat(targetRaw),trimPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrim').value),trimToPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrimTo').value),capPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fCap').value),currentPrice:nextPrice,currentValue:nextValue,priceUpdatedAt:priceChanged?today:(old?.priceUpdatedAt||''),valueUpdatedAt:valueChanged?today:(old?.valueUpdatedAt||''),role:document.getElementById('fRole').value,theme:document.getElementById('fTheme').value,thesis:document.getElementById('fThesis').value.trim(),sellRule:document.getElementById('fSellRule').value.trim(),notes:document.getElementById('fNotes').value.trim(),plans:collect(formType==='etf'?(Number(old?.lastUnitPrice)||((Number(document.getElementById('fShares').value)>0&&Number(nextValue)>0)?Number(nextValue)/Number(document.getElementById('fShares').value):null)):nextPrice),updatedAt:Date.now()};
+  payload.dataFreshness=normalizeDataFreshness(old&&old.dataFreshness);
+  if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);
+  payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);
+  payload.analysisScore=calculateAnalysisScore(payload.analysisFramework);
+  if(editingId){const stock=state.stocks.find(x=>x.id===editingId);if(stock)Object.assign(stock,payload)}else state.stocks.push({id:uid(),...payload,createdAt:Date.now()});
+  const returnTab=editModalReturnTab;
+  currentTab=returnTab==='edit'?'edit':formType;
+  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
+  closeModal();render();
+}
 
 async function del(id){const s=state.stocks.find(x=>x.id===id);if(!s)return;if(!confirm(`确认删除「${s.name}」？`))return;state.stocks=state.stocks.filter(x=>x.id!==id);try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}render()}
 

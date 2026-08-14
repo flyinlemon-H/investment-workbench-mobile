@@ -13,11 +13,13 @@ roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge'
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
 roleByPath.set('src/batch-technical-review.js','M05B strict judgment-only batch review runtime');
 roleByPath.set('src/multi-stock-analysis.js','M05B stable daily multi-stock analysis runtime');
+roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
   'src/batch-technical-review.js',
-  'src/multi-stock-analysis.js'
+  'src/multi-stock-analysis.js',
+  'src/symbol-identity.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -36,7 +38,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05b-workbench-mobile-20260814',
+  assetVersion:'m05b-hotfix1-workbench-mobile-20260814',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };
