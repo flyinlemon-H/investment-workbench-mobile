@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "5103d206ff49f2dc65904de48d5ffa7ba18fe082",
-  "assetVersion": "m05b-hotfix3-workbench-mobile-20260814",
+  "sourceCommit": "f5f1f556bef002b887d8e1dbec342efb4b26cbdc",
+  "assetVersion": "m05b-technical-view-ux1-workbench-mobile-20260815",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 42843,
-      "sha256": "11cc92feed077a1710cc157dd4f4114fb049f04cbee91166574fa22512ddd207"
+      "bytes": 45011,
+      "sha256": "8490f2f5c0d923bc20fa53e414eafe7920744542bbd8373b37551adf4a7d0fd6"
     },
     {
       "path": "social_posts.json",
@@ -239,10 +239,16 @@
       "sha256": "5aec185676eda4a8f332a8ae7ff97ca920b24bea55e815eee4055452dd4e1309"
     },
     {
+      "path": "src/technical-view-ux.js",
+      "role": "M05B Technical View UX 1 localization and canonical freshness runtime",
+      "bytes": 5104,
+      "sha256": "97d1b81586efb06131523d88f9351ee6cd1456558aa3ac9c78a1927fc9b359b8"
+    },
+    {
       "path": "src/ui-render.js",
       "role": "browser runtime dependency",
-      "bytes": 601718,
-      "sha256": "cfd859131a3e1591c9fa0b66f531c42dce87c030f1fd81560cc810118851e3c6"
+      "bytes": 611422,
+      "sha256": "9aff1c71373f7dcd8508afcc7c97a6ef318617fa4aa49ff9236f92ef97f00760"
     },
     {
       "path": "src/v13-alpha3-services.js",

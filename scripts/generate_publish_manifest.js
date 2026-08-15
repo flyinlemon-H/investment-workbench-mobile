@@ -25,7 +25,7 @@ const paths=[...new Set([
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
-  const normalized=execFileSync('git',['show',`HEAD:${relativePath}`],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');
+  const normalized=execFileSync('git',['show',`HEAD:${relativePath}`],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024}).replace(/\r\n/g,'\n');
   const bytes=Buffer.from(normalized,'utf8');
   return {
     path:relativePath,
