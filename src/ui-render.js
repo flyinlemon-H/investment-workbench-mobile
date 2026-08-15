@@ -3676,6 +3676,79 @@ function technicalSignalPanel(stock){
   const last=history.length?history[history.length-1].date:'—';
   return `<div class="card" style="margin-bottom:14px"><div class="card-title">技术面自动评分 <button class="link-btn" data-detail-action="edit-technical" style="float:right">编辑技术数据</button></div><div class="dash" style="margin:0"><div><div class="card-num">${fmtMaybe(sig.technicalScore,1)}<span style="font-size:13px;color:var(--ink3)"> / 10</span></div><div class="card-note">状态 ${esc(technicalStatusLabel(sig.technicalStatus))}</div></div><div><div class="card-title">历史价格</div><div class="card-note">${history.length} 条 · 最近 ${esc(last)}</div></div><div><div class="card-title">均线</div><div class="card-note">MA20 ${fmtTechnicalNumber(td.ma20,2)} · MA60 ${fmtTechnicalNumber(td.ma60,2)} · MA120 ${fmtTechnicalNumber(td.ma120,2)}</div></div><div><div class="card-title">支撑 / 压力</div><div class="card-note">${fmtTechnicalNumber(td.supportPrice,2)} / ${fmtTechnicalNumber(td.resistancePrice,2)} · ${esc(td.lastUpdated||'—')}</div></div></div><div class="text" style="max-width:none;margin-top:10px"><b>摘要：</b>${esc(formatChineseText(sig.technicalSummary))}<br><b>信号：</b><br>${zhBreakList(sig.signals)}<br><b>提醒：</b><br>${zhBreakList(sig.warnings)}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn ghost small" data-detail-action="import-history">导入历史价格CSV</button><button class="btn ghost small" data-detail-action="update-technical-history">从历史价格更新技术数据</button><button class="btn ghost small" data-detail-action="apply-technical">应用到九模块技术评分</button></div></div>`;
 }
+function technicalViewUx(){
+  return window.TechnicalViewUx||{
+    localizeTrend:value=>zhTrendStatus(value)||'不明确',
+    localizeRiskLevel:value=>['正常','轻度','中等','较高'][Math.max(0,Math.min(3,Number(value)||0))],
+    localizeProvider:value=>String(value||'未知'),
+    localizeMachineSignal:value=>formatChineseText(value),
+    localizeUserText:value=>formatChineseText(value),
+    canonicalTechnicalDate:()=>({date:'',label:'技术数据日期待确认',warning:'缺少技术数据日期',status:'anomaly',fresh:false,conflict:false})
+  };
+}
+function technicalFactNumber(value,d=2){
+  const n=Number(value);
+  return Number.isFinite(n)&&n>0?fmtMaybe(n,d):'—';
+}
+function technicalMacdText(macd){
+  const value=macd&&typeof macd==='object'?macd:{};
+  const signed=n=>Number.isFinite(Number(n))?fmtMaybe(Number(n),3):'—';
+  return `DIF ${signed(value.dif)} · DEA ${signed(value.dea)} · 柱值 ${signed(value.histogram)}`;
+}
+function technicalPrimaryLevel(values,fallback){
+  const list=Array.isArray(values)?values.filter(value=>Number(value)>0):[];
+  return list.length?list[0]:(Number(fallback)>0?fallback:null);
+}
+function technicalRiskSummary(stock,review){
+  const rm=stock&&stock.riskManagement?normalizeRiskManagement(stock.riskManagement):null;
+  const level=rm?riskManagementLevel(rm.riskLevel):0;
+  const flags=(review.shortTermTechnical&&review.shortTermTechnical.riskFlags||[]).map(zhRiskFlag).filter(Boolean);
+  return {level,label:technicalViewUx().localizeRiskLevel(level),flags,management:rm};
+}
+function technicalRiskList(title,items){
+  const values=(Array.isArray(items)?items:[]).map(value=>technicalViewUx().localizeUserText(value)).filter(Boolean);
+  if(!values.length)return '';
+  return `<div class="text" style="max-width:none;margin-top:8px"><b>${esc(title)}：</b><ul style="margin:6px 0 0 18px;padding:0">${values.slice(0,8).map(value=>`<li>${esc(value)}</li>`).join('')}</ul></div>`;
+}
+function technicalConclusionLayer(stock,review,td,freshness,risk){
+  const st=review.shortTermTechnical||{};
+  const summary=review.finalTechnicalConclusion||st.technicalSummary||'待补充技术结论';
+  const support=technicalPrimaryLevel(st.supportLevels,td.supportPrice);
+  const resistance=technicalPrimaryLevel(st.resistanceLevels,td.resistancePrice);
+  const rm=risk.management;
+  const focus=[st.actionHint]
+    .concat(risk.flags)
+    .concat(rm&&Array.isArray(rm.reviewConditions)?rm.reviewConditions:[])
+    .map(value=>technicalViewUx().localizeUserText(value)).filter(Boolean).slice(0,3);
+  const dateValue=freshness.date?freshness.date.slice(5):'待确认';
+  const warning=freshness.warning?`<div class="alert" data-technical-freshness-warning>${esc(freshness.warning)}${freshness.date?` · ${esc(freshness.date)}`:''}</div>`:'';
+  return `<section class="card technical-conclusion-card" data-technical-layer="conclusion" style="margin-bottom:12px;border-left:4px solid var(--teal)"><div class="card-title">技术结论</div><div class="technical-conclusion-title">${esc(technicalViewUx().localizeTrend(st.trendStatus))} · ${esc(cyclePositionText(review.cycleTechnical&&review.cycleTechnical.cyclePosition))}</div><div class="technical-conclusion-summary">${esc(technicalViewUx().localizeUserText(summary))}</div><div class="technical-summary-grid"><div><span>趋势</span><strong>${esc(technicalViewUx().localizeTrend(st.trendStatus))}</strong></div><div><span>风险</span><strong>${esc(risk.label)}</strong></div><div><span>数据</span><strong>${esc(freshness.fresh?'最新 '+dateValue:(freshness.stale?'截至 '+dateValue:'待确认'))}</strong></div></div>${warning}<div class="technical-focus"><div class="card-title">今日关注</div>${highFrequencyItemsHtml(focus.length?focus:['继续观察关键均线与支撑压力变化'])}</div><div class="technical-key-levels"><span>支撑 <strong>${technicalFactNumber(support,2)}</strong></span><span>压力 <strong>${technicalFactNumber(resistance,2)}</strong></span></div></section>`;
+}
+function technicalEvidenceLayer(stock,review,td,risk){
+  const st=review.shortTermTechnical||{},cy=review.cycleTechnical||{};
+  const history=normalizePriceHistory(stock);
+  const sig=calculateTechnicalSignal(stock);
+  const evidenceRisk=(risk.flags.length?risk.flags:['暂无明确短期风险记录']);
+  const rm=risk.management;
+  const riskDetails=`${highFrequencyItemsHtml(evidenceRisk)}${rm?technicalRiskList('关键风险',rm.triggerReasons)+technicalRiskList('复核条件',rm.reviewConditions)+technicalRiskList('失效条件',rm.invalidConditions):''}`;
+  const reliableVolume=td.volumeStatus==='comparable'&&!td.volumeWarning;
+  const legacySignals=(sig.signals||[]).concat(sig.warnings||[]).map(value=>technicalViewUx().localizeMachineSignal(value));
+  return `<details class="card technical-layer-details" data-technical-layer="evidence" style="margin-bottom:12px"><summary class="card-title" style="cursor:pointer">查看技术依据</summary><div class="technical-evidence-grid"><div><div class="card-title">价格位置</div><div class="card-note">完整日K收盘 ${technicalFactNumber(td.price,2)} · ${esc(pricePositionText(td.pricePosition))}</div></div><div><div class="card-title">均线结构</div><div class="card-note">MA5 ${technicalFactNumber(td.ma5,2)} · MA10 ${technicalFactNumber(td.ma10,2)} · MA20 ${technicalFactNumber(td.ma20,2)} · MA60 ${technicalFactNumber(td.ma60,2)}${Number(td.ma120)>0?` · MA120 ${technicalFactNumber(td.ma120,2)}`:''}</div></div><div><div class="card-title">MACD</div><div class="card-note">${esc(technicalMacdText(td.macd))}</div></div><div><div class="card-title">历史价格</div><div class="card-note">完整日K ${history.filter(row=>row.is_complete_bar!==false).length} 条</div></div><div><div class="card-title">支撑 / 压力</div><div class="card-note">支撑 ${technicalFactNumber(technicalPrimaryLevel(st.supportLevels,td.supportPrice),2)} · 压力 ${technicalFactNumber(technicalPrimaryLevel(st.resistanceLevels,td.resistancePrice),2)}</div></div><div><div class="card-title">周期位置</div><div class="card-note">${esc(cyclePositionText(cy.cyclePosition))} · ${esc(pricePositionText(td.pricePosition))}</div></div>${reliableVolume?`<div><div class="card-title">成交量状态</div><div class="card-note">${esc(technicalVolumeStatus(td))}</div></div>`:''}</div><div class="technical-evidence-risk"><div class="card-title">风险与复核条件</div>${riskDetails}</div><details class="technical-legacy-details"><summary class="card-note" style="cursor:pointer">旧版指标</summary><div class="card-note" style="margin-top:8px">辅助评分 ${fmtMaybe(sig.technicalScore,1)} / 10 · ${esc(technicalStatusLabel(sig.technicalStatus))}</div>${highFrequencyItemsHtml(legacySignals)}</details></details>`;
+}
+function technicalDataStatusLayer(stock,review,td,freshness){
+  const market=stock&&stock.marketDataFreshness&&typeof stock.marketDataFreshness==='object'?stock.marketDataFreshness:{};
+  const task=window.MARKET_TASK_STATUS&&typeof window.MARKET_TASK_STATUS==='object'?window.MARKET_TASK_STATUS:null;
+  const run=task&&task.latest_run||{};
+  const automatic=!task?'状态未知':(task.task_exists&&task.enabled?'已启用':'未启用');
+  const runResult=run.status==='success'?'成功':(run.status==='failed'?'失败':'尚无记录');
+  const technicalDate=freshness.date||'无法确认';
+  const dateTitle=freshness.fresh?'技术数据最新至':'技术数据截至';
+  const statusWarning=freshness.warning?`<div class="alert">${esc(freshness.warning)}</div>`:'';
+  return `<details class="card technical-layer-details" data-technical-layer="status" style="margin-bottom:12px"><summary class="card-title" style="cursor:pointer">数据状态</summary>${statusWarning}<div class="technical-evidence-grid"><div><div class="card-title">${esc(dateTitle)}</div><div class="card-note">${esc(technicalDate)}</div></div><div><div class="card-title">行情来源</div><div class="card-note">${esc(technicalViewUx().localizeProvider(market.provider))}</div></div><div><div class="card-title">日K更新时间</div><div class="card-note">${esc(market.fetched_at?String(market.fetched_at).replace('T',' ').slice(0,19):'尚未更新')}</div></div><div><div class="card-title">AI技术判断更新时间</div><div class="card-note">${esc(review.updatedAt||'尚未更新')}</div></div><div><div class="card-title">自动更新</div><div class="card-note">${esc(automatic)} · 上次结果 ${esc(runResult)}</div></div><div><div class="card-title">任务运行</div><div class="card-note">上次 ${esc(task&&task.last_run_time||run.started_at||'—')} · 下次 ${esc(task&&task.next_run_time||'—')}</div></div></div></details>`;
+}
+function technicalMaintenanceLayer(){
+  return `<details class="card technical-layer-details" data-technical-layer="maintenance" style="margin-bottom:12px"><summary class="card-title" style="cursor:pointer">数据维护</summary><div class="card-note">低频导入、重算与维护工具；操作前请确认数据来源和日期。</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn ghost small" data-detail-action="copy-technical-prompt">复制技术分析 Prompt</button><button class="btn ghost small" data-detail-action="import-technical-json">导入技术面 JSON</button><button class="btn ghost small" data-detail-action="edit-technical">编辑技术数据</button><button class="btn ghost small" data-detail-action="import-history">导入历史价格 CSV</button><button class="btn ghost small" data-detail-action="update-technical-history">从历史价格更新技术数据</button><button class="btn ghost small" data-detail-action="apply-technical">应用到九模块技术评分</button><button class="btn ghost small" data-detail-action="update-daily-kline">更新日K</button></div></details>`;
+}
 function technicalLevelList(items){
   const arr=Array.isArray(items)?items:[];
   return arr.length?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(' '):'—';
@@ -5094,10 +5167,10 @@ function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--te
 }
 function technicalWorkspacePanel(stock){
   const review=normalizeTechnicalReview(stock.technicalReview,stock);
-  const st=review.shortTermTechnical||{};
-  const cy=review.cycleTechnical||{};
-  const body=`${technicalAnalysisPanel(stock)}${trendRiskManagementPanel(stock)}${technicalSignalPanel(stock)}`;
-  return `${marketDataFreshnessPanel(stock)}${v13WorkspaceAiReviewSummary(stock,['technical_review'],'最近技术复核')}${workspaceSummaryCard('技术面摘要',[review.finalTechnicalConclusion||st.technicalSummary||'待补充技术结论',`趋势 ${zhTrendStatus(st.trendStatus)||'—'}`,`周期 ${cyclePositionText(cy.cyclePosition)}`,st.actionHint||'继续观察'],'查看技术面详情',body,'var(--teal)')}`;
+  const td=normalizeTechnicalData(stock.technicalData);
+  const freshness=technicalViewUx().canonicalTechnicalDate({technicalData:td,priceHistory:normalizePriceHistory(stock)});
+  const risk=technicalRiskSummary(stock,review);
+  return `${technicalConclusionLayer(stock,review,td,freshness,risk)}${technicalEvidenceLayer(stock,review,td,risk)}${technicalDataStatusLayer(stock,review,td,freshness)}${technicalMaintenanceLayer()}`;
 }
 function newsWorkspacePanel(stock){
   const rc=normalizeRecentCatalyst(stock.recentCatalyst,stock);

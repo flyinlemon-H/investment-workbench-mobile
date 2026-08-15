@@ -14,17 +14,18 @@ roleByPath.set('data/market_task_status_bridge.js','delivered daily market task 
 roleByPath.set('src/batch-technical-review.js','M05B Hotfix 3 authoritative batch contract, validation, and parser runtime');
 roleByPath.set('src/multi-stock-analysis.js','M05B Hotfix 3 contract-aligned multi-stock prompt runtime');
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
+roleByPath.set('src/technical-view-ux.js','M05B Technical View UX 1 localization and canonical freshness runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
-  'src/symbol-identity.js'
+  'src/symbol-identity.js',
+  'src/technical-view-ux.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
-  const absolutePath=path.join(root,relativePath);
-  const normalized=fs.readFileSync(absolutePath,'utf8').replace(/\r\n/g,'\n');
+  const normalized=execFileSync('git',['show',`HEAD:${relativePath}`],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');
   const bytes=Buffer.from(normalized,'utf8');
   return {
     path:relativePath,
@@ -38,7 +39,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05b-hotfix3-workbench-mobile-20260814',
+  assetVersion:'m05b-technical-view-ux1-workbench-mobile-20260815',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };

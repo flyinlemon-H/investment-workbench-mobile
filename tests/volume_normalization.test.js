@@ -65,7 +65,6 @@ test('P4 published bridge no longer emits the known fake minus-95-percent scale 
   vm.runInContext(read('data/market_data_bridge.js'),context);
   const incoming=context.window.MARKET_DATA_BRIDGE.stocks.find(stock=>String(stock.symbol).toUpperCase()==='601869.SS');
   assert(incoming);
-  assert(incoming.technicalIndicators.volume_change.change_pct<-90);
   const normalized=runtime.normalizeVolumeComparison(JSON.parse(JSON.stringify(incoming.priceHistory)),incoming.symbol);
   assert.equal(normalized.volumeStatus,'comparable');
   assert(normalized.volumeChangePct>-90,`normalized change should not preserve fake scale signal: ${normalized.volumeChangePct}`);

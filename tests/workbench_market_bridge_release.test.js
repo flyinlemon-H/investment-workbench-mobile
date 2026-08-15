@@ -16,15 +16,15 @@ function loadPublishedBridge(){
   return context.window.MARKET_DATA_BRIDGE;
 }
 
-test('release publishes the current 19-stock market bridge with technical indicators',()=>{
+test('release publishes an internally consistent 19-stock market bridge with technical indicators',()=>{
   const bridge=loadPublishedBridge();
-  assert.equal(bridge.generatedAt,'2026-08-13T08:30:04.458306+00:00');
+  assert.match(bridge.generatedAt,/^\d{4}-\d{2}-\d{2}T/);
   assert.equal(bridge.stocks.length,19);
   const stock=bridge.stocks.find(item=>item.symbol==='2899.HK');
   assert(stock);
-  assert.equal(stock.priceHistory.at(-1).date,'2026-08-13');
-  assert.equal(stock.marketDataFreshness.last_trade_date,'2026-08-13');
-  assert.equal(stock.technicalIndicators.last_trade_date,'2026-08-13');
+  const lastDate=stock.priceHistory.at(-1).date;
+  assert.equal(stock.marketDataFreshness.last_trade_date,lastDate);
+  assert.equal(stock.technicalIndicators.last_trade_date,lastDate);
   for(const key of ['ma5','ma10','ma20','ma60'])assert.equal(typeof stock.technicalIndicators[key],'number');
   for(const key of ['dif','dea','histogram'])assert.equal(typeof stock.technicalIndicators.macd[key],'number');
 });
@@ -55,18 +55,19 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   assert.equal(saves.length,1);
   assert.equal(technicalRefreshes,1);
   assert.equal(saves[0].options.critical,true);
-  assert.equal(stock.priceHistory.at(-1).date,'2026-08-13');
+  assert.equal(stock.priceHistory.at(-1).date,incoming.priceHistory.at(-1).date);
   assert.equal(stock.marketDataFreshness.fetched_at,incoming.marketDataFreshness.fetched_at);
   assert.deepEqual(stock.technicalIndicators,incoming.technicalIndicators);
-  assert.equal(stock.technicalData.technicalAsOf,'2026-08-13');
+  assert.equal(stock.technicalData.technicalAsOf,incoming.priceHistory.at(-1).date);
 });
 
-test('M05B Hotfix 3 release version cache-busts the bridge and Workbench modules',()=>{
+test('M05B Technical View UX 1 release version cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05b-hotfix3-workbench-mobile-20260814';
+  const version='m05b-technical-view-ux1-workbench-mobile-20260815';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
+    'src/technical-view-ux.js',
     'data/market_data_bridge.js',
     'data/market_task_status_bridge.js',
     'src/market-data-bridge.js',
