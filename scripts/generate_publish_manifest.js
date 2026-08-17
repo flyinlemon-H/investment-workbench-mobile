@@ -15,6 +15,8 @@ roleByPath.set('src/batch-technical-review.js','M05B Hotfix 3 authoritative batc
 roleByPath.set('src/multi-stock-analysis.js','M05B Hotfix 3 contract-aligned multi-stock prompt runtime');
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 roleByPath.set('src/technical-view-ux.js','M05B Technical View UX 1 localization and canonical freshness runtime');
+roleByPath.set('src/state.js','M05B News Catalyst freshness normalization runtime');
+roleByPath.set('src/ui-render.js','M05B News Catalyst prompt, import, and current-snapshot rendering runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
@@ -39,7 +41,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05b-technical-view-ux1-workbench-mobile-20260815',
+  assetVersion:'m05b-news-catalyst-freshness1-workbench-mobile-20260817',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };
