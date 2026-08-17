@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "311c10a6c1557b5b272738c4c4cd6dca7ae82d09",
-  "assetVersion": "m05b-news-catalyst-freshness1-workbench-mobile-20260817",
+  "sourceCommit": "cb506114374b4172dbee12b2ddc579b6adf3e9ff",
+  "assetVersion": "m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45161,
-      "sha256": "ea261a92b733ece71b5f0f797724ddb6e2614a160b3e01ea0a0555aef1e87df9"
+      "bytes": 45779,
+      "sha256": "a0278abbbb11138aecbf77d3010e772ee0c78afa6dc790e574cb7b991f090e37"
     },
     {
       "path": "social_posts.json",
@@ -121,8 +121,8 @@
     {
       "path": "src/multi-stock-analysis.js",
       "role": "M05B Hotfix 3 contract-aligned multi-stock prompt runtime",
-      "bytes": 34594,
-      "sha256": "66b9e38de26ffaaa2ebcc1db0c805f277e991485348324a5ffc1a6c6c4f8cff6"
+      "bytes": 34919,
+      "sha256": "2982d3e9f493acc8f75e1fa11d546e30c46611143ea544e48081987c6dd20752"
     },
     {
       "path": "src/multi-tab-protection.js",
@@ -147,6 +147,24 @@
       "role": "browser runtime dependency",
       "bytes": 13922,
       "sha256": "fb279ca193796bb476cdb4713a6459652c4865c9d1129c7d1b14bcf98155169d"
+    },
+    {
+      "path": "src/portfolio-review-context.js",
+      "role": "M05C Daily Portfolio Review compact program-owned context and prompt runtime",
+      "bytes": 16442,
+      "sha256": "89ffd7ceadc710b29ce3b8c9efb95cbb1fad76a2add120e94426bacc084f0f7e"
+    },
+    {
+      "path": "src/portfolio-review-contract.js",
+      "role": "M05C Daily Portfolio Review strict contract and atomic snapshot runtime",
+      "bytes": 10802,
+      "sha256": "7aead679014db24c185f051b0a7dc7b1f3048a7b4df14622bd12b0ff23c8ecc9"
+    },
+    {
+      "path": "src/portfolio-review-ui.js",
+      "role": "M05C Daily Portfolio Review mobile workflow and result runtime",
+      "bytes": 18519,
+      "sha256": "4d6a57aed9c18268bedd971d6a2836b7dd78525a7dbffaab3503ded9e6127eff"
     },
     {
       "path": "src/position.js",
