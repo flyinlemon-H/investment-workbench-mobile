@@ -17,13 +17,19 @@ roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity
 roleByPath.set('src/technical-view-ux.js','M05B Technical View UX 1 localization and canonical freshness runtime');
 roleByPath.set('src/state.js','M05B News Catalyst freshness normalization runtime');
 roleByPath.set('src/ui-render.js','M05B News Catalyst prompt, import, and current-snapshot rendering runtime');
+roleByPath.set('src/portfolio-review-context.js','M05C Daily Portfolio Review compact program-owned context and prompt runtime');
+roleByPath.set('src/portfolio-review-contract.js','M05C Daily Portfolio Review strict contract and atomic snapshot runtime');
+roleByPath.set('src/portfolio-review-ui.js','M05C Daily Portfolio Review mobile workflow and result runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
   'src/symbol-identity.js',
-  'src/technical-view-ux.js'
+  'src/technical-view-ux.js',
+  'src/portfolio-review-context.js',
+  'src/portfolio-review-contract.js',
+  'src/portfolio-review-ui.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
