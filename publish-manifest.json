@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "f5f1f556bef002b887d8e1dbec342efb4b26cbdc",
-  "assetVersion": "m05b-technical-view-ux1-workbench-mobile-20260815",
+  "sourceCommit": "311c10a6c1557b5b272738c4c4cd6dca7ae82d09",
+  "assetVersion": "m05b-news-catalyst-freshness1-workbench-mobile-20260817",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1745001,
-      "sha256": "305a44a5e947558e511875a04c102a473b84e952423916f2a99aaa1e58e748c4"
+      "bytes": 1749748,
+      "sha256": "4c205baa83ba143f88946fed3704427e453ab027073996b9cbad5b90b9ae20d5"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 995,
-      "sha256": "51a34d11f10317e181375203a9b991eb020b38e2b08da5e5af72b4580cca6653"
+      "bytes": 1264,
+      "sha256": "9a2702d2b70204a404c730d70147cd9735aacd8cc6c0d31a5df67724b820b570"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45011,
-      "sha256": "8490f2f5c0d923bc20fa53e414eafe7920744542bbd8373b37551adf4a7d0fd6"
+      "bytes": 45161,
+      "sha256": "ea261a92b733ece71b5f0f797724ddb6e2614a160b3e01ea0a0555aef1e87df9"
     },
     {
       "path": "social_posts.json",
@@ -174,9 +174,9 @@
     },
     {
       "path": "src/state.js",
-      "role": "browser runtime dependency",
-      "bytes": 120655,
-      "sha256": "0004ff8b884f447b0e3c5c8840c7951c9bc15bcb81ea221500a17e779866eb96"
+      "role": "M05B News Catalyst freshness normalization runtime",
+      "bytes": 121031,
+      "sha256": "f04a1486c86bb45dbc4e2cd28d9abc4d774dc1ff8f9d3198bd35038df416536f"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -246,9 +246,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "browser runtime dependency",
-      "bytes": 611422,
-      "sha256": "9aff1c71373f7dcd8508afcc7c97a6ef318617fa4aa49ff9236f92ef97f00760"
+      "role": "M05B News Catalyst prompt, import, and current-snapshot rendering runtime",
+      "bytes": 613331,
+      "sha256": "bc7ab2d5f1cde58cf0d048ff1eb791acebdc173bf36ee73215fb048a64b1cc89"
     },
     {
       "path": "src/v13-alpha3-services.js",
