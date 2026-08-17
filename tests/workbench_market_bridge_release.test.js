@@ -61,9 +61,9 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   assert.equal(stock.technicalData.technicalAsOf,incoming.priceHistory.at(-1).date);
 });
 
-test('M05B News Catalyst Freshness 1 release version cache-busts the bridge and Workbench modules',()=>{
+test('M05C Daily Portfolio Review release version cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05b-news-catalyst-freshness1-workbench-mobile-20260817';
+  const version='m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',

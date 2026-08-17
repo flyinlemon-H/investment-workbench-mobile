@@ -47,7 +47,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05b-news-catalyst-freshness1-workbench-mobile-20260817',
+  assetVersion:'m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };
