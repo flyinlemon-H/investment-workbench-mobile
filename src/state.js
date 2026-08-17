@@ -589,11 +589,12 @@ function defaultRecentCatalyst(){
   };
 }
 function normalizeRecentCatalyst(v,stock={}){
+  const hasExplicitSnapshot=Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length);
   const src=(v&&typeof v==='object')?v:{};
   const ai=normalizeAiReviews(stock.aiReviews);
   const news=(ai.newsReview&&typeof ai.newsReview==='object')?ai.newsReview:{};
   const freshness=normalizeDataFreshness(stock.dataFreshness);
-  const latest=normalizeDateOnly(src.latestSourceDate)||normalizeDateOnly(news.updatedAt)||freshness.newsUpdatedAt||'';
+  const latest=normalizeDateOnly(src.latestSourceDate)||(hasExplicitSnapshot?'':(normalizeDateOnly(news.updatedAt)||freshness.newsUpdatedAt||''));
   let days=nullableNumberValue(src.freshnessDays);
   if(days===null&&latest){
     const t=new Date(todayDate()).getTime();
@@ -604,7 +605,9 @@ function normalizeRecentCatalyst(v,stock={}){
   if(!src.freshnessStatus&&days!==null)freshnessStatus=days<=3?'fresh':(days<=7?'acceptable':'stale');
   const weeklyCatalysts=normalizeStringArray(src.weeklyCatalysts);
   const monthlyCatalysts=normalizeStringArray(src.monthlyCatalysts);
-  const rawEvents=src.recentEvents||news.attentionPoints||news.positivePoints;
+  const rawEvents=Object.prototype.hasOwnProperty.call(src,'recentEvents')
+    ?src.recentEvents
+    :(hasExplicitSnapshot?[]:(news.attentionPoints||news.positivePoints));
   const recentEvents=Array.isArray(rawEvents)
     ?rawEvents.map(x=>(x&&typeof x==='object')?{...x}:String(x??'').trim()).filter(x=>typeof x==='object'||Boolean(x))
     :normalizeStringArray(rawEvents);
@@ -680,8 +683,9 @@ function defaultShortTermSentiment(stock={}){
   };
 }
 function normalizeShortTermSentiment(v,stock={}){
+  const hasExplicitSnapshot=Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length);
   const src=(v&&typeof v==='object')?v:{};
-  const old=normalizeSentimentReview(stock.sentimentReview,stock);
+  const old=hasExplicitSnapshot?defaultSentimentReview(stock):normalizeSentimentReview(stock.sentimentReview,stock);
   const pick=(...keys)=>{
     for(const k of keys){
       if(Object.prototype.hasOwnProperty.call(src,k)&&src[k]!==undefined&&src[k]!==null&&src[k]!=='')return src[k];

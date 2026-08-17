@@ -3314,7 +3314,7 @@ function shortTermCatalystPanel(stock){
   const eventWarning=ev.priceActionDetected&&level==='none'?`<div class="alert" style="margin-top:8px">${esc(ev.warning||'行情异动缺少新闻解释，新闻结论应降权。')}</div>`:'';
   const missingItems=(rc.missingData||[]).concat(ev.missingData||[]);
   const details=has
-    ?`<div class="text" style="max-width:none"><b>当天催化：</b>${esc(formatChineseText(rc.todayCatalyst||'未发现明确当日公告或新闻'))}</div>${catalystListHtml('最近7天催化',rc.weeklyCatalysts,5)}${catalystListHtml('最近30天催化',rc.monthlyCatalysts,6)}${catalystListHtml('近期事件',rc.recentEvents,6)}${catalystListHtml('缺失信息',missingItems,6)}${staleWarning}${noTodayWarning}${levelWarning}${eventWarning}`
+    ?`<div class="text" style="max-width:none"><b>当天催化：</b>${esc(formatChineseText(rc.todayCatalyst||'未发现明确当日公告或新闻'))}</div>${catalystListHtml('最近7天催化（近期参考）',rc.weeklyCatalysts,5)}${catalystListHtml('最近30天催化（历史参考）',rc.monthlyCatalysts,6)}${catalystListHtml('近期事件（历史/持续性背景）',rc.recentEvents,6)}${catalystListHtml('缺失信息',missingItems,6)}${staleWarning}${noTodayWarning}${levelWarning}${eventWarning}`
     :'<div class="alert">暂无短期新闻催化资料；如出现涨停、跳空、放量异动，建议补充新闻解释。</div>';
   return highFrequencyAnalysisCard({
     title:'短期新闻催化',
@@ -5177,7 +5177,7 @@ function newsWorkspacePanel(stock){
   const st=normalizeShortTermSentiment(stock.shortTermSentiment,stock);
   const info=normalizeInformationCompleteness(stock.informationCompleteness,stock);
   const body=`${shortTermCatalystPanel(stock)}${shortTermSentimentPanel(stock)}${informationCompletenessPanel(stock)}`;
-  return workspaceSummaryCard('新闻催化摘要',[rc.todayCatalyst||'未发现明确当日催化',`新闻 ${info.news} · 催化 ${info.catalyst}`,st.marketMood?`情绪 ${st.marketMood}`:'情绪资料待补充',st.fundFlowView?`资金 ${st.fundFlowView}`:'资金流待补充'],'查看新闻催化详情 / Prompt / JSON 导入',body,'var(--seal)','copy-recent-catalyst-prompt','import-recent-catalyst-json');
+  return workspaceSummaryCard('新闻催化摘要',[`截至 ${rc.analysisDate||st.updatedAt||'未更新'}`,rc.todayCatalyst||'未发现明确当日催化',st.marketMood?`情绪 ${st.marketMood}`:'情绪 当前未确认',st.fundFlowView?`资金 ${st.fundFlowView}`:'资金 当前未确认'],'查看新闻催化详情 / Prompt / JSON 导入',body,'var(--seal)','copy-recent-catalyst-prompt','import-recent-catalyst-json');
 }
 function fundamentalWorkspacePanel(stock){
   if(stock.type==='etf'){
@@ -6948,33 +6948,40 @@ function recentCatalystPromptText(stock){
     stock:{name:stock.name||'',symbol:stock.code||stock.symbol||'',type:stock.type||'',role:stock.role||'',theme:stock.theme||''},
     today:todayDate(),
     technicalPriceActionEvent:tech.priceActionEvent,
-    recentCatalyst:normalizeRecentCatalyst(stock.recentCatalyst,stock),
-    eventExplanation:normalizeEventExplanation(stock.eventExplanation,stock),
+    previousAnalysisContext:{
+      recentCatalyst:normalizeRecentCatalyst(stock.recentCatalyst,stock),
+      eventExplanation:normalizeEventExplanation(stock.eventExplanation,stock),
+      shortTermSentiment:normalizeShortTermSentiment(stock.shortTermSentiment,stock),
+      sentimentReview:normalizeSentimentReview(stock.sentimentReview,stock)
+    },
     collectionInputs:normalizeCollectionInputs(stock.collectionInputs),
     dataFreshness:normalizeDataFreshness(stock.dataFreshness)
   };
-  const schema={recentCatalyst:{analysisDate:todayDate(),lookbackDays:7,monthlyLookbackDays:30,latestSourceDate:'',hasTodayNews:false,todayCatalyst:'',weeklyCatalysts:[],monthlyCatalysts:[],recentEvents:[],freshnessStatus:'fresh | acceptable | stale | unknown',freshnessDays:null,catalystCoverage:'high | medium | low | unknown',missingData:[],confidence:'high | medium | low',actionHint:''},eventExplanation:{priceActionDetected:false,priceActionType:'',explanationLevel:'full | partial | none | unknown',canExplainTodayMove:false,explanationConfidence:'high | medium | low',explanation:'',missingData:[],warning:''},informationCompleteness:{news:'high | medium | low | unknown',catalyst:'high | medium | low | unknown',fundFlow:'high | medium | low | unknown',longTermLogic:'high | medium | low | unknown',fundamentals:'high | medium | low | unknown',technical:'high | medium | low | unknown',valuation:'high | medium | low | unknown',overall:'high | medium | low | unknown',missingItems:[],warning:''}};
+  const schema={recentCatalyst:{analysisDate:todayDate(),lookbackDays:7,monthlyLookbackDays:30,latestSourceDate:'',hasTodayNews:false,todayCatalyst:'',weeklyCatalysts:[],monthlyCatalysts:[],recentEvents:[],freshnessStatus:'fresh | acceptable | stale | unknown',freshnessDays:null,catalystCoverage:'high | medium | low | unknown',missingData:[],confidence:'high | medium | low',actionHint:''},shortTermSentiment:{updatedAt:todayDate(),marketMood:'',fundFlowView:'',sectorHeat:'',institutionalView:'',riskFlags:[],confidence:'high | medium | low',actionHint:''},eventExplanation:{priceActionDetected:false,priceActionType:'',explanationLevel:'full | partial | none | unknown',canExplainTodayMove:false,explanationConfidence:'high | medium | low',explanation:'',missingData:[],warning:''},informationCompleteness:{news:'high | medium | low | unknown',catalyst:'high | medium | low | unknown',fundFlow:'high | medium | low | unknown',longTermLogic:'high | medium | low | unknown',fundamentals:'high | medium | low | unknown',technical:'high | medium | low | unknown',valuation:'high | medium | low | unknown',overall:'high | medium | low | unknown',missingItems:[],warning:''}};
   return [
     '你是一名谨慎的短期新闻催化复核助手。',
     '',
     `请复核【${stock.name||'标的名称'}】（代码：【${stock.code||stock.symbol||'symbol'}】）当天、最近 7 天、最近 30 天的新闻、公告、板块异动和资金线索。`,
     '',
-    '【当前系统已有信息】',
+    '【当前事实与历史分析上下文】',
     JSON.stringify(ctx,null,2),
     '',
     '要求：',
-    '1. 当天催化：当日公告、当日新闻、涨停/大涨原因、龙虎榜、资金流、板块异动。',
-    '2. 最近7天催化：本周公告、行业新闻、板块热度、资金变化、机构观点、相关产业链事件。',
-    '3. 最近30天催化：财报后市场反应、投资者关系活动、产品进展、订单/出货/产能信息、产业趋势、机构预期变化。',
-    '4. 不要只搜索当天新闻；当天新闻找不到，不等于上涨完全无法解释。',
-    '5. 如果 analysisDate 是今天但 latestSourceDate 不是今天，必须明确提示新闻未覆盖今天。',
-    '6. 如果涨停/跌停、单日涨跌幅超过 7%、放量突破或接近前高大涨，必须判断 eventExplanation.explanationLevel。',
-    '7. explanationLevel 规则：full = 当天公告/新闻/资金/板块事件可明确解释；partial = 无当天直接新闻，但最近7天或30天存在明确相关催化；none = 当天、7天、30天都缺乏有效解释；unknown = 信息不足。',
-    '8. catalystCoverage 用 high / medium / low / unknown 表示催化资料覆盖度。',
-    '9. 如果无当天公告但近30天存在 AI服务器、GB300、AI ASIC、CPO、800G 等明确产业催化，应给 partial，而不是 none。',
-    '10. 操作提示避免追涨，应使用条件化表达。',
-    '11. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
-    '12. 只输出严格 JSON，不要 Markdown，不要解释文字。',
+    '1. 本次输出必须是同一 analysisDate 的完整当前快照，必须返回 recentCatalyst、shortTermSentiment、eventExplanation、informationCompleteness 四个对象。',
+    '2. previousAnalysisContext 只作历史参考，不是当前事实。不得把其中的旧情绪、旧资金流、旧板块热度或旧机构观点复制为当前值，除非本次重新核验，并在自然语言中明确说明核验依据。',
+    '3. marketMood、fundFlowView、sectorHeat、institutionalView 每次都必须重新评估；无法确认时写“当前未确认”或更具体的不可用说明，不得省略字段。',
+    '4. 当天催化：当日公告、当日新闻、涨停/大涨原因、龙虎榜、资金流、板块异动。',
+    '5. 最近7天催化：本周公告、行业新闻、板块热度、资金变化、机构观点、相关产业链事件。',
+    '6. 最近30天催化：财报后市场反应、投资者关系活动、产品进展、订单/出货/产能信息、产业趋势、机构预期变化。',
+    '7. 不要只搜索当天新闻；当天新闻找不到，不等于上涨完全无法解释。',
+    '8. 如果 analysisDate 是今天但 latestSourceDate 不是今天，必须明确提示新闻未覆盖今天。',
+    '9. 如果涨停/跌停、单日涨跌幅超过 7%、放量突破或接近前高大涨，必须判断 eventExplanation.explanationLevel。',
+    '10. explanationLevel 规则：full = 当天公告/新闻/资金/板块事件可明确解释；partial = 无当天直接新闻，但最近7天或30天存在明确相关催化；none = 当天、7天、30天都缺乏有效解释；unknown = 信息不足。',
+    '11. catalystCoverage 用 high / medium / low / unknown 表示催化资料覆盖度。',
+    '12. 如果无当天公告但近30天存在 AI服务器、GB300、AI ASIC、CPO、800G 等明确产业催化，应给 partial，而不是 none。',
+    '13. 操作提示避免追涨，应使用条件化表达。',
+    '14. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
+    '15. 只输出严格 JSON，不要 Markdown，不要解释文字。',
     JSON.stringify(schema,null,2)
   ].join('\n');
 }
@@ -6983,8 +6990,10 @@ function shortTermSentimentPromptText(stock){
   const ctx={
     stock:{name:stock.name||'',symbol:stock.code||stock.symbol||'',type:stock.type||'',role:stock.role||'',theme:stock.theme||''},
     sentimentImportance:getSentimentImportance(stock),
-    sentimentReview:normalizeSentimentReview(stock.sentimentReview,stock),
-    shortTermSentiment:normalizeShortTermSentiment(stock.shortTermSentiment,stock),
+    previousAnalysisContext:{
+      sentimentReview:normalizeSentimentReview(stock.sentimentReview,stock),
+      shortTermSentiment:normalizeShortTermSentiment(stock.shortTermSentiment,stock)
+    },
     dataFreshness:normalizeDataFreshness(stock.dataFreshness)
   };
   const schema={shortTermSentiment:{updatedAt:todayDate(),marketMood:'',fundFlowView:'',sectorHeat:'',institutionalView:'',riskFlags:[],confidence:'high | medium | low',actionHint:''}};
@@ -6997,11 +7006,13 @@ function shortTermSentimentPromptText(stock){
     JSON.stringify(ctx,null,2),
     '',
     '要求：',
-    '1. 区分事实新闻、资金流、机构观点、社媒情绪和市场传闻。',
-    '2. 对成长股和主题股重点关注预期变化、板块热度和资金流；对资源股/宽基 ETF 不要过度解读社媒。',
-    '3. 不确定时降低 confidence。',
-    '4. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
-    '5. 只输出严格 JSON，不要 Markdown，不要解释文字。',
+    '1. previousAnalysisContext 只作历史参考，不是当前事实；旧值除非本次重新核验，否则不得复制为当前值。',
+    '2. 必须返回 shortTermSentiment 的全部字段；无法确认的 marketMood、fundFlowView、sectorHeat、institutionalView 写“当前未确认”或更具体的不可用说明，不得省略。',
+    '3. 区分事实新闻、资金流、机构观点、社媒情绪和市场传闻。',
+    '4. 对成长股和主题股重点关注预期变化、板块热度和资金流；对资源股/宽基 ETF 不要过度解读社媒。',
+    '5. 不确定时降低 confidence。',
+    '6. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
+    '7. 只输出严格 JSON，不要 Markdown，不要解释文字。',
     JSON.stringify(schema,null,2)
   ].join('\n');
 }
@@ -7155,6 +7166,8 @@ function validateRecentCatalystImportPayload(parsed){
     if(value!==undefined&&(!value||typeof value!=='object'||Array.isArray(value)))throw new Error(`字段校验错误：${name} 必须是对象。`);
   };
   assertObject('recentCatalyst',data.recentCatalyst);
+  assertObject('shortTermSentiment',data.shortTermSentiment);
+  assertObject('sentimentReview',data.sentimentReview);
   assertObject('eventExplanation',data.eventExplanation);
   assertObject('informationCompleteness',data.informationCompleteness);
   const rc=data.recentCatalyst||data;
@@ -7192,6 +7205,9 @@ async function importSentimentPayloadFromText(text,options={}){
     const looksLikeEventExplanation=Boolean(parsed.eventExplanation||parsed.priceActionDetected!==undefined||parsed.canExplainTodayMove!==undefined||parsed.explanationLevel||parsed.explanationConfidence||parsed.explanation);
     const looksLikeShortTermSentiment=Boolean(parsed.shortTermSentiment||parsed.marketMood||parsed.marketSentiment||parsed.sentiment||parsed.fundFlowView||parsed.fundFlow||parsed.fundFlowSummary||parsed.capitalFlow||parsed.moneyFlowView||parsed.sectorHeat||parsed.sectorMomentum||parsed.sectorHotness||parsed.themeHeat||parsed.industryHeat||parsed.institutionalView||parsed.institutionalOpinion||parsed.institutionalViews||parsed.brokerView||parsed.analystView||(parsed.actionHint&&parsed.confidence&&parsed.riskFlags));
     const looksLikeInformationCompleteness=Boolean(parsed.informationCompleteness||parsed.missingItems||parsed.overall||parsed.news&&parsed.fundFlow||parsed.catalyst||parsed.longTermLogic||parsed.fundamentals);
+    const importsCurrentCatalyst=Boolean(parsed.recentCatalyst||looksLikeRecentCatalyst);
+    const catalystPayload=parsed.recentCatalyst||parsed;
+    const currentSnapshotDate=normalizeDateOnly(catalystPayload.analysisDate)||todayDate();
     if(parsed.sentimentReview||(!looksLikeShortTermSentiment&&!looksLikeLongTerm&&!looksLikeRecentCatalyst&&!looksLikeInformationCompleteness&&(parsed.conclusion||parsed.marketMood||parsed.newsSummary||parsed.positivePoints))){
       const payload=parsed.sentimentReview||parsed;
       stock.sentimentReview=normalizeSentimentReview({...payload,symbol:payload.symbol||stock.code||stock.symbol||'',updatedAt:payload.updatedAt||todayDate()},stock);
@@ -7199,20 +7215,19 @@ async function importSentimentPayloadFromText(text,options={}){
       touchDataFreshness(stock,'newsUpdatedAt');
       touchDataFreshness(stock,'socialUpdatedAt');
     }
-    if(parsed.shortTermSentiment||looksLikeShortTermSentiment){
-      const payload=parsed.shortTermSentiment||parsed;
-      stock.shortTermSentiment=normalizeShortTermSentiment({...payload,updatedAt:payload.updatedAt||todayDate()},stock);
+    if(parsed.shortTermSentiment||looksLikeShortTermSentiment||importsCurrentCatalyst){
+      const payload=parsed.shortTermSentiment||(looksLikeShortTermSentiment?parsed:{});
+      stock.shortTermSentiment=normalizeShortTermSentiment({...payload,updatedAt:payload.updatedAt||currentSnapshotDate},stock);
       changed=true;
       touchDataFreshness(stock,'socialUpdatedAt');
     }
-    if(parsed.recentCatalyst||looksLikeRecentCatalyst){
-      const payload=parsed.recentCatalyst||parsed;
-      stock.recentCatalyst=normalizeRecentCatalyst({...payload,analysisDate:payload.analysisDate||todayDate()},stock);
+    if(importsCurrentCatalyst){
+      stock.recentCatalyst=normalizeRecentCatalyst({...catalystPayload,analysisDate:catalystPayload.analysisDate||todayDate()},stock);
       changed=true;
       touchDataFreshness(stock,'newsUpdatedAt');
     }
-    if(parsed.eventExplanation||looksLikeEventExplanation){
-      stock.eventExplanation=normalizeEventExplanation(parsed.eventExplanation||parsed,stock);
+    if(parsed.eventExplanation||looksLikeEventExplanation||importsCurrentCatalyst){
+      stock.eventExplanation=normalizeEventExplanation(parsed.eventExplanation||(looksLikeEventExplanation?parsed:{}),stock);
       changed=true;
     }
     if(parsed.longTermLogic||looksLikeLongTerm){
@@ -7221,15 +7236,15 @@ async function importSentimentPayloadFromText(text,options={}){
       changed=true;
       touchDataFreshness(stock,'personalViewUpdatedAt');
     }
-    if(parsed.informationCompleteness||looksLikeInformationCompleteness){
-      stock.informationCompleteness=normalizeInformationCompleteness(parsed.informationCompleteness||parsed,stock);
+    if(parsed.informationCompleteness||looksLikeInformationCompleteness||importsCurrentCatalyst){
+      stock.informationCompleteness=normalizeInformationCompleteness(parsed.informationCompleteness||(looksLikeInformationCompleteness?parsed:{}),stock);
       changed=true;
     }
     if(options.onlyLongTerm&&!looksLikeLongTerm)throw new Error('未识别 longTermLogic。请粘贴包含 longTermLogic 的 JSON，或直接粘贴长期逻辑对象。');
     if(!changed)throw new Error('未识别到可导入字段。情绪资金 JSON 请包含 shortTermSentiment，或包含 marketMood / marketSentiment / fundFlowView / fundFlow / sectorHeat / institutionalView 等字段。');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,options.onlyLongTerm?'longTermLogic':'recentCatalyst');
-    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
+    await saveState(state,{critical:true});
     if(options.closeLongTerm)closeLongTermLogicImportModal();
     else closeSentimentImportModal();
     refreshLongLogicModalIfOpen();

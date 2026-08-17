@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>News Catalyst Freshness Mobile Harness</title>
+  <style>html,body,#app{width:100%;height:100%;margin:0;border:0}body{overflow:hidden}#app{display:block}</style>
+</head>
+<body>
+  <iframe id="app" src="../../index.html?news-catalyst-freshness-mobile=1" title="News Catalyst mobile acceptance"></iframe>
+  <script>
+    const fixture={
+      stocks:[{
+        id:'fii-mobile',code:'601138.SS',name:'工业富联',type:'holding',role:'成长仓',theme:'AI科技',
+        recentCatalyst:{analysisDate:'2026-08-17',latestSourceDate:'2026-08-17',hasTodayNews:false,todayCatalyst:'今日未发现重大公司公告、订单或业绩事件',weeklyCatalysts:[],monthlyCatalysts:['2026-07-20 业绩催化仍在持续验证'],recentEvents:[{date:'2026-07-20',type:'earnings',summary:'旧业绩事件作为持续性背景'}],freshnessStatus:'fresh',freshnessDays:0,catalystCoverage:'medium',missingData:['盘中完整资金流、陆股通、龙虎榜及盘后公告尚不能确认'],confidence:'low',actionHint:'等待收盘后数据确认'},
+        shortTermSentiment:{updatedAt:'2026-08-17',marketMood:'当前未确认',fundFlowView:'盘中完整资金数据尚不能确认',sectorHeat:'当前未确认',institutionalView:'当前未确认',riskFlags:[],confidence:'low',actionHint:'等待收盘后数据'},
+        eventExplanation:{priceActionDetected:false,explanationLevel:'unknown',canExplainTodayMove:false,explanationConfidence:'low',explanation:'',missingData:['盘中完整资金数据尚不能确认'],warning:''},
+        informationCompleteness:{news:'medium',catalyst:'medium',fundFlow:'low',longTermLogic:'unknown',fundamentals:'unknown',technical:'unknown',valuation:'unknown',overall:'low',missingItems:['盘中完整资金数据尚不能确认'],warning:'盘中数据尚未完整'},
+        sentimentReview:{updatedAt:'2026-07-02',marketMood:'7月2日急跌，风险偏好下降',fundFlowView:'7月1日主力资金净流出'}
+      }]
+    };
+    document.getElementById('app').addEventListener('load',()=>{
+      setTimeout(()=>{
+        const app=document.getElementById('app').contentWindow;
+        app.__newsCatalystFixture=fixture;
+        app.eval("state=normalize(__newsCatalystFixture);detailStockId='fii-mobile';detailSubView='';setDetailWorkspace('news',{persist:false});render();");
+        document.body.dataset.ready='true';
+      },800);
+    });
+  </script>
+</body>
+</html>
