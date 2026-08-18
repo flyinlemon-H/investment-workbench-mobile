@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "cb506114374b4172dbee12b2ddc579b6adf3e9ff",
-  "assetVersion": "m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817",
+  "sourceCommit": "88f86f1e5172e63a88e3149b6a3ab78af628c1cb",
+  "assetVersion": "m05c1-real-trial-fix1-workbench-mobile-20260818",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45779,
-      "sha256": "a0278abbbb11138aecbf77d3010e772ee0c78afa6dc790e574cb7b991f090e37"
+      "bytes": 45275,
+      "sha256": "a57069ca6eb4bddabc08ddf7235ca5b94a6acadec41caa57876f69d66c50a34e"
     },
     {
       "path": "social_posts.json",
@@ -120,9 +120,9 @@
     },
     {
       "path": "src/multi-stock-analysis.js",
-      "role": "M05B Hotfix 3 contract-aligned multi-stock prompt runtime",
-      "bytes": 34919,
-      "sha256": "2982d3e9f493acc8f75e1fa11d546e30c46611143ea544e48081987c6dd20752"
+      "role": "M05C_1 Real Trial Fix 1 two-module navigation runtime",
+      "bytes": 35000,
+      "sha256": "ed8296d123bbf5b00f5071133b8e773c1728a496d57d52eb6122756be038217b"
     },
     {
       "path": "src/multi-tab-protection.js",
@@ -150,21 +150,21 @@
     },
     {
       "path": "src/portfolio-review-context.js",
-      "role": "M05C Daily Portfolio Review compact program-owned context and prompt runtime",
-      "bytes": 16442,
-      "sha256": "89ffd7ceadc710b29ce3b8c9efb95cbb1fad76a2add120e94426bacc084f0f7e"
+      "role": "M05C_1 Real Trial Fix 1 relevance, fact precedence, and fail-safe prompt runtime",
+      "bytes": 29687,
+      "sha256": "33124a828607ff2863e04f55925ad402ac5992846a3311e7e6e57782c6d2204b"
     },
     {
       "path": "src/portfolio-review-contract.js",
-      "role": "M05C Daily Portfolio Review strict contract and atomic snapshot runtime",
-      "bytes": 10802,
-      "sha256": "7aead679014db24c185f051b0a7dc7b1f3048a7b4df14622bd12b0ff23c8ecc9"
+      "role": "M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime",
+      "bytes": 12710,
+      "sha256": "e609b60812715ca25a66e65b5c8d02cd25e9eff783225d86eb3a6f7fd563397e"
     },
     {
       "path": "src/portfolio-review-ui.js",
-      "role": "M05C Daily Portfolio Review mobile workflow and result runtime",
-      "bytes": 18519,
-      "sha256": "4d6a57aed9c18268bedd971d6a2836b7dd78525a7dbffaab3503ded9e6127eff"
+      "role": "M05C_1 Real Trial Fix 1 mobile workflow and defensive display runtime",
+      "bytes": 20638,
+      "sha256": "ac08ed6bac39b395dd334abb58b87d0eadc978a1ddc947c5ad1a168da4e02da5"
     },
     {
       "path": "src/position.js",
