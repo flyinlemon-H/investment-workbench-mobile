@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>M05C Real Trial Mobile Harness</title>
+  <style>html,body,#app{width:100%;height:100%;margin:0;border:0}body{overflow:hidden}#app{display:block}</style>
+</head>
+<body>
+  <iframe id="app" src="../../index.html?m05c-real-trial-mobile=1" title="M05C real trial mobile acceptance"></iframe>
+  <script>
+    Promise.all([
+      fetch('./m05c-real-trial-2026-08-18.json').then(response=>response.json()),
+      new Promise(resolve=>document.getElementById('app').addEventListener('load',resolve,{once:true}))
+    ]).then(([fixture])=>{
+      const review={
+        reviewDate:'2026-08-18',
+        summary:'今天优先复核长飞光纤的技术资料冲突，并关注华勤技术已进入价格复核区。',
+        marketContext:'未提供完整市场背景。',
+        portfolioRiskLevel:'high',
+        priorityStocks:[
+          {symbol:'601869.SS',priority:'high',reason:'技术快照存在冲突，精确支撑压力位暂不采用。',focus:'等待一致的技术结构重新确认。',planRelation:'420元和400元价格条件均已触发，仍需确认附加条件。'},
+          {symbol:'2899.HK',priority:'medium',reason:'当前持仓权重为9.24%，旧配置分析中的20.61%只代表历史观察。',focus:'按当前持仓事实复核资源仓风险。',planRelation:'暂无接近计划。'}
+        ],
+        riskAttention:[{symbol:'603296.SS',reason:'缺少最新新闻资料，短期催化判断置信度较低。'}],
+        planWatch:[
+          {symbol:'603296.SS',status:'triggered',reason:'价格已触发，待确认技术止跌和成交量条件。'},
+          {symbol:'601869.SS',status:'triggered',reason:'价格已触发，待确认其他条件。'}
+        ],
+        candidateReview:[],
+        portfolioRisks:['本次选择的股票中科技主题占比较高，需关注同步波动风险。'],
+        todayFocus:['先处理技术资料冲突，再复核仅有价格触发的计划。'],
+        dataLimitations:[
+          '本次只覆盖4只股票，并非完整券商组合，因此无法判断整个账户的真实集中度。',
+          '紫金矿业只有6月新闻资料，不能作为今日催化。',
+          '华勤技术和长飞光纤缺少最新新闻资料，相关短期判断置信度较低。',
+          '当前未提供可靠现金数据，因此无法判断新增资金承受能力。'
+        ],
+        confidence:'low'
+      };
+      fixture.portfolioReview={current:{reviewDate:review.reviewDate,generatedAt:fixture.generatedAt,savedAt:fixture.generatedAt,selectedSymbols:fixture.stocks.map(stock=>stock.code),review},history:[]};
+      const app=document.getElementById('app').contentWindow;
+      app.__m05cRealTrialFixture=fixture;
+      app.eval("state=normalize(__m05cRealTrialFixture);render();PortfolioReviewUI.open();");
+      document.body.dataset.ready='true';
+    });
+  </script>
+</body>
+</html>

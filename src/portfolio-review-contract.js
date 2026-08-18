@@ -10,6 +10,7 @@
   const PRIORITY_LEVELS=Object.freeze(['high','medium','low']);
   const PLAN_STATUSES=Object.freeze(['approaching','triggered','invalidated','not_close','unclear']);
   const CONFIDENCE_LEVELS=Object.freeze(['high','medium','low']);
+  const FORBIDDEN_USER_TERMS=Object.freeze(['selected_review_universe','knownMarketValue','knownApplicationHoldingsMarketValue','knownCash','cashStatus','weightStatus','allocation','fundamental','valuation','marketContext','todayRelevance','fresh','stale','unknown','unavailable','inconsistent']);
   const REVIEW_FIELDS=Object.freeze(['reviewDate','summary','marketContext','portfolioRiskLevel','priorityStocks','riskAttention','planWatch','candidateReview','portfolioRisks','todayFocus','dataLimitations','confidence']);
   const ITEM_FIELDS=Object.freeze({priorityStocks:['symbol','priority','reason','focus','planRelation'],riskAttention:['symbol','reason'],planWatch:['symbol','status','reason'],candidateReview:['symbol','reason']});
 
@@ -20,6 +21,16 @@
   function fail(code,message,input=null){return {ok:false,code,message,input,value:null,review:null}}
   function exactFields(value,allowed,path){const extra=Object.keys(value).filter(key=>!allowed.includes(key)),missing=allowed.filter(key=>!Object.prototype.hasOwnProperty.call(value,key));if(missing.length)return `${path} 缺少字段：${missing.join(', ')}。`;if(extra.length)return `${path} 包含未知字段：${extra.join(', ')}。`;return ''}
   function validateStringArray(value,path){if(!Array.isArray(value))return `${path} 必须是数组。`;for(let i=0;i<value.length;i+=1)if(typeof value[i]!=='string'||!value[i].trim())return `${path}[${i}] 必须是非空字符串。`;return ''}
+  function userTextEntries(review){
+    const entries=[['summary',review.summary],['marketContext',review.marketContext]];
+    for(const key of Object.keys(ITEM_FIELDS))for(const [index,item] of review[key].entries())for(const field of ITEM_FIELDS[key].filter(field=>!['symbol','priority','status'].includes(field)))entries.push([`${key}[${index}].${field}`,item[field]]);
+    for(const key of ['portfolioRisks','todayFocus','dataLimitations'])for(const [index,value] of review[key].entries())entries.push([`${key}[${index}]`,value]);
+    return entries;
+  }
+  function forbiddenTerm(value){
+    const source=text(value);
+    return FORBIDDEN_USER_TERMS.find(term=>new RegExp(`(^|[^A-Za-z_])${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}($|[^A-Za-z_])`,'i').test(source))||'';
+  }
   function validateSymbolItems(review,key,allowedSymbols){
     const items=review[key];if(!Array.isArray(items))return `${key} 必须是数组。`;
     const seen=new Set();
@@ -33,6 +44,7 @@
       if(!text(item.reason))return `${path}.reason 不能为空。`;
       if(key==='priorityStocks'&&!PRIORITY_LEVELS.includes(item.priority))return `${symbol} priority 使用了不支持的值：${text(item.priority)||'（空）'}。`;
       if(key==='planWatch'&&!PLAN_STATUSES.includes(item.status))return `${symbol} planWatch.status 使用了不支持的值：${text(item.status)||'（空）'}。`;
+      if(key==='planWatch'&&item.status==='triggered'&&(!/价格/.test(item.reason)||!/确认|复核/.test(item.reason)))return `${symbol} 的价格触发说明必须明确仍需确认其他计划条件。`;
     }
     return '';
   }
@@ -50,6 +62,11 @@
     const allowed=new Set((options.expectedSymbols||[]).map(canonical).filter(Boolean));if(!allowed.size)return fail('missing_expected_symbols','缺少本次所选股票范围，无法安全校验 symbol。');
     for(const key of Object.keys(ITEM_FIELDS)){const error=validateSymbolItems(review,key,allowed);if(error)return fail('invalid_symbol_section',error)}
     for(const key of ['portfolioRisks','todayFocus','dataLimitations']){const error=validateStringArray(review[key],key);if(error)return fail('invalid_string_array',error)}
+    if(review.dataLimitations.length>5)return fail('too_many_data_limitations','数据限制最多保留 5 条，请合并同类问题并说明对今日判断的影响。');
+    for(const [path,value] of userTextEntries(review)){
+      if(/完整条件已满足|已到计划条件/.test(value))return fail('unsafe_plan_claim',`${path} 使用了无法由程序证明的完整计划条件表述。`);
+      const forbidden=forbiddenTerm(value);if(forbidden)return fail('internal_jargon',`${path} 包含内部字段或状态词 ${forbidden}，请改为自然中文并说明对判断的影响。`);
+    }
     return {ok:true,code:'valid',message:'组合复核结果校验通过。',input:null,value:{portfolioReview:clone(review)},review:clone(review)};
   }
   function process(raw,options={}){
@@ -92,5 +109,5 @@
   }
   function createCommitController(commitFn=commit){let pending=false;return Object.freeze({get pending(){return pending},run(...args){if(pending)return Promise.resolve({status:'busy'});pending=true;return Promise.resolve().then(()=>commitFn(...args)).finally(()=>{pending=false})}})}
   function text(value){return String(value??'').trim()}
-  return {PORTFOLIO_RISK_LEVELS,PRIORITY_LEVELS,PLAN_STATUSES,CONFIDENCE_LEVELS,REVIEW_FIELDS,ITEM_FIELDS,validate,process,buildSnapshot,buildCandidate,commit,renderPreview,createCommitController};
+  return {PORTFOLIO_RISK_LEVELS,PRIORITY_LEVELS,PLAN_STATUSES,CONFIDENCE_LEVELS,FORBIDDEN_USER_TERMS,REVIEW_FIELDS,ITEM_FIELDS,validate,process,buildSnapshot,buildCandidate,commit,renderPreview,createCommitController};
 });

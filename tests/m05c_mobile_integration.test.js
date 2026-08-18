@@ -15,10 +15,11 @@ test('M05C scripts load after parser and before UI workflow without changing eig
 
 test('M05C mobile workflow exposes short Chinese labels, preview-before-save, and no screenshot or Direct AI UI',()=>{
   const ui=read('src/portfolio-review-ui.js'),multi=read('src/multi-stock-analysis.js');
-  for(const label of ['今日组合','技术复核','生成复核','复制给 AI','粘贴 AI 结果','预览结果','保存复核','优先关注','风险关注','计划接近','候选观察','数据限制'])assert.match(ui,new RegExp(label));
+  for(const label of ['今日组合','技术复核','生成组合复核','查看今日结果','返回选股','复制给 AI','粘贴 AI 结果','预览结果','保存复核','优先关注','风险关注','计划接近','候选观察','数据限制'])assert.match(ui,new RegExp(label));
   assert.match(multi,/今日分析/);assert.match(multi,/multiStockPortfolioBtn/);
   assert.ok(ui.indexOf('m05cPreviewBtn')<ui.indexOf('m05cSaveBtn'));
   assert.doesNotMatch(ui,/截图上传|OpenAI API|DeepSeek|apiKey/i);
+  assert.doesNotMatch(ui,/m05c-mode-tabs|>生成复核<|>今日结果</);
 });
 
 test('M05C 390x844 modal is full-screen, touch-safe, single-column, and prevents horizontal card overflow',()=>{

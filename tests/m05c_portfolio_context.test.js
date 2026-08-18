@@ -37,7 +37,7 @@ test('M05C context preserves module freshness and separates current August news 
   assert.equal(stock.news.analysisDate,'2026-08-17');
   assert.deepEqual(stock.news.currentSnapshot.recentEvents,['8月订单信息']);
   assert.equal(JSON.stringify(stock.news.currentSnapshot).includes('7月历史行业催化'),false);
-  assert.deepEqual(stock.news.historicalReference,{status:'historical_reference',items:['7月历史行业催化']});
+  assert.deepEqual(stock.news.historicalReference,{status:'historical_reference',asOf:'2026-08-17',items:['7月历史行业催化']});
   const stale=context.buildPortfolioContext([fixture.stocks[2]],{reviewDate:fixture.reviewDate}).stocks[0];
   assert.equal(stale.technical.status,'stale');
   assert.equal(stale.news.status,'unavailable');
