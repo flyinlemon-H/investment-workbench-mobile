@@ -12,14 +12,14 @@ const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
 roleByPath.set('src/batch-technical-review.js','M05B Hotfix 3 authoritative batch contract, validation, and parser runtime');
-roleByPath.set('src/multi-stock-analysis.js','M05B Hotfix 3 contract-aligned multi-stock prompt runtime');
+roleByPath.set('src/multi-stock-analysis.js','M05C_1 Real Trial Fix 1 two-module navigation runtime');
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 roleByPath.set('src/technical-view-ux.js','M05B Technical View UX 1 localization and canonical freshness runtime');
 roleByPath.set('src/state.js','M05B News Catalyst freshness normalization runtime');
 roleByPath.set('src/ui-render.js','M05B News Catalyst prompt, import, and current-snapshot rendering runtime');
-roleByPath.set('src/portfolio-review-context.js','M05C Daily Portfolio Review compact program-owned context and prompt runtime');
-roleByPath.set('src/portfolio-review-contract.js','M05C Daily Portfolio Review strict contract and atomic snapshot runtime');
-roleByPath.set('src/portfolio-review-ui.js','M05C Daily Portfolio Review mobile workflow and result runtime');
+roleByPath.set('src/portfolio-review-context.js','M05C_1 Real Trial Fix 1 relevance, fact precedence, and fail-safe prompt runtime');
+roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
+roleByPath.set('src/portfolio-review-ui.js','M05C_1 Real Trial Fix 1 mobile workflow and defensive display runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
@@ -47,7 +47,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817',
+  assetVersion:'m05c1-real-trial-fix1-workbench-mobile-20260818',
   dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
   files
 };

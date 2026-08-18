@@ -63,7 +63,7 @@ test('Workbench consumes bridge data through one critical save',async()=>{
 
 test('M05C Daily Portfolio Review release version cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05c1-daily-portfolio-review-foundation-workbench-mobile-20260817';
+  const version='m05c1-real-trial-fix1-workbench-mobile-20260818';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
