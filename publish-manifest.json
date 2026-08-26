@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "0f6a3541ae60c107e45cfedcc0c3186c9cada0b8",
-  "assetVersion": "m05c1-real-trial-v3-freshness-fix-20260826",
-  "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
+  "sourceCommit": "b1261f60fcc540064b62ae87abc991134673f515",
+  "assetVersion": "real-mobile-trial-v3-phase1-universe-20260826",
+  "dataMode": "add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1749748,
-      "sha256": "4c205baa83ba143f88946fed3704427e453ab027073996b9cbad5b90b9ae20d5"
+      "bytes": 1770581,
+      "sha256": "4c8ae676f62baed7942ed5d759fe236bb7e0db91d2e35eecfaf0b3b7219445f2"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1264,
-      "sha256": "9a2702d2b70204a404c730d70147cd9735aacd8cc6c0d31a5df67724b820b570"
+      "sha256": "673216d1f7a6e99a8929f15ec0aedbdb86ed2b7304983d0da95e70c1dca22477"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45135,
-      "sha256": "757c45b6b304e32bf6c4422e93aeecaf0d50d43d41d8b13527070ea5bdb20186"
+      "bytes": 45383,
+      "sha256": "314db8c5cd5cad45699684565ce18024d63804ccad9e06c93914d68930d42ad1"
     },
     {
       "path": "social_posts.json",
@@ -97,8 +97,8 @@
     {
       "path": "src/app.js",
       "role": "browser runtime dependency",
-      "bytes": 29771,
-      "sha256": "8d5b72cd8073e8e4ee35638403eb8636328ed6f0af39b2b7c62ca665654043cc"
+      "bytes": 31022,
+      "sha256": "76412a17bd1e15d6f5b35f35bd4f71cce7b530f7ec42bbbbcb92b3d9bd8f36b2"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -109,14 +109,14 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7134,
-      "sha256": "fb69ba74569d5d802bf4409153219e812395d04eecb2605948bbb37a2150fd02"
+      "bytes": 7247,
+      "sha256": "d36bd963850470beedae1ab0226846a9a33e7b2898219082378dbe804fc7fd41"
     },
     {
       "path": "src/market-data-bridge.js",
       "role": "browser runtime dependency",
-      "bytes": 1817,
-      "sha256": "86c32e32f7a2fb436d23064aae5d32478a09d5066766b956d6900361eab26528"
+      "bytes": 1899,
+      "sha256": "309c1643af97fdaabe2332540964c0be2ba4e32a9a6e731e4b44f3c4a2461b91"
     },
     {
       "path": "src/multi-stock-analysis.js",
@@ -253,8 +253,8 @@
     {
       "path": "src/symbol-identity.js",
       "role": "M05B Hotfix 1 canonical symbol identity runtime",
-      "bytes": 922,
-      "sha256": "5aec185676eda4a8f332a8ae7ff97ca920b24bea55e815eee4055452dd4e1309"
+      "bytes": 1648,
+      "sha256": "39c24d6d17409d1237eb962ef47f4ba9fd1f96c49594112ef5a534869401ee18"
     },
     {
       "path": "src/technical-view-ux.js",
@@ -265,8 +265,14 @@
     {
       "path": "src/ui-render.js",
       "role": "REAL MOBILE TRIAL V3 mobile technical freshness rendering runtime",
-      "bytes": 613486,
-      "sha256": "56e827029e3b0e48dd4dd77e4c299995397805f91806c816c8628b94276580c8"
+      "bytes": 614821,
+      "sha256": "d073be3670416e03a10ffc1352592470530edf6b87acd072f8cbc459b2fb19fe"
+    },
+    {
+      "path": "src/universe-handoff.js",
+      "role": "REAL MOBILE TRIAL V3 Phase 1 mobile universe handoff runtime",
+      "bytes": 8863,
+      "sha256": "12559165859c864b69aa67bc781c7fac74b3445faa0b1540864bdac9372ba799"
     },
     {
       "path": "src/v13-alpha3-services.js",
