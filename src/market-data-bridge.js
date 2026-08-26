@@ -1,10 +1,11 @@
-async function applyMarketDataBridge(){
+async function applyMarketDataBridge(options={}){
   const payload=window.MARKET_DATA_BRIDGE;
   if(!payload||!Array.isArray(payload.stocks)||!payload.stocks.length)return 0;
   let changed=0;const previous=[];const stateUpdatedAt=state.updatedAt;
   payload.stocks.forEach(incoming=>{
-    const symbol=String(incoming.symbol||'').trim().toUpperCase();
-    const stock=state.stocks.find(item=>String(item.code||item.symbol||'').trim().toUpperCase()===symbol);
+    const symbol=window.SymbolIdentity.canonicalMarketSymbol(incoming.symbol);
+    if(!symbol)return;
+    const stock=state.stocks.find(item=>window.SymbolIdentity.canonicalMarketSymbol(item.code||item.symbol)===symbol);
     if(!stock)return;
     const currentFetched=String(stock.marketDataFreshness&&stock.marketDataFreshness.fetched_at||'');
     const nextFetched=String(incoming.marketDataFreshness&&incoming.marketDataFreshness.fetched_at||'');
@@ -16,7 +17,7 @@ async function applyMarketDataBridge(){
     if(typeof updateTechnicalDataFromPriceHistory==='function')updateTechnicalDataFromPriceHistory(stock);
     changed++;
   });
-  if(changed){
+  if(changed&&options.persist!==false){
     try{await saveState(state,{critical:true})}
     catch(error){
       previous.forEach(item=>{item.stock.priceHistory=item.priceHistory;item.stock.marketDataFreshness=item.marketDataFreshness;item.stock.technicalIndicators=item.technicalIndicators;item.stock.technicalData=item.technicalData;item.stock.dataFreshness=item.dataFreshness});

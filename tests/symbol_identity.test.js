@@ -12,9 +12,11 @@ const review={inputCoverage:{},shortTermTechnical:{trendStatus:'sideways'},final
 const validator=value=>({valid:true,normalized:value});
 const envelope=symbol=>JSON.stringify({technicalReviews:[{symbol,technicalReview:review}]});
 
-test('canonicalSymbol trims and uppercases ASCII letters only',()=>{
+test('canonicalSymbol trims, uppercases, and normalizes supported market aliases',()=>{
   assert.equal(SymbolIdentity.canonicalSymbol(' 2899.hk '),'2899.HK');
   assert.equal(SymbolIdentity.canonicalSymbol('601138.ss'),'601138.SS');
+  assert.equal(SymbolIdentity.canonicalSymbol('601138.sh'),'601138.SS');
+  assert.equal(SymbolIdentity.canonicalSymbol('700.hk'),'0700.HK');
   assert.equal(SymbolIdentity.canonicalSymbol('工业富联'),'工业富联');
 });
 
@@ -63,7 +65,7 @@ test('analysis selection memory and groups resolve case-only variants to the sto
 
 test('new and edited stock save path canonicalizes code and blocks canonical duplicates',()=>{
   const source=fs.readFileSync(path.resolve(__dirname,'../src/ui-render.js'),'utf8');
-  assert.match(source,/SymbolIdentity\.canonicalSymbol\(document\.getElementById\('fCode'\)\.value\)/);
+  assert.match(source,/SymbolIdentity\.canonicalMarketSymbol\(rawCode\)/);
   assert.match(source,/SymbolIdentity\.buildStockIndex\(otherStocks\)/);
   assert.match(source,/lookup\.index\.has\(code\)\|\|lookup\.ambiguous\.has\(code\)/);
   assert.match(source,/const payload=\{type:formType,name,code,/);

@@ -27,11 +27,13 @@ test('scheduled wrapper remains ASCII-only and resolves the real non-ASCII sourc
     const output=fs.readFileSync(log,'utf8');
     assert.match(output,/sourceRunnerPreflight=found/);
     assert.match(output,/finalStatus=success exitCode=0 mode=preflight/);
-    assert.match(output,new RegExp(path.join('投资分析程序','scripts','run_daily_market_update.ps1').replace(/[\\^$.*+?()[\]{}|]/g,'\\$&')));
+    assert.match(output,/run_daily_market_update_with_universe\.ps1/);
+    assert.match(output,/sourceUpdaterPreflight=found/);
+    assert.match(output,/universeInbox=.*investment-workbench-mobile-sync[\\/]inbox/);
   }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
 
-test('missing source runner fails clearly and leaves early diagnostics',()=>{
+test('missing source updater fails clearly and leaves early diagnostics',()=>{
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'workbench-wrapper-missing-'));
   const missingRoot=path.join(temp,'missing-source');
   const log=path.join(temp,'failure.log');
@@ -41,7 +43,7 @@ test('missing source runner fails clearly and leaves early diagnostics',()=>{
     const output=fs.readFileSync(log,'utf8');
     assert.match(output,/wrapperStart=/);
     assert.match(output,/resolvedSourceRoot=/);
-    assert.match(output,/sourceRunnerPreflight=missing/);
+    assert.match(output,/sourceUpdaterPreflight=missing/);
     assert.match(output,/finalStatus=failed exitCode=1/);
   }finally{fs.rmSync(temp,{recursive:true,force:true});}
 });
@@ -52,7 +54,8 @@ test('authoritative task registration describes the intended wrapper architectur
   const description=JSON.parse(result.stdout);
   assert.equal(description.taskName,'InvestmentWorkbench-DailyMarketUpdate');
   assert.equal(description.executable,windowsPowerShell);
-  assert.match(description.arguments,/run_daily_market_update_and_publish\.ps1"$/);
+  assert.match(description.arguments,/run_daily_market_update_and_publish\.ps1" -UniverseInbox ".*investment-workbench-mobile-sync\\inbox"$/);
+  assert.match(description.universeInbox,/investment-workbench-mobile-sync[\\/]inbox$/);
   assert.equal(description.workingDirectory,root);
   assert.equal(description.schedule,'Monday-Friday 16:30');
   assert.equal(description.enabled,true);
@@ -68,5 +71,5 @@ test('task registration can reproduce a scheduler-context no-push acceptance act
   const result=runPowerShell(registration,['-DescribeOnly','-PublishDryRun']);
   assert.equal(result.status,0,`${result.stdout}\n${result.stderr}`);
   const description=JSON.parse(result.stdout);
-  assert.match(description.arguments,/run_daily_market_update_and_publish\.ps1" -PublishDryRun$/);
+  assert.match(description.arguments,/run_daily_market_update_and_publish\.ps1" -UniverseInbox ".*investment-workbench-mobile-sync\\inbox" -PublishDryRun$/);
 });

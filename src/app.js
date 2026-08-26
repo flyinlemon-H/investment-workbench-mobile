@@ -71,6 +71,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{det
 document.getElementById('addBtn').addEventListener('click',()=>openModal(null));
 document.getElementById('importBtn').addEventListener('click',importData);
 document.getElementById('exportBtn').addEventListener('click',exportData);
+document.getElementById('syncPcBtn')?.addEventListener('click',handoffUniverseToPc);
 document.getElementById('socialImportBtn').addEventListener('click',importSocialData);
 document.getElementById('socialImportFile').addEventListener('change',handleSocialImport);
 document.getElementById('resetBtn').addEventListener('click',resetSeed);
@@ -85,6 +86,22 @@ document.getElementById('addSell').addEventListener('click',()=>addPlan('sell'))
 document.querySelectorAll('#typeToggle button').forEach(b=>b.addEventListener('click',()=>setType(b.dataset.type)));
 document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();if(typeof closeV13EventDetailModal==='function')closeV13EventDetailModal();if(typeof closeAnalysisModal==='function')closeAnalysisModal();if(typeof closeAiAnalysisPromptModal==='function')closeAiAnalysisPromptModal();if(typeof closeAiAnalysisImportModal==='function')closeAiAnalysisImportModal();if(typeof closeAiAssistantModal==='function')closeAiAssistantModal();if(typeof closeAnalysisInputsModal==='function')closeAnalysisInputsModal();if(typeof closeFinancialSourceModal==='function')closeFinancialSourceModal();if(typeof closeValuationSourceModal==='function')closeValuationSourceModal();if(typeof closeAnalysisTemplateModal==='function')closeAnalysisTemplateModal();if(typeof closeStrategyModal==='function')closeStrategyModal();if(typeof closeTechnicalDataModal==='function')closeTechnicalDataModal();if(typeof closeValuationDataModal==='function')closeValuationDataModal();if(typeof closeValuationImportModal==='function')closeValuationImportModal();if(typeof closeFinancialDataModal==='function')closeFinancialDataModal();if(typeof closeFinancialImportModal==='function')closeFinancialImportModal();if(typeof closeFundamentalImportModal==='function')closeFundamentalImportModal();if(typeof closeEtfAnalysisImportModal==='function')closeEtfAnalysisImportModal()}});
+
+async function handoffUniverseToPc(){
+  const button=document.getElementById('syncPcBtn');
+  if(!window.UniverseHandoff||!button)return;
+  const original=button.textContent;
+  button.disabled=true;button.textContent='正在生成';
+  try{
+    const manifest=await window.UniverseHandoff.buildManifest(state);
+    const result=await window.UniverseHandoff.shareOrDownloadManifest(manifest);
+    if(result.method==='cancelled')return;
+    state.universeSync.manifest.lastHandoffAt=new Date().toISOString();
+    await saveState(state,{critical:true});
+    alert(result.method==='share'?'已打开分享。请保存到 OneDrive 同步收件夹，并等待 PC 更新。':'已下载同步文件。请将它保存到 OneDrive 同步收件夹。');
+  }catch(error){alert(`同步文件生成失败：${error&&error.message||'未知错误'}`)}
+  finally{button.disabled=false;button.textContent=original;if(typeof renderSyncHint==='function')renderSyncHint()}
+}
 function showStorageLoadingShell(){
   const main=document.getElementById('main');
   if(main){main.dataset.storageState='loading';main.textContent='正在加载本地数据…'}
@@ -367,7 +384,7 @@ function ensureShadowMigrationPanel(){
   return panel;
 }
 function setShadowMigrationEditLock(locked){
-  ['addBtn','saveBtn','resetBtn','importBtn','refreshAllBtn','fxBtn'].forEach(id=>{
+  ['addBtn','saveBtn','resetBtn','importBtn','refreshAllBtn','fxBtn','syncPcBtn'].forEach(id=>{
     const control=document.getElementById(id);
     if(control)control.disabled=Boolean(locked);
   });
@@ -422,6 +439,10 @@ async function refreshShadowMigrationPanel(){
 let applicationServicesStarted=false;
 async function activateLoadedApplication(){
   if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge();
+  if(window.UniverseHandoff){
+    const reconciliation=window.UniverseHandoff.reconcileState(state,window.MARKET_DATA_BRIDGE);
+    if(reconciliation.changed)await saveState(state,{critical:true});
+  }
   const main=document.getElementById('main');
   if(main)main.dataset.storageState='ready';
   render();

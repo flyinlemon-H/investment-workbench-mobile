@@ -1,6 +1,7 @@
 param(
     [ValidatePattern('^([01]\d|2[0-3]):[0-5]\d$')][string]$Time = '16:30',
     [ValidateNotNullOrEmpty()][string]$TaskName = 'InvestmentWorkbench-DailyMarketUpdate',
+    [string]$UniverseInbox = '',
     [switch]$Force,
     [switch]$PublishDryRun,
     [switch]$DescribeOnly
@@ -11,6 +12,8 @@ $Root = Split-Path -Parent $PSScriptRoot
 $WrapperScript = Join-Path $PSScriptRoot 'run_daily_market_update_and_publish.ps1'
 $PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$WrapperScript`""
+$ResolvedUniverseInbox = if ($UniverseInbox) { [System.IO.Path]::GetFullPath($UniverseInbox) } else { Join-Path (Split-Path -Parent $Root) 'investment-workbench-mobile-sync\inbox' }
+$Arguments += " -UniverseInbox `"$ResolvedUniverseInbox`""
 if ($PublishDryRun) { $Arguments += ' -PublishDryRun' }
 $Schedule = "Monday-Friday $Time"
 
@@ -19,6 +22,7 @@ $Description = [ordered]@{
     executable = $PowerShell
     arguments = $Arguments
     workingDirectory = $Root
+    universeInbox = $ResolvedUniverseInbox
     schedule = $Schedule
     enabled = $true
     startWhenAvailable = $true

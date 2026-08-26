@@ -78,7 +78,13 @@ function renderSyncHint(){
   const el=document.getElementById('syncHint');
   if(!el)return;
   const local=(state.updatedAt?'最后修改 · '+new Date(state.updatedAt).toLocaleString('zh-CN'):'')+backupReminderText();
-  el.textContent=[local,backendHealthText()].filter(Boolean).join(' · ');
+  const count=window.UniverseHandoff?window.UniverseHandoff.pendingCount(state):0;
+  const invalidCount=window.UniverseHandoff?window.UniverseHandoff.invalidStockCount(state):0;
+  const sync=window.UniverseHandoff?window.UniverseHandoff.normalizeSyncState(state.universeSync):null;
+  const universeText=count?(sync&&sync.manifest.lastHandoffAt?`已交接，等待PC更新 ${count}只`:`${count}只等待同步`):(invalidCount?`${invalidCount}只代码需检查`:(state.stocks&&state.stocks.length?'行情已同步':''));
+  const button=document.getElementById('syncPcBtn');
+  if(button)button.hidden=count===0;
+  el.textContent=[universeText,local,backendHealthText()].filter(Boolean).join(' · ');
 }
 const ZH_ENUM_MAP={
   uptrend:'上升趋势',downtrend:'下降趋势',sideways:'震荡整理',rebound:'反弹修复',recovery:'修复反弹',breakdown:'破位下行',reversal:'反转观察',unknown:'未知',
@@ -2834,6 +2840,7 @@ function renderTable(){const raw=filtered();const total=getEstimatedTotalAssets(
 function entryTags(s){
   const f=normalizeDataFreshness(s.dataFreshness);
   const tags=[];
+  if(window.UniverseHandoff&&window.UniverseHandoff.isPending(state,s.code||s.symbol))tags.push({text:'等待同步',cls:'buy'});
   if(s.type==='watching')tags.push({text:'观察仓',cls:'tag'});
   if(s.role)tags.push({text:s.role,cls:'role'});
   if(isOverdue(priceReferenceDate(s),7))tags.push({text:'价格待更新',cls:'sell'});
@@ -3086,7 +3093,9 @@ function collect(currentPrice){const clean=(a,action)=>a.map(p=>{const price=Num
 async function save(){
   const name=document.getElementById('fName').value.trim();
   if(!name)return alert('请填写名称');
-  const code=window.SymbolIdentity.canonicalSymbol(document.getElementById('fCode').value);
+  const rawCode=document.getElementById('fCode').value.trim();
+  const code=window.SymbolIdentity.canonicalMarketSymbol(rawCode);
+  if(!code)return alert(rawCode?'代码格式不支持。请使用 601138.SS、000858.SZ 或 2899.HK 这类格式。':'请填写有效的股票代码。');
   if(code){
     const otherStocks=(state.stocks||[]).filter(stock=>stock.id!==editingId);
     const lookup=window.SymbolIdentity.buildStockIndex(otherStocks);
@@ -3106,7 +3115,13 @@ async function save(){
   if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);
   payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);
   payload.analysisScore=calculateAnalysisScore(payload.analysisFramework);
+  const previousCode=window.SymbolIdentity.canonicalMarketSymbol(old&&(old.code||old.symbol));
   if(editingId){const stock=state.stocks.find(x=>x.id===editingId);if(stock)Object.assign(stock,payload)}else state.stocks.push({id:uid(),...payload,createdAt:Date.now()});
+  if(window.UniverseHandoff){
+    if(!editingId||previousCode!==code)window.UniverseHandoff.markPending(state,code);
+    if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge({persist:false});
+    window.UniverseHandoff.reconcileState(state,window.MARKET_DATA_BRIDGE);
+  }
   const returnTab=editModalReturnTab;
   currentTab=returnTab==='edit'?'edit':formType;
   try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}

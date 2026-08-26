@@ -4,6 +4,7 @@ param(
     [string]$Remote = 'https://github.com/flyinlemon-H/investment-workbench-mobile.git',
     [string]$Branch = 'main',
     [string]$LogPath = '',
+    [string]$UniverseInbox = '',
     [switch]$PublishDryRun,
     [switch]$PreflightOnly
 )
@@ -51,7 +52,8 @@ try {
         $SourceRoot = Join-Path (Split-Path -Parent $WorkbenchRoot) $SourceDirectoryName
     }
     $SourceRoot = [System.IO.Path]::GetFullPath($SourceRoot)
-    $SourceRunScript = Join-Path $SourceRoot 'scripts\run_daily_market_update.ps1'
+    $SourceRunScript = Join-Path $WorkbenchRoot 'scripts\run_daily_market_update_with_universe.ps1'
+    $SourceUpdaterModule = Join-Path $SourceRoot 'src\market_data\updater.py'
     $BridgePreparerScript = Join-Path $WorkbenchRoot 'scripts\prepare_market_bridge.js'
     $PublisherScript = Join-Path $WorkbenchRoot 'scripts\publish_market_bridges.js'
     $DataBridgePath = Join-Path $WorkbenchRoot 'data\market_data_bridge.js'
@@ -59,11 +61,19 @@ try {
     $WindowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
     Write-WrapperDiagnostic "resolvedSourceRoot=$SourceRoot"
+    if (-not $UniverseInbox) { $UniverseInbox = Join-Path (Split-Path -Parent $WorkbenchRoot) 'investment-workbench-mobile-sync\inbox' }
+    $UniverseInbox = [System.IO.Path]::GetFullPath($UniverseInbox)
+    Write-WrapperDiagnostic "universeInbox=$UniverseInbox"
     if (-not (Test-Path -LiteralPath $SourceRunScript -PathType Leaf)) {
         Write-WrapperDiagnostic "sourceRunnerPreflight=missing path=$SourceRunScript" 'ERROR'
         throw "Source market update script missing: $SourceRunScript"
     }
     Write-WrapperDiagnostic "sourceRunnerPreflight=found path=$SourceRunScript"
+    if (-not (Test-Path -LiteralPath $SourceUpdaterModule -PathType Leaf)) {
+        Write-WrapperDiagnostic "sourceUpdaterPreflight=missing path=$SourceUpdaterModule" 'ERROR'
+        throw "Source market updater module missing: $SourceUpdaterModule"
+    }
+    Write-WrapperDiagnostic "sourceUpdaterPreflight=found path=$SourceUpdaterModule"
     if (-not (Test-Path -LiteralPath $BridgePreparerScript -PathType Leaf)) {
         Write-WrapperDiagnostic "bridgePreparerPreflight=missing path=$BridgePreparerScript" 'ERROR'
         throw "Market bridge preparer missing: $BridgePreparerScript"
@@ -88,7 +98,7 @@ try {
     $PreviousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $SourceOutput = @(& $WindowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $SourceRunScript 2>&1 | ForEach-Object { $_.ToString() })
+        $SourceOutput = @(& $WindowsPowerShell -NoProfile -ExecutionPolicy Bypass -File $SourceRunScript -SourceRoot $SourceRoot -WorkbenchRoot $WorkbenchRoot -UniverseInbox $UniverseInbox 2>&1 | ForEach-Object { $_.ToString() })
         $SourceExitCode = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $PreviousErrorActionPreference

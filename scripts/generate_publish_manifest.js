@@ -14,6 +14,7 @@ roleByPath.set('data/market_task_status_bridge.js','delivered daily market task 
 roleByPath.set('src/batch-technical-review.js','M05B Hotfix 3 authoritative batch contract, validation, and parser runtime');
 roleByPath.set('src/multi-stock-analysis.js','M05C_1 Real Trial Fix 1 two-module navigation runtime');
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
+roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 Phase 1 mobile universe handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','M05B News Catalyst freshness normalization runtime');
 roleByPath.set('src/ui-render.js','REAL MOBILE TRIAL V3 mobile technical freshness rendering runtime');
@@ -26,6 +27,7 @@ const paths=[...new Set([
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
   'src/symbol-identity.js',
+  'src/universe-handoff.js',
   'src/technical-view-ux.js',
   'src/portfolio-review-context.js',
   'src/portfolio-review-contract.js',
@@ -47,8 +49,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'m05c1-real-trial-v3-freshness-fix-20260826',
-  dataMode:'delivered daily market bridge + browser localStorage + IndexedDB cutover recovery',
+  assetVersion:'real-mobile-trial-v3-phase1-universe-20260826',
+  dataMode:'add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

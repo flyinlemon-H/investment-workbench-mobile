@@ -58,6 +58,10 @@ function fixture() {
 function remoteHead(f) { return git(['rev-parse', 'refs/heads/main'], f.remote); }
 function remoteFile(f, file) { return git(['show', `refs/heads/main:${file}`], f.remote); }
 
+test('publisher allowlist remains exactly the two production bridge files',()=>{
+  assert.deepEqual(ALLOWLIST,['data/market_data_bridge.js','data/market_task_status_bridge.js']);
+});
+
 test('valid bridge publishes only allowlisted files and leaves unrelated dirty work untouched', () => {
   const f = fixture();
   try {

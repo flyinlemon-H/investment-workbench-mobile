@@ -51,7 +51,7 @@ test('Workbench consumes bridge data through one critical save',async()=>{
   const saves=[];
   let technicalRefreshes=0;
   const context={
-    window:{MARKET_DATA_BRIDGE:{...bridge,stocks:[incoming]}},
+    window:{MARKET_DATA_BRIDGE:{...bridge,stocks:[incoming]},SymbolIdentity:require('../src/symbol-identity.js')},
     state:{stocks:[stock],updatedAt:'before'},
     structuredClone,
     normalizePriceHistory:rows=>structuredClone(rows),
@@ -100,10 +100,11 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
 
 test('REAL MOBILE TRIAL V3 freshness repair cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='m05c1-real-trial-v3-freshness-fix-20260826';
+  const version='real-mobile-trial-v3-phase1-universe-20260826';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
+    'src/universe-handoff.js',
     'src/technical-view-ux.js',
     'data/market_data_bridge.js',
     'data/market_task_status_bridge.js',
