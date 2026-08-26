@@ -150,3 +150,17 @@ test('dry run creates an allowlisted commit but does not move the remote', () =>
     assert.equal(remoteHead(f), before);
   } finally { f.cleanup(); }
 });
+
+test('manual-run task history is accepted only for a no-push operational dry run', () => {
+  const f = fixture();
+  try {
+    const before = remoteHead(f);
+    write(path.join(f.dev, ALLOWLIST[0]), bridge('2026-08-14'));
+    write(path.join(f.dev, ALLOWLIST[1]), status('2026-08-14').replace('"last_task_result":0','"last_task_result":1'));
+    assert.throws(() => f.publish({ dryRun: true }), /Scheduled task result is not successful/);
+    assert.throws(() => f.publish({ acceptManualRun: true }), /only with --dry-run/);
+    const result = f.publish({ dryRun: true, acceptManualRun: true });
+    assert.equal(result.status, 'dry-run');
+    assert.equal(remoteHead(f), before);
+  } finally { f.cleanup(); }
+});

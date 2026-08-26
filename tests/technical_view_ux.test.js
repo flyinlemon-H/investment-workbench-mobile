@@ -16,7 +16,7 @@ function completeHistory(lastDate='2026-08-14'){
 test('canonical technical date is the AI facts date when all complete-bar sources agree',()=>{
   const result=Ux.canonicalTechnicalDate({
     technicalData:{technicalAsOf:'2026-08-14',latestCompleteBar:'2026-08-14',technicalDataStatus:'fresh'},
-    priceHistory:completeHistory()
+    priceHistory:completeHistory(),referenceDate:'2026-08-17'
   });
   assert.equal(result.date,'2026-08-14');
   assert.equal(result.label,'技术数据最新至');
@@ -27,7 +27,7 @@ test('canonical technical date is the AI facts date when all complete-bar source
 test('date conflict fails safe without presenting either source as latest',()=>{
   const result=Ux.canonicalTechnicalDate({
     technicalData:{technicalAsOf:'2026-08-13',latestCompleteBar:'2026-08-13',technicalDataStatus:'fresh'},
-    priceHistory:completeHistory('2026-08-14')
+    priceHistory:completeHistory('2026-08-14'),referenceDate:'2026-08-17'
   });
   assert.equal(result.date,'');
   assert.equal(result.status,'anomaly');
@@ -39,13 +39,70 @@ test('date conflict fails safe without presenting either source as latest',()=>{
 test('stale technical facts show an explicit warning and never claim latest',()=>{
   const result=Ux.canonicalTechnicalDate({
     technicalData:{technicalAsOf:'2026-08-14',latestCompleteBar:'2026-08-14',technicalDataStatus:'stale'},
-    priceHistory:completeHistory()
+    priceHistory:completeHistory(),referenceDate:'2026-08-17'
   });
   assert.equal(result.date,'2026-08-14');
   assert.equal(result.label,'技术数据截至');
   assert.equal(result.warning,'技术数据可能已过期');
   assert.equal(result.status,'stale');
   assert.doesNotMatch(result.label,/最新/);
+});
+
+test('an old persisted fresh flag cannot make old technical facts render as latest indefinitely',()=>{
+  const result=Ux.canonicalTechnicalDate({
+    technicalData:{technicalAsOf:'2026-08-14',latestCompleteBar:'2026-08-14',technicalDataStatus:'fresh'},
+    priceHistory:completeHistory(),referenceDate:'2026-08-26'
+  });
+  assert.equal(result.status,'stale');
+  assert.equal(result.label,'技术数据截至');
+  assert.equal(result.warning,'技术数据可能已过期');
+  assert.equal(result.ageInBusinessDays,8);
+});
+
+test('a future technical date is an anomaly even when the persisted flag says fresh',()=>{
+  const result=Ux.canonicalTechnicalDate({
+    technicalData:{technicalAsOf:'2026-08-27',latestCompleteBar:'2026-08-27',technicalDataStatus:'fresh'},
+    priceHistory:completeHistory('2026-08-27'),referenceDate:'2026-08-26'
+  });
+  assert.equal(result.status,'anomaly');
+  assert.equal(result.date,'');
+  assert.match(result.warning,/日期不一致/);
+});
+
+test('recent successful task status is presented as currently normal',()=>{
+  const result=Ux.taskStatusPresentation({
+    generated_at:'2026-08-26T08:00:00+08:00',task_exists:true,enabled:true,
+    next_run_time:'2026-08-26T16:30:00+08:00',last_run_time:'2026-08-25T16:30:00.0000000+08:00',last_task_result:0,
+    latest_run:{status:'success',finished_at:'2026-08-25T16:35:00.0000000+08:00'}
+  },{now:Date.parse('2026-08-26T10:00:00+08:00')});
+  assert.deepEqual(result,{kind:'normal',label:'自动更新正常',result:'最近运行成功',current:true});
+});
+
+test('old successful task status is qualified as historical rather than current success',()=>{
+  const result=Ux.taskStatusPresentation({
+    generated_at:'2026-08-14T17:38:34.7716835+08:00',task_exists:true,enabled:true,
+    next_run_time:'2026-08-17T16:30:00.0000000+08:00',last_run_time:'2026-08-14T17:38:26.0000000+08:00',last_task_result:0,
+    latest_run:{status:'success',finished_at:'2026-08-14T17:38:32.9195356+08:00'}
+  },{now:Date.parse('2026-08-26T10:00:00+08:00')});
+  assert.equal(result.label,'自动更新状态较旧');
+  assert.equal(result.result,'历史记录为成功');
+  assert.equal(result.current,false);
+});
+
+test('recent failed task state uses natural Chinese',()=>{
+  const result=Ux.taskStatusPresentation({
+    generated_at:'2026-08-26T09:00:00+08:00',task_exists:true,enabled:true,
+    next_run_time:'2026-08-26T16:30:00+08:00',last_run_time:'2026-08-25T16:30:00+08:00',last_task_result:1,
+    latest_run:{status:'failed',finished_at:'2026-08-25T16:31:00+08:00'}
+  },{now:Date.parse('2026-08-26T10:00:00+08:00')});
+  assert.deepEqual(result,{kind:'failed',label:'最近更新失败',result:'最近运行失败',current:true});
+  assert.doesNotMatch(`${result.label}${result.result}`,/fresh|stale|failed|taskStatus/);
+});
+
+test('newer AI review names the older authoritative technical-data basis',()=>{
+  assert.equal(Ux.technicalReviewBasisNotice({updatedAt:'2026-08-18T09:00:00+08:00'},'2026-08-14'),'AI 判断基于截至 08-14 的技术数据');
+  assert.equal(Ux.technicalReviewBasisNotice({updatedAt:'2026-08-14'},'2026-08-14'),'');
+  assert.equal(Ux.technicalReviewBasisNotice({updatedAt:'2026-08-13'},'2026-08-14'),'');
 });
 
 test('technical view localization maps enums without rewriting stored contract values',()=>{
@@ -89,6 +146,7 @@ test('technical workspace source enforces conclusion, evidence, status, and coll
   assert.match(renderers,/>查看技术依据</);
   assert.match(renderers,/>数据状态</);
   assert.match(renderers,/>数据维护</);
+  assert.match(renderers,/data-technical-review-basis/);
   assert.match(renderers,/data-technical-layer="maintenance"/);
   assert.doesNotMatch(renderers,/data-technical-layer="maintenance"[^>]*open/);
 });

@@ -21,6 +21,58 @@
     const match=text(value).match(/^(\d{4}-\d{2}-\d{2})/);
     return match?match[1]:'';
   }
+  function timestampMs(value){
+    const raw=text(value);
+    if(!raw)return NaN;
+    const normalized=raw.replace(/(\.\d{3})\d+(?=(?:Z|[+-]\d{2}:\d{2})$)/,'$1');
+    return Date.parse(normalized);
+  }
+  function taskStatusPresentation(task,{now=Date.now(),maxAgeHours=96,overdueGraceHours=12}={}){
+    if(!task||typeof task!=='object'||task.task_exists!==true||task.enabled!==true){
+      return {kind:'unknown',label:'暂无可靠任务状态',result:'暂无可靠记录',current:false};
+    }
+    const run=task.latest_run&&typeof task.latest_run==='object'?task.latest_run:{};
+    const nowMs=now instanceof Date?now.getTime():Number(now);
+    const evidenceMs=timestampMs(run.finished_at||task.last_run_time||task.generated_at);
+    const snapshotMs=timestampMs(task.generated_at);
+    const nextRunMs=timestampMs(task.next_run_time);
+    const maximumAge=maxAgeHours*60*60*1000;
+    const overdueGrace=overdueGraceHours*60*60*1000;
+    const recent=Number.isFinite(nowMs)&&Number.isFinite(evidenceMs)&&nowMs>=evidenceMs&&nowMs-evidenceMs<=maximumAge
+      &&(!Number.isFinite(snapshotMs)||(nowMs>=snapshotMs&&nowMs-snapshotMs<=maximumAge))
+      &&(!Number.isFinite(nextRunMs)||nowMs<=nextRunMs+overdueGrace);
+    const taskResult=task.last_task_result;
+    const failed=run.status==='failed'||(taskResult!==null&&taskResult!==undefined&&Number(taskResult)!==0&&Number(taskResult)!==267009);
+    const succeeded=run.status==='success'&&(taskResult===null||taskResult===undefined||Number(taskResult)===0);
+    if(failed&&recent)return {kind:'failed',label:'最近更新失败',result:'最近运行失败',current:true};
+    if(!recent&&failed)return {kind:'old',label:'自动更新状态较旧',result:'历史记录为失败',current:false};
+    if(succeeded&&recent)return {kind:'normal',label:'自动更新正常',result:'最近运行成功',current:true};
+    if(succeeded)return {kind:'old',label:'自动更新状态较旧',result:'历史记录为成功',current:false};
+    return {kind:'unknown',label:'暂无可靠任务状态',result:'暂无可靠记录',current:false};
+  }
+  function technicalReviewBasisNotice(review,technicalDate){
+    const reviewDate=dateOnly(review&&review.updatedAt);
+    const factsDate=dateOnly(technicalDate);
+    if(!reviewDate||!factsDate||reviewDate<=factsDate)return '';
+    return `AI 判断基于截至 ${factsDate.slice(5)} 的技术数据`;
+  }
+  function localDate(value){
+    if(typeof value==='string')return dateOnly(value);
+    const date=value instanceof Date?value:new Date(value);
+    if(Number.isNaN(date.getTime()))return '';
+    const part=number=>String(number).padStart(2,'0');
+    return `${date.getFullYear()}-${part(date.getMonth()+1)}-${part(date.getDate())}`;
+  }
+  function businessDaysSince(startDate,endDate){
+    const start=Date.parse(`${startDate}T00:00:00Z`),end=Date.parse(`${endDate}T00:00:00Z`);
+    if(!Number.isFinite(start)||!Number.isFinite(end)||start>end)return NaN;
+    let days=0;
+    for(let cursor=start+86400000;cursor<=end;cursor+=86400000){
+      const weekday=new Date(cursor).getUTCDay();
+      if(weekday!==0&&weekday!==6)days+=1;
+    }
+    return days;
+  }
   function lastCompleteBarDate(history){
     return (Array.isArray(history)?history:[])
       .filter(row=>row&&row.is_complete_bar!==false&&dateOnly(row.date))
@@ -75,7 +127,7 @@
       .replace(/\bcurrentPrice\b/g,'现价')
       .replace(/\bma(5|10|20|60|120)\b/gi,(_,period)=>`MA${period}`);
   }
-  function canonicalTechnicalDate({technicalData={},priceHistory=[]}={}){
+  function canonicalTechnicalDate({technicalData={},priceHistory=[],referenceDate=new Date()}={}){
     const technicalAsOf=dateOnly(technicalData.technicalAsOf);
     const latestCompleteBar=dateOnly(technicalData.latestCompleteBar);
     const historyLastDate=lastCompleteBarDate(priceHistory);
@@ -83,19 +135,24 @@
     const conflict=Boolean(technicalAsOf&&comparisons.some(value=>value!==technicalAsOf));
     const incomplete=!technicalAsOf||!latestCompleteBar||!historyLastDate;
     const rawStatus=text(technicalData.technicalDataStatus)||'unavailable';
-    const stale=rawStatus==='stale';
-    const anomaly=rawStatus==='anomaly'||conflict||incomplete;
-    const fresh=rawStatus==='fresh'&&!anomaly;
+    const reference=localDate(referenceDate);
+    const ageInBusinessDays=technicalAsOf&&reference?businessDaysSince(technicalAsOf,reference):NaN;
+    const futureDate=Boolean(technicalAsOf&&reference&&technicalAsOf>reference);
+    const staleByAge=Number.isFinite(ageInBusinessDays)&&ageInBusinessDays>3;
+    const stale=rawStatus==='stale'||staleByAge;
+    const anomaly=rawStatus==='anomaly'||futureDate||conflict||incomplete;
+    const fresh=rawStatus==='fresh'&&!anomaly&&!staleByAge;
     let label='技术数据日期待确认',date='',warning='缺少完整的技术数据日期，请先更新日K与技术数据';
-    if(conflict){warning='技术数据日期不一致，请先更新技术数据';}
+    if(conflict||futureDate){warning='技术数据日期不一致，请先更新技术数据';}
     else if(!incomplete&&stale){label='技术数据截至';date=technicalAsOf;warning='技术数据可能已过期';}
     else if(!incomplete&&fresh){label='技术数据最新至';date=technicalAsOf;warning='';}
     else if(!incomplete){label='技术数据截至';date=technicalAsOf;warning=text(technicalData.technicalWarning)||'技术数据状态异常，请谨慎使用';}
-    return {date,label,warning,status:fresh?'fresh':(stale&&!anomaly?'stale':'anomaly'),fresh,stale:stale&&!anomaly,conflict,incomplete,technicalAsOf,latestCompleteBar,historyLastDate};
+    return {date,label,warning,status:fresh?'fresh':(stale&&!anomaly?'stale':'anomaly'),fresh,stale:stale&&!anomaly,conflict,incomplete,technicalAsOf,latestCompleteBar,historyLastDate,ageInBusinessDays};
   }
 
   return Object.freeze({
     TREND_LABELS,RISK_LEVEL_LABELS,PROVIDER_LABELS,dateOnly,lastCompleteBarDate,
+    taskStatusPresentation,technicalReviewBasisNotice,
     localizeTrend,riskLevelNumber,localizeRiskLevel,localizeProvider,
     localizeMachineSignal,localizeUserText,canonicalTechnicalDate
   });

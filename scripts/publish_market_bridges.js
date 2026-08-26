@@ -93,11 +93,11 @@ function validateBridgeContent(content, { minimumSymbols = 19 } = {}) {
   };
 }
 
-function validateStatusContent(content, bridgeSummary) {
+function validateStatusContent(content, bridgeSummary, { acceptManualRun = false } = {}) {
   const status = readAssignment(content, 'MARKET_TASK_STATUS');
   isoTimestamp(status.generated_at, 'status.generated_at');
   if (status.task_exists !== true || status.enabled !== true) fail('Scheduled task status is not enabled/available.');
-  if (status.last_task_result !== 0) fail(`Scheduled task result is not successful: ${status.last_task_result}.`);
+  if (!acceptManualRun && status.last_task_result !== 0) fail(`Scheduled task result is not successful: ${status.last_task_result}.`);
   if (status.latest_data_trade_date !== bridgeSummary.latestDate) {
     fail(`Task status date conflicts with bridge (${status.latest_data_trade_date || '<empty>'} != ${bridgeSummary.latestDate}).`);
   }
@@ -139,10 +139,11 @@ function publishMarketBridges(options) {
   const branch = options.branch || 'main';
   const minimumSymbols = options.minimumSymbols ?? 19;
   const gitOptions = { gitBinary: options.gitBinary, env: options.env };
+  if (options.acceptManualRun && !options.dryRun) fail('Manual-run acceptance is allowed only with --dry-run.');
   const dataContent = fs.readFileSync(sourceDataPath, 'utf8');
   const statusContent = fs.readFileSync(sourceStatusPath, 'utf8');
   const incoming = validateBridgeContent(dataContent, { minimumSymbols });
-  validateStatusContent(statusContent, incoming);
+  validateStatusContent(statusContent, incoming, { acceptManualRun: options.acceptManualRun });
 
   const expectedRemoteHead = remoteHead(remote, branch, gitOptions);
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'investment-workbench-market-publish-'));
@@ -167,7 +168,7 @@ function publishMarketBridges(options) {
     fs.copyFileSync(sourceDataPath, publishedDataPath);
     fs.copyFileSync(sourceStatusPath, publishedStatusPath);
     validateBridgeContent(fs.readFileSync(publishedDataPath, 'utf8'), { minimumSymbols });
-    validateStatusContent(fs.readFileSync(publishedStatusPath, 'utf8'), incoming);
+    validateStatusContent(fs.readFileSync(publishedStatusPath, 'utf8'), incoming, { acceptManualRun: options.acceptManualRun });
 
     const changedPaths = runGit(['diff', '--name-only'], cloneGit).split(/\r?\n/).filter(Boolean).map(item => item.replace(/\\/g, '/')).sort();
     const allowedSorted = [...ALLOWLIST].sort();
@@ -205,6 +206,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
     if (key === '--dry-run') result.dryRun = true;
+    else if (key === '--accept-manual-run') result.acceptManualRun = true;
     else if (key.startsWith('--')) result[key.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = argv[++index];
     else fail(`Unknown argument: ${key}`);
   }
