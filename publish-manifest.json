@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "88f86f1e5172e63a88e3149b6a3ab78af628c1cb",
-  "assetVersion": "m05c1-real-trial-fix1-workbench-mobile-20260818",
+  "sourceCommit": "0f6a3541ae60c107e45cfedcc0c3186c9cada0b8",
+  "assetVersion": "m05c1-real-trial-v3-freshness-fix-20260826",
   "dataMode": "delivered daily market bridge + browser localStorage + IndexedDB cutover recovery",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45275,
-      "sha256": "a57069ca6eb4bddabc08ddf7235ca5b94a6acadec41caa57876f69d66c50a34e"
+      "bytes": 45135,
+      "sha256": "757c45b6b304e32bf6c4422e93aeecaf0d50d43d41d8b13527070ea5bdb20186"
     },
     {
       "path": "social_posts.json",
@@ -258,15 +258,15 @@
     },
     {
       "path": "src/technical-view-ux.js",
-      "role": "M05B Technical View UX 1 localization and canonical freshness runtime",
-      "bytes": 5104,
-      "sha256": "97d1b81586efb06131523d88f9351ee6cd1456558aa3ac9c78a1927fc9b359b8"
+      "role": "REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime",
+      "bytes": 8708,
+      "sha256": "7c5203056d5bd05b1dcd4a0c82a90f13b112011d6eed21056c56fa9df2aa3851"
     },
     {
       "path": "src/ui-render.js",
-      "role": "M05B News Catalyst prompt, import, and current-snapshot rendering runtime",
-      "bytes": 613331,
-      "sha256": "bc7ab2d5f1cde58cf0d048ff1eb791acebdc173bf36ee73215fb048a64b1cc89"
+      "role": "REAL MOBILE TRIAL V3 mobile technical freshness rendering runtime",
+      "bytes": 613486,
+      "sha256": "56e827029e3b0e48dd4dd77e4c299995397805f91806c816c8628b94276580c8"
     },
     {
       "path": "src/v13-alpha3-services.js",
