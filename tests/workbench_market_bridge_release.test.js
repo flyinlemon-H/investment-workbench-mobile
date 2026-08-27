@@ -98,20 +98,32 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('REAL MOBILE TRIAL V3 freshness repair cache-busts the bridge and Workbench modules',()=>{
+test('Plan V2 Foundation cache-busts the bridge and changed Workbench modules',()=>{
   const html=read('index.html');
-  const version='real-mobile-trial-v3-pc-sync-status-20260827';
+  const version='plan-v2-foundation-20260827';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
     'src/universe-handoff.js',
     'src/technical-view-ux.js',
+    'src/plan-v2.js',
+    'src/v13-core-model.js',
+    'src/v13-plan-engine.js',
+    'src/v13-recommendation-engine.js',
+    'src/storage/storage-validation.js',
+    'src/state.js',
     'data/market_data_bridge.js',
     'data/market_task_status_bridge.js',
     'src/market-data-bridge.js',
+    'src/plan-update-draft.js',
+    'src/rebalance.js',
     'src/ui-render.js',
     'src/batch-technical-review.js',
     'src/multi-stock-analysis.js',
+    'src/portfolio-review-context.js',
+    'src/portfolio-review-contract.js',
+    'src/portfolio-review-ui.js',
+    'src/price-refresh.js',
     'src/app.js'
   ])assert.match(html,new RegExp(`${asset.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')}\\?v=${version}`));
 });
