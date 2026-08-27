@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "b1261f60fcc540064b62ae87abc991134673f515",
-  "assetVersion": "real-mobile-trial-v3-phase1-universe-20260826",
+  "sourceCommit": "c2934d9ffc94911422a21010f70cfd498a5874f4",
+  "assetVersion": "real-mobile-trial-v3-pc-sync-status-20260827",
   "dataMode": "add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45383,
-      "sha256": "314db8c5cd5cad45699684565ce18024d63804ccad9e06c93914d68930d42ad1"
+      "bytes": 46089,
+      "sha256": "c5432c64251f21bf84943d1b7f87014611116524ba0c296d49d2c8541f11cc3e"
     },
     {
       "path": "social_posts.json",
@@ -97,8 +97,8 @@
     {
       "path": "src/app.js",
       "role": "browser runtime dependency",
-      "bytes": 31022,
-      "sha256": "76412a17bd1e15d6f5b35f35bd4f71cce7b530f7ec42bbbbcb92b3d9bd8f36b2"
+      "bytes": 31030,
+      "sha256": "49f21672509e7e7ec0ab132e94db9e8297ce6c812446fbe563613cf82bfa6ce6"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -264,15 +264,15 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "REAL MOBILE TRIAL V3 mobile technical freshness rendering runtime",
-      "bytes": 614821,
-      "sha256": "d073be3670416e03a10ffc1352592470530edf6b87acd072f8cbc459b2fb19fe"
+      "role": "REAL MOBILE TRIAL V3 mobile PC sync status and technical freshness rendering runtime",
+      "bytes": 614966,
+      "sha256": "ea5561e519c692535f75af9f627fb2ac50e51f1937c9a9b7cf0287890cfc40fc"
     },
     {
       "path": "src/universe-handoff.js",
-      "role": "REAL MOBILE TRIAL V3 Phase 1 mobile universe handoff runtime",
-      "bytes": 8863,
-      "sha256": "12559165859c864b69aa67bc781c7fac74b3445faa0b1540864bdac9372ba799"
+      "role": "REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime",
+      "bytes": 9406,
+      "sha256": "d70fff19b7e4a16fa9bfeb24c2507a3423d7371f5d69b8fa92d4e4493d6dde2f"
     },
     {
       "path": "src/v13-alpha3-services.js",
