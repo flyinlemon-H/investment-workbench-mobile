@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Batch Plan Review Mobile Acceptance</title>
+  <style>
+    :root{--paper:#f7f3e9;--ink:#24211c;--ink3:#766f63;--line:#d9d1c2;--gold:#a8843a;--seal:#a13d32}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"PingFang SC",sans-serif}.toolbar{display:flex;padding:10px;border-bottom:1px solid var(--line)}.btn{border:0;border-radius:8px;background:var(--ink);color:white;padding:9px 12px;font-weight:800}.btn.ghost{background:white;color:var(--ink);border:1px solid var(--line)}.btn.small{padding:7px 10px}.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10;align-items:center;justify-content:center;padding:12px}.modal-bg.show{display:flex}.modal{width:min(720px,100%);max-height:94vh;overflow:auto;background:var(--paper);padding:18px;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.25)}h2{margin:0 0 4px}.modal-sub,.card-note{color:var(--ink3);font-size:12px}.card{background:white;border:1px solid var(--line);border-radius:10px;padding:12px}.card-title{font-weight:900}.hint{border-left:3px solid var(--gold);background:#fff9e8;padding:10px;margin:10px 0}.trig-list{display:grid;gap:10px}.text{margin-top:6px}input,textarea,select{max-width:100%}
+  </style>
+</head>
+<body>
+  <div class="toolbar" id="globalActions"></div>
+  <script src="../../src/plan-v2.js"></script>
+  <script src="../../src/symbol-identity.js"></script>
+  <script src="../../src/batch-technical-review.js"></script>
+  <script src="../../src/plan-review.js"></script>
+  <script src="../../src/portfolio-review-context.js"></script>
+  <script>
+    const fixtureNow='2026-08-27T10:00:00.000Z';
+    const create=(id,action,price,direction,note)=>PlanV2.createPlan({id,action,triggerPrice:price,triggerDirection:direction,note,allocationConstraint:{maxPositionPct:12,targetWeightRange:'8%-12%'}},{now:fixtureNow,source:'manual'});
+    const legacy=PlanV2.normalizePlan({id:'legacy-b',action:'buy',price:88,triggerOn:'below',note:'历史计划，等待人工复核'});
+    const plans=[create('current-a','buy',100,'below','当前计划，近期人工资料仍一致'),legacy,create('invalid-c','sell',120,'above','减仓前提可能已经变化'),create('complete-d','observe',110,'above','观察计划可能已经完成')];
+    let state={stocks:[
+      {id:'a',name:'当前计划样例',code:'600000.SS',type:'holding',shares:100,currentPrice:105,plans:[plans[0]]},
+      {id:'b',name:'历史计划样例',code:'000001.SZ',type:'holding',shares:50,currentPrice:90,plans:[plans[1]]},
+      {id:'c',name:'可能失效样例',code:'0700.HK',type:'holding',shares:20,currentPrice:118,plans:[plans[2]]},
+      {id:'d',name:'可能完成样例',code:'1810.HK',type:'watching',shares:0,currentPrice:111,plans:[plans[3]]}
+    ]};
+    function review(symbol,plan,outcome,summary){return PlanReview.normalizePlanReview({reviewId:`review-${plan.id}`,schemaVersion:'plan-review.v1',symbol,planId:plan.id,planVersion:plan.planVersion,planSnapshotHash:PlanReview.planSnapshotHash(plan),reviewDate:'2026-08-27',reviewedAt:fixtureNow,reviewOutcome:outcome,priceTriggerStatus:'near',fullConditionStatus:'unproven',changedPremises:outcome==='still_valid'?[]:['存在需要人工确认的前提变化'],programPremiseFacts:[],riskFlags:outcome==='likely_invalid'?['原计划依据可能不再充分']:[],suggestedChanges:[],summary,confidence:outcome==='still_valid'?'medium':'low',source:'ai_batch_review'})}
+    const reviews=[review('600000.SS',plans[0],'still_valid','近期资料没有显示明确矛盾，仍需用户确认是否继续有效。'),review('000001.SZ',plans[1],'needs_review','历史计划缺少可靠复核日期，保持谨慎。'),review('0700.HK',plans[2],'likely_invalid','现有证据提示原计划可能不再合适，但尚未由用户确认失效。'),review('1810.HK',plans[3],'completed_candidate','当前事实提示计划可能已完成，但不能据此推断券商成交。')];
+    state.planReviews=PlanReview.normalizeStore({schemaVersion:'plan-review.store.v1',currentByPlan:Object.fromEntries(reviews.map(item=>[PlanReview.reviewKey(item.symbol,item.planId),item])),history:[],snapshots:[{snapshotId:'fixture-snapshot',reviewDate:'2026-08-27',reviewedAt:fixtureNow,reviews}]});
+    async function saveState(candidate){state=candidate;return candidate}
+    function render(){}
+  </script>
+  <script src="../../src/plan-review-ui.js"></script>
+  <script>PlanReviewUI.open();PlanReviewUI.renderSaved();</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "fixture": "Batch Plan Review mobile acceptance",
+  "viewport": {"width": 390, "height": 844},
+  "dataBoundary": "isolated in-memory fixture; no production Plan read or write",
+  "cases": {
+    "A": "current Plan with recent still-valid judgment",
+    "B": "legacy Plan remains selectable and needs review",
+    "C": "likely-invalid judgment renders as 可能失效, never 已失效",
+    "D": "completed candidate renders as 可能已完成",
+    "E": "four judgments expose summary counts before drill-down"
+  },
+  "checks": [
+    "no horizontal overflow",
+    "no console errors",
+    "natural Chinese labels",
+    "no raw schema or enum names",
+    "44px minimum action targets on mobile"
+  ]
+}

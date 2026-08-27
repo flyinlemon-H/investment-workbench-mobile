@@ -53,6 +53,10 @@
       if(symbols.has(symbol))fail('validation.state.duplicateSymbol');
       symbols.add(symbol);
     });
+    if(state.planReviews!==undefined){
+      if(!isPlainObject(state.planReviews))fail('validation.state.planReviews');
+      if(global.PlanReview&&typeof global.PlanReview.validateStore==='function'&&!global.PlanReview.validateStore(state.planReviews).ok)fail('validation.state.planReviewStore');
+    }
     const holdingCount=stocks.filter(stock=>{
       if(isExemptIdentityRow(stock))return false;
       const type=String(stock.type||'').toLowerCase();
