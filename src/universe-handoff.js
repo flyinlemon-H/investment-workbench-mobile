@@ -173,5 +173,15 @@
   function pendingCount(state){return normalizeSyncState(state&&state.universeSync).pendingSymbols.length}
   function invalidStockCount(state){return (state&&Array.isArray(state.stocks)?state.stocks:[]).filter(stock=>stock&&!isCash(stock)&&!stockSymbol(stock)).length}
 
-  return {SCHEMA_VERSION,CHECKSUM_ALGORITHM,FILE_PREFIX,canonicalJson,universeRows,validBridgeFacts,acknowledgedSymbols,normalizeSyncState,ensureManifestSnapshot,reconcileState,markPending,buildManifest,manifestFilename,shareOrDownloadManifest,isPending,pendingCount,invalidStockCount};
+  function statusPresentation(state){
+    const securityCount=universeRows(state&&state.stocks).length;
+    const sync=normalizeSyncState(state&&state.universeSync);
+    const count=sync.pendingSymbols.length;
+    const statusText=!securityCount?'':(count
+      ?(sync.manifest.lastHandoffAt?`PC同步 · 已交接，等待PC更新 ${count}只`:`PC同步 · ${count}只等待同步`)
+      :`PC同步 · 已同步 ${securityCount}只`);
+    return {text:statusText,securityCount,pendingCount:count,showAction:count>0};
+  }
+
+  return {SCHEMA_VERSION,CHECKSUM_ALGORITHM,FILE_PREFIX,canonicalJson,universeRows,validBridgeFacts,acknowledgedSymbols,normalizeSyncState,ensureManifestSnapshot,reconcileState,markPending,buildManifest,manifestFilename,shareOrDownloadManifest,isPending,pendingCount,invalidStockCount,statusPresentation};
 });

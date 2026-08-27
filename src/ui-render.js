@@ -78,13 +78,21 @@ function renderSyncHint(){
   const el=document.getElementById('syncHint');
   if(!el)return;
   const local=(state.updatedAt?'最后修改 · '+new Date(state.updatedAt).toLocaleString('zh-CN'):'')+backupReminderText();
-  const count=window.UniverseHandoff?window.UniverseHandoff.pendingCount(state):0;
   const invalidCount=window.UniverseHandoff?window.UniverseHandoff.invalidStockCount(state):0;
-  const sync=window.UniverseHandoff?window.UniverseHandoff.normalizeSyncState(state.universeSync):null;
-  const universeText=count?(sync&&sync.manifest.lastHandoffAt?`已交接，等待PC更新 ${count}只`:`${count}只等待同步`):(invalidCount?`${invalidCount}只代码需检查`:(state.stocks&&state.stocks.length?'行情已同步':''));
-  const button=document.getElementById('syncPcBtn');
-  if(button)button.hidden=count===0;
+  const universeText=invalidCount?`${invalidCount}只代码需检查`:'';
   el.textContent=[universeText,local,backendHealthText()].filter(Boolean).join(' · ');
+}
+function renderPcSyncStatus(){
+  const control=document.getElementById('pcSyncControl');
+  const el=document.getElementById('pcSyncStatus');
+  const button=document.getElementById('syncPcBtn');
+  if(!control||!el||!button)return;
+  const status=window.UniverseHandoff&&typeof window.UniverseHandoff.statusPresentation==='function'
+    ?window.UniverseHandoff.statusPresentation(state)
+    :{text:'',showAction:false};
+  el.textContent=status.text;
+  button.hidden=!status.showAction;
+  control.hidden=!status.text||currentTab!=='tools'||Boolean(detailStockId);
 }
 const ZH_ENUM_MAP={
   uptrend:'上升趋势',downtrend:'下降趋势',sideways:'震荡整理',rebound:'反弹修复',recovery:'修复反弹',breakdown:'破位下行',reversal:'反转观察',unknown:'未知',
@@ -2641,6 +2649,7 @@ function render(){
   document.getElementById('countEtf').textContent=state.stocks.filter(s=>s.type==='etf').length;
   document.getElementById('countWatching').textContent=state.stocks.filter(s=>s.type==='watching').length;
   renderSyncHint();
+  renderPcSyncStatus();
   const fxBtn=document.getElementById('fxBtn');
   if(fxBtn)fxBtn.textContent=fxLabel();
   const actions=document.getElementById('globalActions');

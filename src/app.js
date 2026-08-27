@@ -100,7 +100,7 @@ async function handoffUniverseToPc(){
     await saveState(state,{critical:true});
     alert(result.method==='share'?'已打开分享。请保存到 OneDrive 同步收件夹，并等待 PC 更新。':'已下载同步文件。请将它保存到 OneDrive 同步收件夹。');
   }catch(error){alert(`同步文件生成失败：${error&&error.message||'未知错误'}`)}
-  finally{button.disabled=false;button.textContent=original;if(typeof renderSyncHint==='function')renderSyncHint()}
+  finally{button.disabled=false;button.textContent=original;if(typeof renderPcSyncStatus==='function')renderPcSyncStatus()}
 }
 function showStorageLoadingShell(){
   const main=document.getElementById('main');
