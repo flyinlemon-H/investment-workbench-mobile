@@ -162,7 +162,7 @@ function v13RecommendationPlanReason(plan,level){
   return '';
 }
 function v13RecommendationFromPlan(stock={},plan={},priceSnapshot={},ruleConfig={}){
-  if(!plan||plan.versionStatus==='archived')return null;
+  if(!plan||plan.status!=='active'||['invalid','completed'].includes(plan.validityStatus))return null;
   const level=typeof checkPlanTriggerLevel==='function'?checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig):plan.stage;
   if(!['triggered','level2','level1'].includes(level))return null;
   const priority=level==='triggered'?'P4':(level==='level2'?'P3':'P2');
@@ -175,7 +175,7 @@ function v13RecommendationFromPlan(stock={},plan={},priceSnapshot={},ruleConfig=
     reviewGuide:'复核计划生成依据、当前价格、技术事实、仓位状态和是否需要人工决策。计划触发不代表已经执行。',
     source:{objectType:'Plan',objectId:plan.id},
     linkedPlanId:plan.id,
-    legacy:{planType:plan.planType,triggerDirection:plan.triggerDirection,stage:level}
+    legacy:{planType:plan.action,triggerDirection:plan.triggerDirection,stage:level}
   },stock);
 }
 function v13RecommendationFromInformationCompleteness(stock={},existingRecommendations=[],options={}){

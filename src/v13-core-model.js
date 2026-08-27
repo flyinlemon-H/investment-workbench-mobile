@@ -117,45 +117,12 @@ function normalizeV13PriceSnapshot(v={},stock={}){
   };
 }
 
-const V13_PLAN_TYPES=['build','add','position_control','profit_take','trend_defense'];
-const V13_VERSION_STATUS=['active','archived'];
 function defaultV13Plan(){
-  return {
-    objectType:'Plan',
-    id:'',
-    stockId:'',
-    planType:'add',
-    versionStatus:'active',
-    triggerPrice:null,
-    triggerDirection:'',
-    stage:'none',
-    summary:'',
-    createdAt:'',
-    archivedAt:'',
-    source:'',
-    legacy:{}
-  };
+  return typeof PlanV2!=='undefined'?PlanV2.defaultPlan():{};
 }
 function normalizeV13Plan(v={},stock={}){
-  const src=v13Object(v);
-  const known=['objectType','id','stockId','planType','versionStatus','triggerPrice','triggerDirection','stage','summary','createdAt','archivedAt','source','legacy'];
-  const legacyAction=v13String(src.action);
-  const inferredType=legacyAction==='sell'?'profit_take':(legacyAction==='buy'?'add':src.planType);
-  return {
-    ...defaultV13Plan(),
-    id:v13String(src.id)||v13Id('plan'),
-    stockId:v13String(src.stockId||stock.id||stock.code||stock.symbol),
-    planType:v13Enum(inferredType,V13_PLAN_TYPES,'add'),
-    versionStatus:v13Enum(src.versionStatus||src.status,V13_VERSION_STATUS,'active'),
-    triggerPrice:v13NumberOrNull(src.triggerPrice??src.price),
-    triggerDirection:v13String(src.triggerDirection||src.triggerOn),
-    stage:v13Enum(src.stage,['none','level1','level2','triggered'],'none'),
-    summary:v13String(src.summary||src.planSummary||src.note),
-    createdAt:v13String(src.createdAt||src.updatedAt||''),
-    archivedAt:v13String(src.archivedAt||''),
-    source:v13String(src.source||'legacy'),
-    legacy:{...v13Object(src.legacy),...v13KeepLegacy(src,known)}
-  };
+  if(typeof PlanV2!=='undefined')return PlanV2.normalizePlan(v,{currentPrice:stock.currentPrice});
+  return v13Object(v);
 }
 
 const V13_EVENT_PHASES=['info','prepare','decision'];

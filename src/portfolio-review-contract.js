@@ -77,7 +77,8 @@
   function buildSnapshot(result,options={}){
     if(!result||result.ok!==true)throw new Error('只有校验通过的组合复核可以创建快照。');
     const generatedAt=text(options.generatedAt)||new Date().toISOString(),savedAt=text(options.savedAt)||new Date().toISOString();
-    return {reviewDate:result.review.reviewDate,generatedAt,savedAt,selectedSymbols:(options.expectedSymbols||[]).map(canonical).filter(Boolean),review:clone(result.review)};
+    const planReferences=options.planReferences&&typeof options.planReferences==='object'?clone(options.planReferences):{reviewDate:result.review.reviewDate,stocks:[],contextHash:''};
+    return {reviewDate:result.review.reviewDate,generatedAt,savedAt,selectedSymbols:(options.expectedSymbols||[]).map(canonical).filter(Boolean),planReferences,review:clone(result.review)};
   }
   function buildCandidate(currentState,result,options={}){
     if(!currentState||typeof currentState!=='object'||!Array.isArray(currentState.stocks))throw new Error('当前应用状态无效。');

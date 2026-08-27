@@ -166,11 +166,12 @@ function setPriceRefreshUiState(id,status,detail={}){
   priceRefreshUiStates.set(String(id||''),next);
   return {...next};
 }
-const PRICE_REFRESH_MUTATED_FIELDS=Object.freeze(['currentPrice','currentValue','priceUpdatedAt','valueUpdatedAt','priceSource','lastUnitPrice','dailyChange','priceHistory','technicalData','dataFreshness']);
+const PRICE_REFRESH_MUTATED_FIELDS=Object.freeze(['currentPrice','currentValue','priceUpdatedAt','valueUpdatedAt','priceSource','lastUnitPrice','dailyChange','priceHistory','technicalData','dataFreshness','plans']);
 function cloneRefreshValue(value){
   if(value===undefined)return undefined;
   return typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value));
 }
+function touchPriceRefreshFreshness(s,r){touchDataFreshness(s,'priceUpdatedAt',r.updatedAt)}
 function snapshotPriceRefreshBusinessState(stock){
   return {
     stateUpdatedAt:state.updatedAt,
@@ -201,7 +202,7 @@ async function runPriceRefresh(id,opts={}){
     const shares=Number(s.shares);
     if(isNaN(shares)||shares<=0)return fail(`「${s.name}」没有填写份额，无法用单价计算市值。请先到编辑界面补充份额。`);
   }
-  const before=snapshotPriceRefreshBusinessState(s);
+  const authoritativeState=state;
   setPriceRefreshUiState(s.id,'refreshing');
   render();
   let r;
@@ -215,29 +216,31 @@ async function runPriceRefresh(id,opts={}){
     return {ok:false,name:s.name,status:'refresh_failed',errors};
   }
   try{
+    const candidate=cloneRefreshValue(authoritativeState),target=candidate.stocks.find(stock=>stock.id===id);if(!target)throw new Error('刷新候选中的标的不存在。');
     if(isEtf){
-      const shares=Number(s.shares);
-      s.currentValue=Number((r.price*shares).toFixed(2));
-      s.valueUpdatedAt=r.updatedAt;
-      s.priceSource=r.source;
-      s.lastUnitPrice=r.price;
-      s.dailyChange=r.change;
+      const shares=Number(target.shares);
+      target.currentValue=Number((r.price*shares).toFixed(2));
+      target.valueUpdatedAt=r.updatedAt;
+      target.priceSource=r.source;
+      target.lastUnitPrice=r.price;
+      target.dailyChange=r.change;
     }else{
-      s.currentPrice=r.price;
-      s.priceUpdatedAt=r.updatedAt;
-      s.priceSource=r.source;
-      s.dailyChange=r.change;
+      target.currentPrice=r.price;
+      target.priceUpdatedAt=r.updatedAt;
+      target.priceSource=r.source;
+      target.dailyChange=r.change;
     }
-    touchDataFreshness(s,'priceUpdatedAt',r.updatedAt);
+    if(typeof PlanV2!=='undefined')target.plans=(target.plans||[]).map(plan=>PlanV2.observePriceTrigger(plan,r.price,{now:r.updatedAt}));
+    touchPriceRefreshFreshness(target,r);
     setPriceRefreshUiState(s.id,'persisting',{price:r.price,source:r.source,updatedAt:r.updatedAt});
     render();
-    await saveState(state,{critical:true});
+    await saveState(candidate,{critical:true});state=candidate;
     const savedAt=new Date().toISOString();
     setPriceRefreshUiState(s.id,'success',{price:r.price,source:r.source,updatedAt:r.updatedAt,savedAt});
     render();
     return {ok:true,name:s.name,status:'success',source:r.source,price:r.price,updatedAt:r.updatedAt,savedAt};
   }catch(err){
-    restorePriceRefreshBusinessState(s,before);
+    state=authoritativeState;
     const error=err&&err.message?err.message:String(err);
     setPriceRefreshUiState(s.id,'persistence_failed',{price:r.price,source:r.source,updatedAt:r.updatedAt,error});
     render();

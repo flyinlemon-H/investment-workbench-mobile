@@ -99,7 +99,7 @@
   }
   async function saveReview(){
     if(commitController.pending||!currentPreview||!currentPreview.ok)return;const button=document.getElementById('m05cSaveBtn');button.disabled=true;button.textContent='保存中…';const expected=selectedStocks().map(stock=>canonical(symbolOf(stock)));
-    const result=await commitController.run(currentPreview,state,{saveCandidate:saveCandidateWithRollback,adoptCandidate:candidate=>{state=candidate},render:()=>render()},{expectedSymbols:expected,generatedAt:currentContext.generatedAt});
+    const result=await commitController.run(currentPreview,state,{saveCandidate:saveCandidateWithRollback,adoptCandidate:candidate=>{state=candidate},render:()=>render()},{expectedSymbols:expected,generatedAt:currentContext.generatedAt,planReferences:currentContext.planReferences});
     if(result.status==='completed'||result.status==='saved_render_failed'){currentPreview=null;mode='result';renderBody()}else{setStatus('保存失败；上一份有效组合复核保持不变。',true);button.disabled=false;button.textContent='保存复核'}
   }
   function openDetail(symbol){const stock=stocks().find(item=>canonical(symbolOf(item))===canonical(symbol));if(!stock||typeof openStockDetail!=='function')return;close();openStockDetail(stock.id)}

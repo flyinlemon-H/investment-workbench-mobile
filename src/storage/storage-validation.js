@@ -42,6 +42,11 @@
     const symbols=new Set();
     stocks.forEach(stock=>{
       if(!isPlainObject(stock))fail('validation.state.stock');
+      if(stock.plans!==undefined&&!Array.isArray(stock.plans))fail('validation.state.plans');
+      array(stock.plans).forEach(plan=>{
+        if(!isPlainObject(plan))fail('validation.state.plan');
+        if(plan.schemaVersion==='plan.v2'&&global.PlanV2&&typeof global.PlanV2.validatePlan==='function'&&!global.PlanV2.validatePlan(plan).ok)fail('validation.state.planV2');
+      });
       if(isExemptIdentityRow(stock))return;
       const symbol=canonicalSymbol(stock);
       if(!symbol)return;

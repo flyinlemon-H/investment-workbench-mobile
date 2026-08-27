@@ -1,5 +1,5 @@
-const V13_PLAN_STAGE_RANK={triggered:4,level2:3,level1:2,none:1};
-const V13_PLAN_TYPE_RANK={trend_defense:5,profit_take:4,position_control:3,add:2,build:1};
+const V13_PLAN_STAGE_RANK={triggered:4,near:3,not_triggered:2,unavailable:1};
+const V13_PLAN_TYPE_RANK={observe:5,sell:4,reduce:3,add:2,buy:1};
 
 function normalizePlanList(plans){
   return (Array.isArray(plans)?plans:[])
@@ -8,30 +8,30 @@ function normalizePlanList(plans){
 }
 
 function getActivePlans(plans){
-  return normalizePlanList(plans).filter(plan=>plan.versionStatus==='active');
+  return normalizePlanList(plans).filter(plan=>plan.status==='active'&&!['invalid','completed'].includes(plan.validityStatus));
 }
 
 function getArchivedPlans(plans){
-  return normalizePlanList(plans).filter(plan=>plan.versionStatus==='archived');
+  return normalizePlanList(plans).filter(plan=>plan.status!=='active'||['invalid','completed'].includes(plan.validityStatus));
 }
 
 function getActivePlanByType(plans,planType){
-  return sortPlansByPriority(getActivePlans(plans).filter(plan=>plan.planType===planType))[0]||null;
+  return sortPlansByPriority(getActivePlans(plans).filter(plan=>plan.action===planType))[0]||null;
 }
 
 function getDisplayActivePlans(plans){
   const grouped=new Map();
   sortPlansByPriority(getActivePlans(plans)).forEach(plan=>{
-    if(!grouped.has(plan.planType))grouped.set(plan.planType,plan);
+    if(!grouped.has(plan.action))grouped.set(plan.action,plan);
   });
   return Array.from(grouped.values());
 }
 
 function sortPlansByPriority(plans){
   return normalizePlanList(plans).slice().sort((a,b)=>{
-    const stageDiff=(V13_PLAN_STAGE_RANK[b.stage]||0)-(V13_PLAN_STAGE_RANK[a.stage]||0);
+    const stageDiff=(V13_PLAN_STAGE_RANK[b.priceTriggerStatus]||0)-(V13_PLAN_STAGE_RANK[a.priceTriggerStatus]||0);
     if(stageDiff)return stageDiff;
-    const typeDiff=(V13_PLAN_TYPE_RANK[b.planType]||0)-(V13_PLAN_TYPE_RANK[a.planType]||0);
+    const typeDiff=(V13_PLAN_TYPE_RANK[b.action]||0)-(V13_PLAN_TYPE_RANK[a.action]||0);
     if(typeDiff)return typeDiff;
     const priceDiff=(Number(b.triggerPrice)||0)-(Number(a.triggerPrice)||0);
     if(priceDiff)return priceDiff;
@@ -55,8 +55,6 @@ function v13PlanTriggerDirection(plan){
   const explicit=String(plan&&plan.triggerDirection||'').toLowerCase();
   if(['above','gte','up','sell_above'].includes(explicit))return 'above';
   if(['below','lte','down','buy_below'].includes(explicit))return 'below';
-  if(['profit_take','position_control'].includes(plan&&plan.planType))return 'above';
-  if(['build','add','trend_defense'].includes(plan&&plan.planType))return 'below';
   return '';
 }
 
@@ -79,14 +77,6 @@ function checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig){
 }
 
 function archivePlan(plan,reason){
-  const normalized=typeof normalizeV13Plan==='function'?normalizeV13Plan(plan):{...(plan||{})};
-  return {
-    ...normalized,
-    versionStatus:'archived',
-    archivedAt:normalized.archivedAt||(typeof v13NowIso==='function'?v13NowIso():new Date().toISOString()),
-    legacy:{
-      ...(normalized.legacy||{}),
-      archiveReason:String(reason||'')
-    }
-  };
+  if(typeof PlanV2!=='undefined')return PlanV2.terminatePlan(plan,'replaced',{reason});
+  return {...plan,status:'replaced'};
 }
