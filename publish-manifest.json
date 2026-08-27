@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "c2934d9ffc94911422a21010f70cfd498a5874f4",
-  "assetVersion": "real-mobile-trial-v3-pc-sync-status-20260827",
+  "sourceCommit": "cdef64e57e621ccc52bad26f8c5dbe8e6870401c",
+  "assetVersion": "plan-v2-foundation-20260827",
   "dataMode": "add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1770581,
-      "sha256": "4c8ae676f62baed7942ed5d759fe236bb7e0db91d2e35eecfaf0b3b7219445f2"
+      "bytes": 1775263,
+      "sha256": "69efd88dc187c4f66e49ce122eb3e391542bbc6108c2412e98f610e141c42167"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 1264,
-      "sha256": "673216d1f7a6e99a8929f15ec0aedbdb86ed2b7304983d0da95e70c1dca22477"
+      "bytes": 1282,
+      "sha256": "a2f20875f4838539619317d825443f3e7f4c93abd32ad971307e10a5c65c0998"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 46089,
-      "sha256": "c5432c64251f21bf84943d1b7f87014611116524ba0c296d49d2c8541f11cc3e"
+      "bytes": 45861,
+      "sha256": "b7a9e847deadf38420b2a6d16e702d90b1a93cc377c76bba141a611c4359bceb"
     },
     {
       "path": "social_posts.json",
@@ -109,8 +109,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7247,
-      "sha256": "d36bd963850470beedae1ab0226846a9a33e7b2898219082378dbe804fc7fd41"
+      "bytes": 7255,
+      "sha256": "73e04f01c2a606421c5eacf4eaa6d1ce9663301a4a08a815b062c001ca02b6d1"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -144,27 +144,33 @@
     },
     {
       "path": "src/plan-update-draft.js",
-      "role": "browser runtime dependency",
-      "bytes": 13922,
-      "sha256": "fb279ca193796bb476cdb4713a6459652c4865c9d1129c7d1b14bcf98155169d"
+      "role": "Plan V2 confirmed browser-side draft application runtime",
+      "bytes": 14003,
+      "sha256": "5f037487f509440bdc40dcb3cc8effae5d7e584ac17af503c2254085a11a5f70"
+    },
+    {
+      "path": "src/plan-v2.js",
+      "role": "Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime",
+      "bytes": 21725,
+      "sha256": "f0db188768f5a4928ef0235a96a4ba3acf4f18584ab051c5804f37e220a24de4"
     },
     {
       "path": "src/portfolio-review-context.js",
       "role": "M05C_1 Real Trial Fix 1 relevance, fact precedence, and fail-safe prompt runtime",
-      "bytes": 29687,
-      "sha256": "33124a828607ff2863e04f55925ad402ac5992846a3311e7e6e57782c6d2204b"
+      "bytes": 29050,
+      "sha256": "ae940f1a5f08573889a417f5e29782fcb3b6e1870ab427512399679ae1c92188"
     },
     {
       "path": "src/portfolio-review-contract.js",
       "role": "M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime",
-      "bytes": 12710,
-      "sha256": "e609b60812715ca25a66e65b5c8d02cd25e9eff783225d86eb3a6f7fd563397e"
+      "bytes": 12909,
+      "sha256": "22dc03d0da58f7cb72a8a7223f9c9ad3228bcac1119204ebfe701016ad7a98ae"
     },
     {
       "path": "src/portfolio-review-ui.js",
       "role": "M05C_1 Real Trial Fix 1 mobile workflow and defensive display runtime",
-      "bytes": 20638,
-      "sha256": "ac08ed6bac39b395dd334abb58b87d0eadc978a1ddc947c5ad1a168da4e02da5"
+      "bytes": 20683,
+      "sha256": "9f6918e986de07f5abd4832735d1ef5d68462fa5ba99e6a9485175c57032c199"
     },
     {
       "path": "src/position.js",
@@ -174,15 +180,15 @@
     },
     {
       "path": "src/price-refresh.js",
-      "role": "browser runtime dependency",
-      "bytes": 15328,
-      "sha256": "cce5fa2a613df41d77a03749af560d924fcf5dedd86bdc1145cd20f0e750da86"
+      "role": "Plan V2 program-owned price trigger observation and candidate-save runtime",
+      "bytes": 15763,
+      "sha256": "38eade71ba181e76807df6df969c67947625a42c4a2919b69f0c0562adb95f5f"
     },
     {
       "path": "src/rebalance.js",
-      "role": "browser runtime dependency",
-      "bytes": 5717,
-      "sha256": "1f58d7a6305d2dfde1f073fd4163867d20bf965231334e64529f959d9f3af5f9"
+      "role": "Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime",
+      "bytes": 7215,
+      "sha256": "690baf599b3b01ee2eb9d6808949f7e4ecd7cb1e7151a09e8684a47259c8483c"
     },
     {
       "path": "src/social.js",
@@ -193,8 +199,8 @@
     {
       "path": "src/state.js",
       "role": "M05B News Catalyst freshness normalization runtime",
-      "bytes": 121031,
-      "sha256": "f04a1486c86bb45dbc4e2cd28d9abc4d774dc1ff8f9d3198bd35038df416536f"
+      "bytes": 121113,
+      "sha256": "fcd44f8d5300b9e38557b3508902ede46a639b52d1632345d6ed23fc7ed03cec"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -246,9 +252,9 @@
     },
     {
       "path": "src/storage/storage-validation.js",
-      "role": "browser runtime dependency",
-      "bytes": 4673,
-      "sha256": "b138144b51088f1ac44be5f1327c10b7b8d69ce806fee35ff597265d439123c3"
+      "role": "Plan V2 candidate storage validation runtime",
+      "bytes": 5057,
+      "sha256": "974f68347836699bb81f8754aa28aa529a2825f401f2fff505c08edbdd415290"
     },
     {
       "path": "src/symbol-identity.js",
@@ -265,8 +271,8 @@
     {
       "path": "src/ui-render.js",
       "role": "REAL MOBILE TRIAL V3 mobile PC sync status and technical freshness rendering runtime",
-      "bytes": 614966,
-      "sha256": "ea5561e519c692535f75af9f627fb2ac50e51f1937c9a9b7cf0287890cfc40fc"
+      "bytes": 620128,
+      "sha256": "988796002d6107bb44898f1e4887460778c17494fbb645b7d76919c9ae58f9d9"
     },
     {
       "path": "src/universe-handoff.js",
@@ -282,9 +288,9 @@
     },
     {
       "path": "src/v13-core-model.js",
-      "role": "browser runtime dependency",
-      "bytes": 11567,
-      "sha256": "3cce3a9b2a140f8dd563d333df96e9c3c5a7abdfce360cf81037eb5841ffd594"
+      "role": "Plan V2 canonical normalization compatibility runtime",
+      "bytes": 10234,
+      "sha256": "0d1492fa5e398eea917df76610c3cf6af3e8810d5ab973d2ad548f1bf921c38b"
     },
     {
       "path": "src/v13-event-engine.js",
@@ -294,15 +300,15 @@
     },
     {
       "path": "src/v13-plan-engine.js",
-      "role": "browser runtime dependency",
-      "bytes": 3679,
-      "sha256": "e3b4a9ec7e15418085b2488fd16e48a5f8207c6e68e88a36daa3acf3a8e7c1fb"
+      "role": "Plan V2 lifecycle-aware plan orchestration runtime",
+      "bytes": 3373,
+      "sha256": "c3df9ec5c33421aa5a87eacfb9473311542e5bf9ad7cf15432ad6246fd5ccbf0"
     },
     {
       "path": "src/v13-recommendation-engine.js",
-      "role": "browser runtime dependency",
-      "bytes": 11312,
-      "sha256": "06ea959e14cbc34a8c66c6a8cffb68a809746c268a555d2859ab0a7ddeecd298"
+      "role": "Plan V2 lifecycle-aware recommendation compatibility runtime",
+      "bytes": 11356,
+      "sha256": "5bc5c774e5c591f2139bf8022a54dc36e55d0dbecec26a74bfb7b0d9f20ce237"
     },
     {
       "path": "src/v13-risk-engine.js",
