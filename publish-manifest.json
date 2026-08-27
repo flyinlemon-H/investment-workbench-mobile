@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "cdef64e57e621ccc52bad26f8c5dbe8e6870401c",
-  "assetVersion": "plan-v2-foundation-20260827",
-  "dataMode": "add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
+  "sourceCommit": "0cd5f3565a5736fe4f53c35bc0f647b48c9f620f",
+  "assetVersion": "batch-plan-review-20260827",
+  "dataMode": "separate PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45861,
-      "sha256": "b7a9e847deadf38420b2a6d16e702d90b1a93cc377c76bba141a611c4359bceb"
+      "bytes": 45970,
+      "sha256": "4b6be1c52cfb625192602172af78e41587818b57f29718955df8302d3e7bba5c"
     },
     {
       "path": "social_posts.json",
@@ -109,8 +109,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7255,
-      "sha256": "73e04f01c2a606421c5eacf4eaa6d1ce9663301a4a08a815b062c001ca02b6d1"
+      "bytes": 7254,
+      "sha256": "ffd9cb9dd0b03db04b4e9d759a6c680b715aedfa10f2fe54a774766cd208a123"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -143,6 +143,18 @@
       "sha256": "1feb58fb37afdfaa6f8379bf1547b77849f7642c1aa4f9a440429380c83ccaa0"
     },
     {
+      "path": "src/plan-review-ui.js",
+      "role": "Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow",
+      "bytes": 24533,
+      "sha256": "306140df5637fc2548f94e99c3506c6d54535fee4f71710f75ad02d804d83fee"
+    },
+    {
+      "path": "src/plan-review.js",
+      "role": "Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime",
+      "bytes": 29783,
+      "sha256": "a0b2a1e4b6a8724fd740a9689fa82d84378e5480b110b90d9b387a4b2460fa4e"
+    },
+    {
       "path": "src/plan-update-draft.js",
       "role": "Plan V2 confirmed browser-side draft application runtime",
       "bytes": 14003,
@@ -156,9 +168,9 @@
     },
     {
       "path": "src/portfolio-review-context.js",
-      "role": "M05C_1 Real Trial Fix 1 relevance, fact precedence, and fail-safe prompt runtime",
-      "bytes": 29050,
-      "sha256": "ae940f1a5f08573889a417f5e29782fcb3b6e1870ab427512399679ae1c92188"
+      "role": "Portfolio Review context with non-authoritative PlanReview judgment and freshness runtime",
+      "bytes": 30510,
+      "sha256": "23348ee8db6bdb084d6e8ab7e38c09d2dc0c6492b28cad94f378c63d94f15954"
     },
     {
       "path": "src/portfolio-review-contract.js",
@@ -168,9 +180,9 @@
     },
     {
       "path": "src/portfolio-review-ui.js",
-      "role": "M05C_1 Real Trial Fix 1 mobile workflow and defensive display runtime",
-      "bytes": 20683,
-      "sha256": "9f6918e986de07f5abd4832735d1ef5d68462fa5ba99e6a9485175c57032c199"
+      "role": "Portfolio Review mobile workflow with PlanReview coverage presentation",
+      "bytes": 20832,
+      "sha256": "73aa9e5fef5598431da32c312a68ea3646a538f8713f346cc936fc831ee21201"
     },
     {
       "path": "src/position.js",
@@ -198,9 +210,9 @@
     },
     {
       "path": "src/state.js",
-      "role": "M05B News Catalyst freshness normalization runtime",
-      "bytes": 121113,
-      "sha256": "fcd44f8d5300b9e38557b3508902ede46a639b52d1632345d6ed23fc7ed03cec"
+      "role": "Batch Plan Review state normalization plus existing Workbench state runtime",
+      "bytes": 121250,
+      "sha256": "b7b854270d9186e04363e3d8a097a2073e26c8f99b5937cbfb514adc54d95576"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -252,9 +264,9 @@
     },
     {
       "path": "src/storage/storage-validation.js",
-      "role": "Plan V2 candidate storage validation runtime",
-      "bytes": 5057,
-      "sha256": "974f68347836699bb81f8754aa28aa529a2825f401f2fff505c08edbdd415290"
+      "role": "Plan V2 and separate PlanReview candidate storage validation runtime",
+      "bytes": 5361,
+      "sha256": "2c0cff7b7f639d17da4279351e678365417b20dbca700ded5f1f7cab6d756065"
     },
     {
       "path": "src/symbol-identity.js",
@@ -270,9 +282,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "REAL MOBILE TRIAL V3 mobile PC sync status and technical freshness rendering runtime",
-      "bytes": 620128,
-      "sha256": "988796002d6107bb44898f1e4887460778c17494fbb645b7d76919c9ae58f9d9"
+      "role": "Batch Plan Review entry point plus existing mobile Workbench rendering runtime",
+      "bytes": 620358,
+      "sha256": "334ef1c3dd5f16022bd8f5deae8499c53a3938e3b42981a5e5751781cfd7406b"
     },
     {
       "path": "src/universe-handoff.js",
