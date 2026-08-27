@@ -98,15 +98,17 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Plan V2 Foundation cache-busts the bridge and changed Workbench modules',()=>{
+test('Batch Plan Review cache-busts the bridge and changed Workbench modules',()=>{
   const html=read('index.html');
-  const version='plan-v2-foundation-20260827';
+  const version='batch-plan-review-20260827';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
     'src/universe-handoff.js',
     'src/technical-view-ux.js',
     'src/plan-v2.js',
+    'src/plan-review.js',
+    'src/plan-review-ui.js',
     'src/v13-core-model.js',
     'src/v13-plan-engine.js',
     'src/v13-recommendation-engine.js',

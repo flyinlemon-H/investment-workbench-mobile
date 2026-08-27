@@ -16,16 +16,18 @@ roleByPath.set('src/multi-stock-analysis.js','M05C_1 Real Trial Fix 1 two-module
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
-roleByPath.set('src/state.js','M05B News Catalyst freshness normalization runtime');
-roleByPath.set('src/ui-render.js','REAL MOBILE TRIAL V3 mobile PC sync status and technical freshness rendering runtime');
-roleByPath.set('src/portfolio-review-context.js','M05C_1 Real Trial Fix 1 relevance, fact precedence, and fail-safe prompt runtime');
+roleByPath.set('src/state.js','Batch Plan Review state normalization plus existing Workbench state runtime');
+roleByPath.set('src/ui-render.js','Batch Plan Review entry point plus existing mobile Workbench rendering runtime');
+roleByPath.set('src/portfolio-review-context.js','Portfolio Review context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
-roleByPath.set('src/portfolio-review-ui.js','M05C_1 Real Trial Fix 1 mobile workflow and defensive display runtime');
+roleByPath.set('src/portfolio-review-ui.js','Portfolio Review mobile workflow with PlanReview coverage presentation');
 roleByPath.set('src/plan-v2.js','Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime');
+roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime');
+roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
-roleByPath.set('src/storage/storage-validation.js','Plan V2 candidate storage validation runtime');
+roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
 roleByPath.set('src/v13-core-model.js','Plan V2 canonical normalization compatibility runtime');
 roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestration runtime');
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
@@ -40,7 +42,9 @@ const paths=[...new Set([
   'src/portfolio-review-context.js',
   'src/portfolio-review-contract.js',
   'src/portfolio-review-ui.js',
-  'src/plan-v2.js'
+  'src/plan-v2.js',
+  'src/plan-review.js',
+  'src/plan-review-ui.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -58,8 +62,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'plan-v2-foundation-20260827',
-  dataMode:'add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
+  assetVersion:'batch-plan-review-20260827',
+  dataMode:'separate PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
