@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "7f453590220de52854f67447b66cbfb61f664784",
-  "assetVersion": "decision-compression-20260828",
-  "dataMode": "separate Decision Compression and PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
+  "sourceCommit": "e43af089a7cd04afed97c0d7d1c9574fe54d5b62",
+  "assetVersion": "decision-compression-fix1-20260828",
+  "dataMode": "program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1775263,
-      "sha256": "69efd88dc187c4f66e49ce122eb3e391542bbc6108c2412e98f610e141c42167"
+      "bytes": 1779980,
+      "sha256": "ca6d119d7ebf897ff9bc40117ed83b59d310239e9bc723e960bb341657568075"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1282,
-      "sha256": "a2f20875f4838539619317d825443f3e7f4c93abd32ad971307e10a5c65c0998"
+      "sha256": "13ec6a824b7d0328c4fc97fc4b323b0611cd887691ea6bcd649ebc27d8838130"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 46275,
-      "sha256": "48e6ba6c92d02d3ba478c055b4ea66c529034e50978c8ab7156f275ad2df8770"
+      "bytes": 46487,
+      "sha256": "e0f2666bea4b37506795cdaa6229260bf9a732d17997eb6bdab2eb0c7eb4bcd5"
     },
     {
       "path": "social_posts.json",
@@ -108,21 +108,21 @@
     },
     {
       "path": "src/decision-compression-context.js",
-      "role": "Decision Compression compact authoritative context and audit-reference runtime",
-      "bytes": 18874,
-      "sha256": "b43ca4e3bcb839d318941c3df94cea7976e3fbef151264824c4bebb9f2f68f0b"
+      "role": "Decision Compression compact context with program-owned blocker facts and audit references",
+      "bytes": 20116,
+      "sha256": "56d280648fdafc35e73d3e250c3251ec1d9e254246c18ff980f9e74c7f93c770"
     },
     {
       "path": "src/decision-compression-contract.js",
-      "role": "Decision Compression strict AI contract and atomic snapshot runtime",
-      "bytes": 17733,
-      "sha256": "bab1daa8e9de7a34ec29f3e81c0e92e6caabf9bc4911b7e222b2357c3bef2c03"
+      "role": "Decision Compression AI emphasis-only contract and atomic snapshot runtime",
+      "bytes": 19279,
+      "sha256": "6141e86802602da95ba3b943411335ece1800cc546d361a7423cc9e412aeb52e"
     },
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7257,
-      "sha256": "57fff8b1eaab974eb44d9987e07182858c19c156d513d2f544e6c63e29c2dc6c"
+      "bytes": 7263,
+      "sha256": "38db837b10dfa7f025c5f6cb8ff217488f4decddc2686c6bb518ce7ffdd1ad9e"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -180,9 +180,9 @@
     },
     {
       "path": "src/portfolio-review-context.js",
-      "role": "Portfolio Review context with non-authoritative PlanReview judgment and freshness runtime",
-      "bytes": 30510,
-      "sha256": "23348ee8db6bdb084d6e8ab7e38c09d2dc0c6492b28cad94f378c63d94f15954"
+      "role": "Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime",
+      "bytes": 31200,
+      "sha256": "976afb084cf6c195f83eb8dc3d0cd289e0494d1d7a0c407adb62f996c2286317"
     },
     {
       "path": "src/portfolio-review-contract.js",
@@ -192,9 +192,9 @@
     },
     {
       "path": "src/portfolio-review-ui.js",
-      "role": "Decision Compression first layer plus preserved Portfolio Review drill-down workflow",
-      "bytes": 31848,
-      "sha256": "c24c58a4928c228368321b26855453338d9dd730b7bff171d6310175a0085eb1"
+      "role": "Decision Compression scope, freshness, first layer, and preserved Portfolio Review drill-down workflow",
+      "bytes": 37011,
+      "sha256": "dd5c62853cac03fbdec27899f0bafffdb52a435a143d2d50c74251c4f62e5934"
     },
     {
       "path": "src/position.js",
