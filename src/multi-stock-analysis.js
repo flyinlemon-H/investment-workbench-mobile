@@ -474,29 +474,15 @@
     copyFeedbackTimer=setTimeout(()=>{if(button)button.textContent='复制给 AI'},2200);
   }
   async function copyRequest(){
-    const request=generateRequest();
+    const field=document.getElementById('multiStockRequestText');
+    const request=String(field&&field.value||'')||generateRequest();
     if(!request)return;
     const button=document.getElementById('multiStockCopyBtn');
     if(button)button.textContent='复制中…';
-    try{
-      if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')throw new Error('clipboard_unavailable');
-      await navigator.clipboard.writeText(request);
+    const result=await root.ClipboardUtils.copyTextWithFallback(request,{selectableElement:field,detailsElement:document.getElementById('multiStockRequestDetails')});
+    if(result.ok){
       showCopyFeedback('已复制 ✓','AI 分析请求已复制，可以直接粘贴给 AI。');
-    }catch(_error){fallbackCopy()}
-  }
-
-  function fallbackCopy(){
-    const field=document.getElementById('multiStockRequestText');
-    field.focus();field.select();
-    try{
-      if(typeof document.execCommand!=='function'||document.execCommand('copy')!==true)throw new Error('fallback_failed');
-      showCopyFeedback('已复制 ✓','AI 分析请求已复制，可以直接粘贴给 AI。');
-    }catch(_){
-      const details=document.getElementById('multiStockRequestDetails');
-      if(details)details.open=true;
-      field.focus();field.select();
-      showCopyFeedback('请手动复制','自动复制失败，请长按已选中的请求文本手动复制。');
-    }
+    }else showCopyFeedback('复制失败','复制失败，请长按复制');
   }
 
   function previewResult(){

@@ -17,7 +17,15 @@
       const fifth=JSON.parse(JSON.stringify(fixture.stocks[0]));fifth.id='decision-fixture-fifth';fifth.code='600000.SS';fifth.symbol='600000.SS';fifth.name='第五只观察股';fifth.currentPrice=10;fifth.currentValue=1000;fifth.shares=100;fifth.plans=[];
       fixture.stocks=[...fixture.stocks.slice(0,4),fifth];
       const app=document.getElementById('app').contentWindow;app.__decisionFixture=fixture;
+      const clipboardMode=new URLSearchParams(location.search).get('clipboard')||'native';
+      app.__clipboardMode=clipboardMode;
       app.eval(`
+        window.__clipboardWrites=[];
+        if(__clipboardMode!=='native'){
+          const clipboardValue=__clipboardMode==='unavailable'?undefined:{writeText:text=>__clipboardMode==='success'?(window.__clipboardWrites.push(text),document.body.dataset.clipboardText=text,Promise.resolve()):Promise.reject(new Error('simulated rejection'))};
+          Object.defineProperty(navigator,'clipboard',{configurable:true,value:clipboardValue});
+          document.execCommand=()=>{if(__clipboardMode==='fallback-throw')throw new Error('simulated fallback exception');if(__clipboardMode==='fallback-success'){const text=document.activeElement&&document.activeElement.value||'';window.__clipboardWrites.push(text);document.body.dataset.clipboardText=text;return true}return false};
+        }
         state=normalize(__decisionFixture);
         const reviewDate='2026-08-28',generatedAt='2026-08-28T08:00:00+08:00',chosen=state.stocks.slice(0,5),symbols=chosen.map(stock=>SymbolIdentity.canonicalSymbol(stock.code||stock.symbol));
         const base=PortfolioReviewContext.buildPortfolioContext(chosen,{allStocks:state.stocks,reviewDate,generatedAt,planReviewStore:state.planReviews});

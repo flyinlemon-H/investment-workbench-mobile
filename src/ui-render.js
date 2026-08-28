@@ -505,15 +505,14 @@ function updateChecklistPanel(){
   if(!rows.length)return '<div class="card" style="margin-bottom:14px"><div class="card-title">待更新清单</div><div class="card-note">当前没有需要优先更新的股票资料。</div></div>';
   return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)"><div class="card-title">待更新清单（${rows.length} 只）</div><div class="modal-actions" style="justify-content:flex-start;margin:0 0 10px;flex-wrap:wrap"><button class="btn ghost small" id="copyUpdateCodesBtn" type="button">复制待更新股票代码</button><button class="btn ghost small" id="copyUpdatePromptBtn" type="button">复制待更新任务提示词</button></div><div class="trig-list">${rows.map(x=>`<div class="trig-row ${x.isHolding?'buy':''}" data-update-stock="${esc(x.s.id)}" style="cursor:pointer"><div class="trig-name">${esc(x.s.name||'—')} <span class="muted" style="font-weight:400">· ${esc(x.s.code||'无代码')} · ${x.isHolding?'持仓':'观察'}</span></div><div class="trig-dist">${esc(x.oldest)}</div><div class="trig-desc">需要更新：${x.items.map(esc).join('、')}${x.focus?' · 重点关注':''}</div></div>`).join('')}</div></div>`;
 }
-function copyText(text,okMsg){
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>alert(okMsg)).catch(()=>fallbackCopyText(text,okMsg));
-  else fallbackCopyText(text,okMsg);
-}
-function fallbackCopyText(text,okMsg){
-  const ta=document.createElement('textarea');
-  ta.value=text;document.body.appendChild(ta);ta.focus();ta.select();
-  try{document.execCommand('copy');alert(okMsg)}catch(e){alert('复制失败，请手动复制。')}
-  ta.remove();
+async function copyText(text,okMsg,options={}){
+  if(!window.ClipboardUtils||typeof window.ClipboardUtils.copyTextWithFallback!=='function'){
+    alert('复制失败，请长按复制');
+    return {ok:false,error:new Error('Clipboard helper unavailable')};
+  }
+  const result=await window.ClipboardUtils.copyTextWithFallback(text,options);
+  alert(result.ok?okMsg:'复制失败，请长按复制');
+  return result;
 }
 function copyUpdateCodes(){
   const codes=[...new Set(updateChecklistRows().map(x=>x.s.code).filter(Boolean))];
@@ -1019,13 +1018,13 @@ function previewV13PlanRefreshPrompt(options={}){
   if(result.status==='warning'&&!confirmPlanGenerationWarnings(result)){if(text)text.value='';setV13PlanRefreshMessage('已取消生成计划 Prompt。');return}
   try{if(text)text.value=v13PlanRefreshPrompt(stock);setV13PlanRefreshMessage(result.status==='warning'?`数据提醒：${result.warnings.join('；')}`:'数据已准备，可以生成新版计划。')}catch(err){if(text)text.value='';setV13PlanRefreshMessage(err&&err.message?err.message:String(err),true)}
 }
-function copyV13PlanRefreshPrompt(){
+async function copyV13PlanRefreshPrompt(){
   const stock=currentV13PlanRefreshStock();
   if(!stock)return setV13PlanRefreshMessage('当前没有可复制的刷新候选。',true);
   const result=planGenerationGateResult(stock);
   if(!result.canGenerate)return setV13PlanRefreshMessage(planGenerationBlockedText(result),true);
   if(!confirmPlanGenerationWarnings(result))return setV13PlanRefreshMessage('已取消生成计划 Prompt。');
-  try{copyText(v13PlanRefreshPrompt(stock),'计划刷新 Prompt 已复制。')}catch(err){setV13PlanRefreshMessage(err&&err.message?err.message:String(err),true)}
+  try{const field=document.getElementById('v13PlanRefreshPromptText'),text=v13PlanRefreshPrompt(stock);if(field)field.value=text;const result=await copyText(text,'计划刷新 Prompt 已复制。',{selectableElement:field});setV13PlanRefreshMessage(result.ok?'已复制':'复制失败，请长按复制',!result.ok)}catch(err){setV13PlanRefreshMessage(err&&err.message?err.message:String(err),true)}
 }
 async function importV13PlanRefreshJson(){
   const stock=currentV13PlanRefreshStock();
@@ -2403,7 +2402,7 @@ function copyUnifiedPrompt(){
   const el=document.getElementById('unifiedPromptPreview');
   if(!el)return;
   if(!String(el.value||'').trim())generateUnifiedPrompt();
-  copyText(document.getElementById('unifiedPromptPreview').value,'Prompt 已复制。');
+  copyText(el.value,'Prompt 已复制。',{selectableElement:el});
 }
 function clearUnifiedPrompt(){
   const el=document.getElementById('unifiedPromptPreview');
@@ -2541,7 +2540,7 @@ function copyReviewPackage(){
   const el=document.getElementById('reviewPackagePreview');
   if(!el)return;
   if(!String(el.value||'').trim())generateReviewPackage();
-  copyText(document.getElementById('reviewPackagePreview').value,'综合复核包已复制。');
+  copyText(el.value,'综合复核包已复制。',{selectableElement:el});
 }
 function clearReviewPackage(){
   const el=document.getElementById('reviewPackagePreview');
@@ -5020,7 +5019,7 @@ function v13PlanUpdateDraftPanel(stock,record){
   const saved=module.saved(ctx.request.request_id),validation=saved&&saved.validation||null;
   const applied=v13PlanApplicationStatus(saved&&saved.draft&&saved.draft.draft_id);
   const status=applied?`计划更新已应用：${applied.applied_at||'—'}，新增 ${arrSafe(applied.created_plan_ids).length} 条，归档 ${arrSafe(applied.archived_plan_ids).length} 条，审计记录 ${applied.application_id||'—'}。`:(saved&&saved.status==='applied'?'计划更新已由用户确认并在浏览器内安全保存。':(saved&&saved.status==='application_request_generated'?'检测到旧版应用请求；请重新预览差异并使用浏览器内安全保存。':(saved?(validation&&validation.business_valid?'计划草案已通过校验，尚未写入正式计划。':'草案存在，但尚未通过校验。'):'等待生成Prompt并导入计划草案。')));
-  return `<div class="card" style="margin-top:10px;border-left:4px solid var(--gold)"><div class="card-title">计划更新草案</div><div class="card-note">来源决策：${esc(ctx.outcome.decision_id||'—')} · 请求：${esc(ctx.request.request_id||'—')}</div><div class="text" style="max-width:none;margin-top:8px">${esc(status)}</div>${blocked?`<div class="alert" style="margin-top:8px">${esc(planGenerationBlockedText(readiness).replace(/\n+/g,' '))}</div>`:''}<div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn small" type="button" data-detail-action="generate-plan-update-prompt" ${blocked?'disabled':''}>生成计划更新Prompt</button><button class="btn ghost small" type="button" data-detail-action="import-plan-update-draft" ${blocked?'disabled':''}>导入计划草案</button><button class="btn ghost small" type="button" data-detail-action="view-plan-update-diff" ${saved&&validation&&validation.business_valid?'':'disabled'}>查看计划差异</button></div></div>`;
+  return `<div class="card" style="margin-top:10px;border-left:4px solid var(--gold)"><div class="card-title">计划更新草案</div><div class="card-note">来源决策：${esc(ctx.outcome.decision_id||'—')} · 请求：${esc(ctx.request.request_id||'—')}</div><div class="text" style="max-width:none;margin-top:8px">${esc(status)}</div>${blocked?`<div class="alert" style="margin-top:8px">${esc(planGenerationBlockedText(readiness).replace(/\n+/g,' '))}</div>`:''}<div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn small" type="button" data-detail-action="generate-plan-update-prompt" ${blocked?'disabled':''}>准备计划更新Prompt</button><button class="btn ghost small" type="button" data-detail-action="import-plan-update-draft" ${blocked?'disabled':''}>导入计划草案</button><button class="btn ghost small" type="button" data-detail-action="view-plan-update-diff" ${saved&&validation&&validation.business_valid?'':'disabled'}>查看计划差异</button></div></div>`;
 }
 function arrSafe(value){return Array.isArray(value)?value:[]}
 function v13PlanApplicationStatus(draftId){const payload=window.PLAN_APPLICATION_STATUS,rows=payload&&Array.isArray(payload.applications)?payload.applications:[];return rows.find(row=>row&&row.draft_id===draftId&&row.result==='applied')||null}
@@ -5375,16 +5374,8 @@ function closeAiAnalysisPromptModal(){
   if(modal)modal.classList.remove('show');
 }
 function copyAiAnalysisPrompt(){
-  const text=document.getElementById('aiAnalysisPromptText').value;
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>alert('提示词已复制。')).catch(()=>fallbackCopyAnalysisPrompt());
-  }else fallbackCopyAnalysisPrompt();
-}
-function fallbackCopyAnalysisPrompt(){
-  const ta=document.getElementById('aiAnalysisPromptText');
-  ta.focus();
-  ta.select();
-  try{document.execCommand('copy');alert('提示词已复制。')}catch(e){alert('复制失败，请手动全选复制。')}
+  const field=document.getElementById('aiAnalysisPromptText');
+  copyText(field.value,'提示词已复制。',{selectableElement:field});
 }
 function ensureAiAnalysisImportModal(){
   let el=document.getElementById('aiAnalysisImportModal');
@@ -5616,16 +5607,8 @@ function refreshAiAssistantPrompt(){
   document.getElementById('aiAssistantPrompt').value=buildAiAssistantPrompt(stock,task);
 }
 function copyAiAssistantPrompt(){
-  const text=document.getElementById('aiAssistantPrompt').value;
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>alert('提示词已复制。')).catch(()=>fallbackCopyAiAssistantPrompt());
-  }else fallbackCopyAiAssistantPrompt();
-}
-function fallbackCopyAiAssistantPrompt(){
-  const ta=document.getElementById('aiAssistantPrompt');
-  ta.focus();
-  ta.select();
-  try{document.execCommand('copy');alert('提示词已复制。')}catch(e){alert('复制失败，请手动全选复制。')}
+  const field=document.getElementById('aiAssistantPrompt');
+  copyText(field.value,'提示词已复制。',{selectableElement:field});
 }
 async function importAiAssistantJson(){
   const stock=state.stocks.find(x=>x.id===detailStockId);
@@ -7359,6 +7342,25 @@ function latestPlanUpdateContext(stock){
   const record=window.AiDecisionReviewReader.recordsForStock(stock).find(item=>item.outcomeType==='plan_update');
   return record?window.PlanUpdateDraft.context(record.reviewId,stock):null;
 }
+function ensurePlanUpdatePromptModal(){
+  let el=document.getElementById('planUpdatePromptModal');
+  if(el)return el;
+  el=document.createElement('div');el.className='modal-bg import-layer';el.id='planUpdatePromptModal';
+  el.innerHTML=`<div class="modal"><h2>计划更新 Prompt</h2><div class="modal-sub">请求与当前计划快照已准备并记录；复制不会修改正式计划。</div><div class="form-row"><label for="planUpdatePromptText">Prompt</label><textarea id="planUpdatePromptText" readonly style="min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px"></textarea></div><div id="planUpdatePromptStatus" class="card-note" role="status" aria-live="polite">请求已准备</div><div class="modal-actions"><button class="btn ghost" id="planUpdatePromptClose" type="button">关闭</button><button class="btn" id="planUpdatePromptCopy" type="button">复制 Prompt</button></div></div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click',event=>{if(event.target===el)el.classList.remove('show')});
+  document.getElementById('planUpdatePromptClose').addEventListener('click',()=>el.classList.remove('show'));
+  document.getElementById('planUpdatePromptCopy').addEventListener('click',copyPreparedPlanUpdatePrompt);
+  return el;
+}
+async function copyPreparedPlanUpdatePrompt(){
+  const field=document.getElementById('planUpdatePromptText'),status=document.getElementById('planUpdatePromptStatus'),button=document.getElementById('planUpdatePromptCopy');
+  if(!field||!String(field.value||'').trim())return;
+  if(button)button.textContent='复制中…';
+  const result=await copyText(field.value,'计划更新 Prompt 已复制。',{selectableElement:field});
+  if(status){status.textContent=result.ok?'已复制':'复制失败，请长按复制';status.style.color=result.ok?'':'var(--seal)'}
+  if(button)button.textContent=result.ok?'已复制 ✓':'复制失败';
+}
 async function generatePlanUpdatePromptForStock(stock){
   const ctx=latestPlanUpdateContext(stock);
   if(!ctx||!window.PlanUpdateDraft.eligible(ctx))return alert('尚未形成有效的计划更新请求。');
@@ -7369,8 +7371,9 @@ async function generatePlanUpdatePromptForStock(stock){
     const generatedAt=new Date().toISOString(),text=window.PlanUpdateDraft.prompt(ctx.record.reviewId,stock);
     const snapshot=await window.PlanUpdateDraft.snapshotHash(stock.plans||[]);
     await window.PlanUpdateDraft.savePromptMeta(ctx.request.request_id,ctx.outcome.decision_id,snapshot);
-    copyText(text,`计划更新 Prompt 已复制。生成时间：${generatedAt}；来源决策：${ctx.outcome.decision_id}。`);
     renderStockDetail();
+    const modal=ensurePlanUpdatePromptModal(),field=document.getElementById('planUpdatePromptText'),status=document.getElementById('planUpdatePromptStatus'),button=document.getElementById('planUpdatePromptCopy');
+    field.value=text;status.textContent=`请求已准备 · ${generatedAt} · 来源决策 ${ctx.outcome.decision_id}`;status.style.color='';button.textContent='复制 Prompt';modal.classList.add('show');
   }catch(err){alert('生成失败：'+(err&&err.message?err.message:String(err)))}
 }
 function ensurePlanUpdateDraftImportModal(){

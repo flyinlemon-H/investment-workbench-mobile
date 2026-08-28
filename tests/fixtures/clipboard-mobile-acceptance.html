@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Clipboard Mobile Acceptance</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;max-width:100%;overflow-x:hidden;font-family:system-ui,sans-serif;background:#f5f1e8;color:#24211d}.wrap{width:100%;max-width:480px;margin:auto;padding:18px}.card{border:1px solid #cfc7b7;background:#fff;padding:16px;border-radius:12px}.btn{min-height:44px;border:0;border-radius:9px;padding:10px 14px;background:#243d36;color:#fff;font-size:16px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}details{margin-top:12px}textarea{display:block;width:100%;max-width:100%;min-height:180px;padding:12px;font-size:16px;overflow-wrap:anywhere}#status{min-height:26px;margin-top:10px;font-weight:700}.error{color:#9c2f2f}
+  </style>
+</head>
+<body>
+  <main class="wrap"><section class="card"><h1 style="font-size:22px">Clipboard acceptance</h1><div class="actions"><button class="btn" data-case="A">Case A</button><button class="btn" data-case="B">Case B</button><button class="btn" data-case="C">Case C</button><button class="btn" data-case="D">Case D</button><button class="btn" data-case="E">Case E</button></div><details id="requestDetails"><summary>请求已准备</summary><textarea id="requestText" readonly aria-label="待复制请求">prepared-request-v1</textarea></details><div id="status" role="status" aria-live="polite">请求已准备</div></section></main>
+  <script src="../../src/clipboard.js"></script>
+  <script>
+    const field=document.getElementById('requestText'),details=document.getElementById('requestDetails'),status=document.getElementById('status');
+    function testDocument(mode){return {body:document.body,documentElement:document.documentElement,createElement:tag=>document.createElement(tag),getElementById:id=>document.getElementById(id),querySelector:value=>document.querySelector(value),execCommand:()=>{if(mode==='throw')throw new Error('blocked');return mode===true}}}
+    async function runCase(name){
+      field.value=`prepared-request-${name}`;details.open=false;status.className='';status.textContent='复制中…';window.__clipboardWrites=[];
+      const modern=name==='D'?{}:{clipboard:{writeText:text=>name==='A'?(window.__clipboardWrites.push(text),Promise.resolve()):Promise.reject(new Error('denied'))}};
+      const fallback=name==='B'||name==='D'?true:(name==='E'?'throw':false);
+      const result=await ClipboardUtils.copyTextWithFallback(field.value,{navigator:modern,document:testDocument(fallback),selectableElement:field,detailsElement:details,manualCopy:false});
+      if(result.ok){status.textContent='已复制';status.dataset.method=result.method}else{status.textContent='复制失败，请长按复制';status.className='error';status.dataset.method='failed'}
+      status.dataset.case=name;window.__clipboardResult={ok:result.ok,method:result.method||'',codes:result.diagnostics?result.diagnostics.map(item=>item.code):[]};
+    }
+    document.querySelectorAll('[data-case]').forEach(button=>button.addEventListener('click',()=>runCase(button.dataset.case)));
+  </script>
+</body>
+</html>

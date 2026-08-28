@@ -125,6 +125,7 @@ test('P3 generates a visible-size request for twenty stocks without a tokenizer 
 test('browser integration exposes one-copy and one-paste path into batch preview',()=>{
   const source=fs.readFileSync(path.resolve(__dirname,'../src/multi-stock-analysis.js'),'utf8');
   const batch=fs.readFileSync(path.resolve(__dirname,'../src/batch-technical-review.js'),'utf8');
+  const clipboard=fs.readFileSync(path.resolve(__dirname,'../src/clipboard.js'),'utf8');
   const html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
   assert.match(source,/刷新并生成/);
   assert.match(source,/复制给 AI/);
@@ -142,7 +143,9 @@ test('browser integration exposes one-copy and one-paste path into batch preview
   assert.match(source,/保存当前组合/);
   assert.match(source,/BATCH_WARNING_THRESHOLD=10/);
   assert.match(source,/已复制 ✓/);
-  assert.match(source,/document\.execCommand\('copy'\)!==true/);
+  assert.match(source,/ClipboardUtils\.copyTextWithFallback/);
+  assert.doesNotMatch(source,/document\.execCommand/);
+  assert.match(clipboard,/document|doc\.execCommand\('copy'\)!==true/);
   assert.match(source,/multiStockRequestDetails/);
   assert.match(source,/openWithInput\(raw,selectedStocks\(\)\.map\(symbolOf\)\)/);
   assert.match(batch,/openWithInput/);
