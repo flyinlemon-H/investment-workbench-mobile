@@ -20,7 +20,9 @@ roleByPath.set('src/state.js','Batch Plan Review state normalization plus existi
 roleByPath.set('src/ui-render.js','Batch Plan Review entry point plus existing mobile Workbench rendering runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
-roleByPath.set('src/portfolio-review-ui.js','Portfolio Review mobile workflow with PlanReview coverage presentation');
+roleByPath.set('src/decision-compression-context.js','Decision Compression compact authoritative context and audit-reference runtime');
+roleByPath.set('src/decision-compression-contract.js','Decision Compression strict AI contract and atomic snapshot runtime');
+roleByPath.set('src/portfolio-review-ui.js','Decision Compression first layer plus preserved Portfolio Review drill-down workflow');
 roleByPath.set('src/plan-v2.js','Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime');
 roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime');
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
@@ -41,6 +43,8 @@ const paths=[...new Set([
   'src/technical-view-ux.js',
   'src/portfolio-review-context.js',
   'src/portfolio-review-contract.js',
+  'src/decision-compression-context.js',
+  'src/decision-compression-contract.js',
   'src/portfolio-review-ui.js',
   'src/plan-v2.js',
   'src/plan-review.js',
@@ -62,8 +66,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'batch-plan-review-20260827',
-  dataMode:'separate PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
+  assetVersion:'decision-compression-20260828',
+  dataMode:'separate Decision Compression and PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

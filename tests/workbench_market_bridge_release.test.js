@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Batch Plan Review cache-busts the bridge and changed Workbench modules',()=>{
+test('Decision Compression cache-busts the bridge and changed Workbench modules',()=>{
   const html=read('index.html');
-  const version='batch-plan-review-20260827';
+  const version='decision-compression-20260828';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
@@ -124,6 +124,8 @@ test('Batch Plan Review cache-busts the bridge and changed Workbench modules',()
     'src/multi-stock-analysis.js',
     'src/portfolio-review-context.js',
     'src/portfolio-review-contract.js',
+    'src/decision-compression-context.js',
+    'src/decision-compression-contract.js',
     'src/portfolio-review-ui.js',
     'src/price-refresh.js',
     'src/app.js'
