@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Decision Compression 12-stock Mobile Acceptance</title>
+  <style>html,body,#app{width:100%;height:100%;margin:0;border:0}body{overflow:hidden}#app{display:block}</style>
+</head>
+<body>
+  <iframe id="app" src="../../index.html?decision-compression-12-mobile=1" title="Decision Compression 12-stock mobile acceptance"></iframe>
+  <script>
+    Promise.all([
+      fetch('./m05c-real-trial-2026-08-18.json').then(response=>response.json()),
+      new Promise(resolve=>document.getElementById('app').addEventListener('load',resolve,{once:true}))
+    ]).then(async ([fixture])=>{
+      await new Promise(resolve=>setTimeout(resolve,800));
+      const template=fixture.stocks[1];
+      const additions=['观察一号','观察二号','观察三号','观察四号','观察五号','观察六号','观察七号','观察八号'].map((name,index)=>{
+        const stock=JSON.parse(JSON.stringify(template)),suffix=String(index+1).padStart(2,'0');
+        stock.id=`decision-fixture-${suffix}`;
+        stock.code=`6000${suffix}.SS`;
+        stock.symbol=stock.code;
+        stock.name=name;
+        stock.type='watch';
+        stock.shares=0;
+        stock.currentValue=0;
+        stock.marketValue=0;
+        stock.plans=[];
+        delete stock.allocationDecision;
+        delete stock.positionManagementReview;
+        return stock;
+      });
+      fixture.stocks=[...fixture.stocks,...additions];
+      const app=document.getElementById('app').contentWindow;
+      app.__decision12Fixture=fixture;
+      app.eval(`
+        state=normalize(__decision12Fixture);
+        const reviewDate='2026-08-28',generatedAt='2026-08-28T08:00:00+08:00',chosen=state.stocks.slice(0,12),symbols=chosen.map(stock=>SymbolIdentity.canonicalSymbol(stock.code||stock.symbol));
+        state.multiStockAnalysis={...(state.multiStockAnalysis||{}),lastSymbols:[symbols[0]]};
+        const base=PortfolioReviewContext.buildPortfolioContext(chosen,{allStocks:state.stocks,reviewDate,generatedAt,planReviewStore:state.planReviews});
+        const review={reviewDate,summary:'今天详细复核五项高关注事实，其余七只股票仍在本次范围内并暂不处理。',marketContext:'未提供权威市场环境。',portfolioRiskLevel:'moderate',priorityStocks:symbols.slice(0,5).map((symbol,index)=>({symbol,priority:'high',reason:'第'+(index+1)+'项结构化事实需要优先人工复核。',focus:'确认事实与计划前提。',planRelation:'只作复核，不直接执行。'})),riskAttention:[],planWatch:[],candidateReview:[],portfolioRisks:['所选股票存在需要关注的组合风险。'],todayFocus:['先复核五项高关注事实。'],dataLimitations:['当前没有权威市场环境判断。'],confidence:'medium'};
+        state.portfolioReview={current:{reviewDate,generatedAt,savedAt:generatedAt,selectedSymbols:symbols,planReferences:base.planReferences,review},history:[]};
+        const context=DecisionCompressionContext.buildDecisionContext(state.portfolioReview.current,state.stocks,{allStocks:state.stocks,reviewDate,generatedAt,planReviewStore:state.planReviews}),detailed=context.stocks.filter(facts=>facts.highAttentionEligible),detailedSymbols=new Set(detailed.map(facts=>facts.symbol)),pickState=facts=>facts.allowedPlanStates.find(value=>value!=='likely_invalid_unconfirmed')||'no_current_plan';
+        if(detailed.length!==5)throw new Error('12-stock fixture must contain exactly five high-attention stocks.');
+        const decision={decisionCompression:{reviewDate,overallSummary:'今天先详细复核五项关键事实，其余七只已选股票暂不处理。',items:detailed.map(facts=>({symbol:facts.symbol,priority:'high',actionCategory:'review_now',reason:'当前关键事实需要人工确认，先复核有效性与完整条件。',blockerPriority:facts.blockerFacts.slice(0,2),planState:pickState(facts),confidence:facts.technical.todayUse==='current'?'medium':'low'})),noActionSymbols:context.stocks.filter(facts=>!detailedSymbols.has(facts.symbol)).map(facts=>facts.symbol),confidence:'medium',limitations:['当前没有权威市场环境判断，相关结论保持谨慎。']}};
+        const validated=DecisionCompressionContract.validate(decision,{context});if(!validated.ok)throw new Error(validated.message);
+        const snapshot=DecisionCompressionContract.buildSnapshot(validated,context,{savedAt:generatedAt});state.decisionCompression={schemaVersion:DecisionCompressionContract.STORE_SCHEMA_VERSION,current:snapshot,history:[snapshot]};
+        render();PortfolioReviewUI.open();
+      `);
+      document.body.dataset.ready='true';
+    });
+  </script>
+</body>
+</html>

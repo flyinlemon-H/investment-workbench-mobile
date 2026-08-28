@@ -23,6 +23,16 @@
   }});
 
   function text(value){return String(value??'').trim()}
+  function pad2(value){return String(value).padStart(2,'0')}
+  function localCalendarDate(value=new Date(),options={}){
+    const date=value instanceof Date?value:new Date(value);
+    if(!Number.isFinite(date.getTime()))return '';
+    if(options.timeZone&&typeof Intl!=='undefined'&&Intl.DateTimeFormat){
+      const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:options.timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    }
+    return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
+  }
   function arr(value){return Array.isArray(value)?value:[]}
   function object(value){return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}
   function clone(value){return JSON.parse(JSON.stringify(value))}
@@ -139,13 +149,13 @@
   }
   function namesFor(stocks,predicate){return stocks.filter(predicate).map(item=>item.stock.name||item.stock.symbol)}
   function coordinationLimitations(stocks,portfolio){
-    const limitations=['本次只覆盖所选股票，并非完整券商组合，因此不能据此判断整个账户的真实集中度。'],unavailableNews=namesFor(stocks,item=>item.news.todayRelevance==='unavailable'),oldNews=namesFor(stocks,item=>item.news.todayRelevance==='outdated'),badTechnical=namesFor(stocks,item=>item.technical.todayRelevance==='inconsistent');
+    const limitations=[],unavailableNews=namesFor(stocks,item=>item.news.todayRelevance==='unavailable'),oldNews=namesFor(stocks,item=>item.news.todayRelevance==='outdated'),badTechnical=namesFor(stocks,item=>item.technical.todayRelevance==='inconsistent');
     if(unavailableNews.length)limitations.push(`${unavailableNews.join('、')}缺少最新新闻资料，短期催化判断置信度较低。`);if(oldNews.length)limitations.push(`${oldNews.join('、')}仅有较早新闻资料，不能作为今日催化。`);if(badTechnical.length)limitations.push(`${badTechnical.join('、')}的技术快照存在不一致，暂不使用精确支撑压力位。`);if(stocks.some(item=>item.holding.currentWeight===null))limitations.push('部分仓位权重口径不完整，暂不进行精确超配判断。');if(portfolio.knownCash===null)limitations.push('当前未提供可靠现金数据，因此无法判断现金比例和新增资金承受能力。');return limitations.slice(0,5);
   }
   function buildPortfolioContext(stocks,options={}){
     const selected=selectableStocks(stocks);if(selected.length<1)throw new Error('请至少选择一只股票。');if(selected.length>MAX_SELECTED_STOCKS)throw new Error(`今日组合最多选择 ${MAX_SELECTED_STOCKS} 只股票。`);
     const seen=new Set();selected.forEach(stock=>{const symbol=canonicalSymbol(symbolOf(stock));if(!symbol)throw new Error('组合复核股票缺少 canonical symbol。');if(seen.has(symbol))throw new Error(`组合中存在重复 symbol：${symbol}。`);seen.add(symbol)});
-    const allStocks=selectableStocks(options.allStocks&&options.allStocks.length?options.allStocks:selected),portfolioMarketValue=allKnownHoldingMarketValue(allStocks),reviewDate=dateOnly(options.reviewDate)||new Date().toISOString().slice(0,10),contexts=selected.map(stock=>stockContext(stock,{portfolioMarketValue,reviewDate,planReviewStore:options.planReviewStore})),selectedValues=contexts.map(item=>item.holding.currentMarketValue).filter(value=>value!==null),knownMarketValue=selectedValues.length?Number(selectedValues.reduce((sum,value)=>sum+value,0).toFixed(2)):null;
+    const allStocks=selectableStocks(options.allStocks&&options.allStocks.length?options.allStocks:selected),portfolioMarketValue=allKnownHoldingMarketValue(allStocks),reviewDate=dateOnly(options.reviewDate)||localCalendarDate(options.now||new Date(),{timeZone:options.timeZone}),contexts=selected.map(stock=>stockContext(stock,{portfolioMarketValue,reviewDate,planReviewStore:options.planReviewStore})),selectedValues=contexts.map(item=>item.holding.currentMarketValue).filter(value=>value!==null),knownMarketValue=selectedValues.length?Number(selectedValues.reduce((sum,value)=>sum+value,0).toFixed(2)):null;
     const portfolio={stockCount:contexts.length,knownMarketValue,marketValueScope:'selected_review_universe',knownApplicationHoldingsMarketValue:portfolioMarketValue,knownCash:null,cashStatus:'unavailable',selectionScope:'selected_review_universe_not_confirmed_full_brokerage_portfolio',notes:'当前持仓与价格来自应用状态；实际券商持仓与成交记录具有最终权威。'};
     const planReferences=PlanV2.buildContextReference(contexts,reviewDate);
     return {reviewDate,generatedAt:text(options.generatedAt)||new Date().toISOString(),portfolio,readiness:readiness(contexts),coordinationLimitations:coordinationLimitations(contexts,portfolio),planReferences,stocks:contexts};
@@ -155,7 +165,7 @@
     return [
       '你是一名谨慎的组合级每日复核助理。你的任务不是重复逐只股票分析，而是比较所选股票（本次选择的股票）并给出今天的组合复核优先级。','',
       '事实协调规则：','1. 只能使用下方结构化事实；程序拥有当前持仓、价格、日期、计划、todayRelevance 和数据一致性，禁止重算或改写。','2. 当前持仓事实优先于配置分析中的历史仓位描述；当前程序技术事实优先于旧技术叙述；当前新闻快照优先于历史催化；只有标记为当前有效的计划可作为当前计划输入。','3. 计划复核只是判断，不能覆盖计划事实。计划版本不一致时，旧复核必须视为过期；没有复核或复核过期时应降低置信度，但不得自动移除计划。','4. 只有 todayRelevance=current 的高时效资料可直接描述为今日信息；usable_with_caution 只能作为带日期的谨慎参考；outdated 只能作为历史背景；stale、unavailable、unknown 或 inconsistent 都必须降低对应事实的可用性。','5. currentSnapshot 与 historicalReference 不得混用；历史新闻只能称为“历史参考”或“延续性背景”。','6. 实际券商持仓、成交和订单具有最终权威；本次选择的股票不一定等于完整券商组合。','7. 明确区分 held、watchlist 与 zero_position_candidate；零仓候选不得使用“继续持有”等措辞。','8. 复核既有计划，但不得修改、覆盖或新增存储计划。价格跨过阈值只表示“价格已触发，待确认其他条件”，绝不等于完整计划条件已满足。需复核或历史参考计划不得静默提高今日优先级。','9. 不得发明持仓、价格、财务、新闻、计划、仓位或市场背景，也不给确定性买卖指令。','',
-      '用户语言边界：','1. 正常用户文字（summary、marketContext、reason、focus、planRelation、portfolioRisks、todayFocus、dataLimitations）不得出现内部字段名、对象名、英文枚举或实现术语。','2. 禁止在正常文字中出现：selected_review_universe、knownMarketValue、knownApplicationHoldingsMarketValue、knownCash、cashStatus、weightStatus、allocation、fundamental、valuation、marketContext、todayRelevance、fresh、stale、unknown、unavailable、inconsistent。结构化 JSON 的固定字段名和枚举字段值除外。','3. 把内部状态翻译成自然中文及其后果。例如不要写“knownCash=null, cashStatus=unavailable”，应写“当前未提供可靠现金数据，因此无法判断现金比例和新增资金承受能力”。','4. 模块名称使用“基本面、估值、配置”；所选范围使用“本次复核股票、本次选择的股票、本次复核范围”。','5. dataLimitations 优先 3–5 条且最多 5 条，合并同类问题；每条只说明这项问题如何影响今天的判断，不得输出字段审计清单。','6. portfolioRisks 只写集中度、同步技术风险、计划触发聚集、关键资料覆盖、估值集中或影响决策的已知冲突。','',
+      '用户语言边界：','1. 正常用户文字（summary、marketContext、reason、focus、planRelation、portfolioRisks、todayFocus、dataLimitations）不得出现内部字段名、对象名、英文枚举或实现术语。','2. 禁止在正常文字中出现：selected_review_universe、knownMarketValue、knownApplicationHoldingsMarketValue、knownCash、cashStatus、weightStatus、allocation、fundamental、valuation、marketContext、todayRelevance、fresh、stale、unknown、unavailable、inconsistent。结构化 JSON 的固定字段名和枚举字段值除外。','3. 把内部状态翻译成自然中文及其后果。例如不要写“knownCash=null, cashStatus=unavailable”，应写“当前未提供可靠现金数据，因此无法判断现金比例和新增资金承受能力”。','4. 模块名称使用“基本面、估值、配置”。本次复核范围、所选数量与股票清单由程序显示，不要在 summary 或 dataLimitations 中重复范围说明。','5. dataLimitations 优先 3–5 条且最多 5 条，合并同类问题；每条只说明实际资料问题如何影响今天的判断，不得输出范围说明或字段审计清单。','6. portfolioRisks 只写集中度、同步技术风险、计划触发聚集、关键资料覆盖、估值集中或影响决策的已知冲突。','',
       '复核任务：','1. 比较股票并识别今日最高优先级关注。','2. 识别持仓、技术、新闻、估值、配置与主题集中风险。','3. 对计划区分“接近价格区、价格已触发待确认、计划需复核、尚未接近、不明确”；输入的 fullConditionStatus 无法证明时，绝不能写“完整条件已满足”。','4. 优先卡只写股票、优先级、今天为何重要、观察什么及相关计划，避免重复完整模块摘要。','5. confidence 综合覆盖度、对今日的适用性、不一致和高影响模块缺失；多个高时效模块较旧/缺失/不一致时降低置信度，单独估值较旧不必自动降为低。','',
       '严格输出要求：','1. 只输出严格 JSON，不要 Markdown、代码围栏或额外解释。','2. 顶层只能包含 portfolioReview；内部必须完整包含示例中的全部字段，即使数组为空也要返回 []。','3. 只能引用输入 stocks 中的精确 symbol；禁止名称匹配、后缀猜测、部分推断或新增股票。','4. 同一 section 内 symbol 不得重复。','5. portfolioRiskLevel 只能为 low, moderate, high, unclear。','6. priority 只能为 high, medium, low。','7. planWatch.status 只能为 approaching, triggered, invalidated, not_close, unclear；triggered 的 reason 必须明确只是价格触发且仍待确认。','8. confidence 只能为 high, medium, low。','9. reviewDate 必须等于输入 reviewDate。','',
       '程序生成的组合上下文：',JSON.stringify(context,null,2),'','严格输出结构示例（内容仅示意，必须按输入事实重写）：',JSON.stringify(CONTRACT_EXAMPLE,null,2)
@@ -163,5 +173,5 @@
   }
   function requestMetrics(request){const value=String(request??'');const bytes=typeof TextEncoder==='function'?new TextEncoder().encode(value).length:Buffer.byteLength(value,'utf8');return {characters:value.length,bytes,kilobytes:Number((bytes/1024).toFixed(1)),approxTokens:Math.ceil(value.length/2.2)}}
 
-  return {MAX_SELECTED_STOCKS,TODAY_RELEVANCE,RELEVANCE_POLICY,CONTRACT_EXAMPLE,selectableStocks,holdingFacts,technicalConsistency,compactTechnical,compactNews,compactFundamental,compactValuation,compactLongTerm,compactAllocation,compactPlans,stockContext,readiness,coordinationLimitations,buildPortfolioContext,buildRequest,requestMetrics};
+  return {MAX_SELECTED_STOCKS,TODAY_RELEVANCE,RELEVANCE_POLICY,CONTRACT_EXAMPLE,localCalendarDate,selectableStocks,holdingFacts,technicalConsistency,compactTechnical,compactNews,compactFundamental,compactValuation,compactLongTerm,compactAllocation,compactPlans,stockContext,readiness,coordinationLimitations,buildPortfolioContext,buildRequest,requestMetrics};
 });

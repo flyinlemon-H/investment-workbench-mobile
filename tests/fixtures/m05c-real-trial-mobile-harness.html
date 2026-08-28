@@ -12,7 +12,8 @@
     Promise.all([
       fetch('./m05c-real-trial-2026-08-18.json').then(response=>response.json()),
       new Promise(resolve=>document.getElementById('app').addEventListener('load',resolve,{once:true}))
-    ]).then(([fixture])=>{
+    ]).then(async ([fixture])=>{
+      await new Promise(resolve=>setTimeout(resolve,800));
       const review={
         reviewDate:'2026-08-18',
         summary:'今天优先复核长飞光纤的技术资料冲突，并关注华勤技术已进入价格复核区。',

@@ -30,5 +30,5 @@ test('M05C 390x844 modal is full-screen, touch-safe, single-column, and prevents
 
 test('M05C result hierarchy hides empty sections and links known symbols to existing detail navigation',()=>{
   const ui=read('src/portfolio-review-ui.js');
-  assert.match(ui,/items&&items\.length/);assert.match(ui,/openStockDetail\(stock\.id\)/);assert.match(ui,/currentSnapshot\(\)\?'result':'generate'/);
+  assert.match(ui,/items&&items\.length/);assert.match(ui,/openStockDetail\(stock\.id\)/);assert.match(ui,/mode=snapshot\?'result':'generate'/);
 });
