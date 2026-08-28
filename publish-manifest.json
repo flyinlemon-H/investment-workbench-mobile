@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "e43af089a7cd04afed97c0d7d1c9574fe54d5b62",
-  "assetVersion": "decision-compression-fix1-20260828",
-  "dataMode": "program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
+  "sourceCommit": "2f5cf8bebd0b76cba54325356533849f056a5441",
+  "assetVersion": "mobile-clipboard-reliability-20260828",
+  "dataMode": "verified shared mobile clipboard plumbing + program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 46487,
-      "sha256": "e0f2666bea4b37506795cdaa6229260bf9a732d17997eb6bdab2eb0c7eb4bcd5"
+      "bytes": 46692,
+      "sha256": "7a5b3d43fd1c6157bc1b9d790a42ff5a69e75afbd2fbe01d7320ef251daeff2b"
     },
     {
       "path": "social_posts.json",
@@ -107,6 +107,12 @@
       "sha256": "ab21cf1ceaf3d5fdbcad315da1a1f30790b9fd70889479aae6dfb9a05420cb0a"
     },
     {
+      "path": "src/clipboard.js",
+      "role": "shared verified mobile clipboard runtime with explicit manual-copy fallback",
+      "bytes": 5900,
+      "sha256": "8b4b1ffef2f9a69fee1a202c9e29250655790a8960be8f960a306f5a36faad1f"
+    },
+    {
       "path": "src/decision-compression-context.js",
       "role": "Decision Compression compact context with program-owned blocker facts and audit references",
       "bytes": 20116,
@@ -121,8 +127,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7263,
-      "sha256": "38db837b10dfa7f025c5f6cb8ff217488f4decddc2686c6bb518ce7ffdd1ad9e"
+      "bytes": 7265,
+      "sha256": "2e15bd679e562d34e5d667caa76d36facdba492fdbb92f618112e529842665bd"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -133,8 +139,8 @@
     {
       "path": "src/multi-stock-analysis.js",
       "role": "M05C_1 Real Trial Fix 1 two-module navigation runtime",
-      "bytes": 35000,
-      "sha256": "ed8296d123bbf5b00f5071133b8e773c1728a496d57d52eb6122756be038217b"
+      "bytes": 34499,
+      "sha256": "75ba80dec4523e2a5cf0ea00681f89096a748f5632cad293ed6c0f8644fbd441"
     },
     {
       "path": "src/multi-tab-protection.js",
@@ -157,8 +163,8 @@
     {
       "path": "src/plan-review-ui.js",
       "role": "Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow",
-      "bytes": 24533,
-      "sha256": "306140df5637fc2548f94e99c3506c6d54535fee4f71710f75ad02d804d83fee"
+      "bytes": 24524,
+      "sha256": "1e08313563cb5d5cb904f8893d1b8b99bfff1bf4c6c092254296b39a683e4dea"
     },
     {
       "path": "src/plan-review.js",
@@ -193,8 +199,8 @@
     {
       "path": "src/portfolio-review-ui.js",
       "role": "Decision Compression scope, freshness, first layer, and preserved Portfolio Review drill-down workflow",
-      "bytes": 37011,
-      "sha256": "dd5c62853cac03fbdec27899f0bafffdb52a435a143d2d50c74251c4f62e5934"
+      "bytes": 36957,
+      "sha256": "78f2823af10454d06ff2cf8e15d4d5620ff33b5e20b645613efc0f26d806a734"
     },
     {
       "path": "src/position.js",
@@ -295,8 +301,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Batch Plan Review entry point plus existing mobile Workbench rendering runtime",
-      "bytes": 620358,
-      "sha256": "334ef1c3dd5f16022bd8f5deae8499c53a3938e3b42981a5e5751781cfd7406b"
+      "bytes": 621883,
+      "sha256": "81f3a90cd9e5b3bd9712695f8b970886b0979b3ff2118e323ff80867ca54ecac"
     },
     {
       "path": "src/universe-handoff.js",
