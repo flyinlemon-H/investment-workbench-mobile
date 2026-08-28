@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "0cd5f3565a5736fe4f53c35bc0f647b48c9f620f",
-  "assetVersion": "batch-plan-review-20260827",
-  "dataMode": "separate PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
+  "sourceCommit": "7f453590220de52854f67447b66cbfb61f664784",
+  "assetVersion": "decision-compression-20260828",
+  "dataMode": "separate Decision Compression and PlanReview snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 45970,
-      "sha256": "4b6be1c52cfb625192602172af78e41587818b57f29718955df8302d3e7bba5c"
+      "bytes": 46275,
+      "sha256": "48e6ba6c92d02d3ba478c055b4ea66c529034e50978c8ab7156f275ad2df8770"
     },
     {
       "path": "social_posts.json",
@@ -107,10 +107,22 @@
       "sha256": "ab21cf1ceaf3d5fdbcad315da1a1f30790b9fd70889479aae6dfb9a05420cb0a"
     },
     {
+      "path": "src/decision-compression-context.js",
+      "role": "Decision Compression compact authoritative context and audit-reference runtime",
+      "bytes": 18874,
+      "sha256": "b43ca4e3bcb839d318941c3df94cea7976e3fbef151264824c4bebb9f2f68f0b"
+    },
+    {
+      "path": "src/decision-compression-contract.js",
+      "role": "Decision Compression strict AI contract and atomic snapshot runtime",
+      "bytes": 17733,
+      "sha256": "bab1daa8e9de7a34ec29f3e81c0e92e6caabf9bc4911b7e222b2357c3bef2c03"
+    },
+    {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7254,
-      "sha256": "ffd9cb9dd0b03db04b4e9d759a6c680b715aedfa10f2fe54a774766cd208a123"
+      "bytes": 7257,
+      "sha256": "57fff8b1eaab974eb44d9987e07182858c19c156d513d2f544e6c63e29c2dc6c"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -180,9 +192,9 @@
     },
     {
       "path": "src/portfolio-review-ui.js",
-      "role": "Portfolio Review mobile workflow with PlanReview coverage presentation",
-      "bytes": 20832,
-      "sha256": "73aa9e5fef5598431da32c312a68ea3646a538f8713f346cc936fc831ee21201"
+      "role": "Decision Compression first layer plus preserved Portfolio Review drill-down workflow",
+      "bytes": 31848,
+      "sha256": "c24c58a4928c228368321b26855453338d9dd730b7bff171d6310175a0085eb1"
     },
     {
       "path": "src/position.js",
@@ -265,8 +277,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "Plan V2 and separate PlanReview candidate storage validation runtime",
-      "bytes": 5361,
-      "sha256": "2c0cff7b7f639d17da4279351e678365417b20dbca700ded5f1f7cab6d756065"
+      "bytes": 6009,
+      "sha256": "99a61a9130ba69419747a546e5d44729dd5999b8bd3e2709fe59311a3060cb70"
     },
     {
       "path": "src/symbol-identity.js",
