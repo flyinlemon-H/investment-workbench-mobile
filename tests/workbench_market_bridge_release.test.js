@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Decision Compression cache-busts the bridge and changed Workbench modules',()=>{
+test('Decision Compression Fix 1 cache-busts the bridge and changed Workbench modules',()=>{
   const html=read('index.html');
-  const version='decision-compression-20260828';
+  const version='decision-compression-fix1-20260828';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',

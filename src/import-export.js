@@ -1,7 +1,7 @@
 function pad2(n){return String(n).padStart(2,'0')}
 function dateStamp(d=new Date()){return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`}
 function timeStamp(d=new Date()){return `${dateStamp(d)}-${pad2(d.getHours())}${pad2(d.getMinutes())}`}
-function appVersion(){return 'V13.0 RC3 Decision Compression'}
+function appVersion(){return 'V13.0 RC4 Decision Compression Fix 1'}
 function backupFilename(prefix='投资作战手册',d=new Date()){return `${prefix}-${appVersion()}-${timeStamp(d)}.json`}
 function downloadJson(data,filename){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
