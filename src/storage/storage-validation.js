@@ -57,6 +57,11 @@
       if(!isPlainObject(state.planReviews))fail('validation.state.planReviews');
       if(global.PlanReview&&typeof global.PlanReview.validateStore==='function'&&!global.PlanReview.validateStore(state.planReviews).ok)fail('validation.state.planReviewStore');
     }
+    if(state.decisionCompression!==undefined){
+      if(!isPlainObject(state.decisionCompression)||!Array.isArray(state.decisionCompression.history))fail('validation.state.decisionCompression');
+      if(state.decisionCompression.current!==null&&state.decisionCompression.current!==undefined&&!isPlainObject(state.decisionCompression.current))fail('validation.state.decisionCompressionCurrent');
+      if(global.DecisionCompressionContract&&typeof global.DecisionCompressionContract.validateStore==='function'&&!global.DecisionCompressionContract.validateStore(state.decisionCompression).ok)fail('validation.state.decisionCompressionStore');
+    }
     const holdingCount=stocks.filter(stock=>{
       if(isExemptIdentityRow(stock))return false;
       const type=String(stock.type||'').toLowerCase();

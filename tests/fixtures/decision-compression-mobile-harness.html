@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Decision Compression Mobile Acceptance</title>
+  <style>html,body,#app{width:100%;height:100%;margin:0;border:0}body{overflow:hidden}#app{display:block}</style>
+</head>
+<body>
+  <iframe id="app" src="../../index.html?decision-compression-mobile=1" title="Decision Compression mobile acceptance"></iframe>
+  <script>
+    Promise.all([
+      fetch('./m05c-real-trial-2026-08-18.json').then(response=>response.json()),
+      new Promise(resolve=>document.getElementById('app').addEventListener('load',resolve,{once:true}))
+    ]).then(([fixture])=>{
+      const fifth=JSON.parse(JSON.stringify(fixture.stocks[0]));fifth.id='decision-fixture-fifth';fifth.code='600000.SS';fifth.symbol='600000.SS';fifth.name='第五只观察股';fifth.currentPrice=10;fifth.currentValue=1000;fifth.shares=100;fifth.plans=[];
+      fixture.stocks=[...fixture.stocks.slice(0,4),fifth];
+      const app=document.getElementById('app').contentWindow;app.__decisionFixture=fixture;
+      app.eval(`
+        state=normalize(__decisionFixture);
+        const reviewDate='2026-08-28',generatedAt='2026-08-28T08:00:00+08:00',chosen=state.stocks.slice(0,5),symbols=chosen.map(stock=>SymbolIdentity.canonicalSymbol(stock.code||stock.symbol));
+        const base=PortfolioReviewContext.buildPortfolioContext(chosen,{allStocks:state.stocks,reviewDate,generatedAt,planReviewStore:state.planReviews});
+        const review={reviewDate,summary:'今天先复核两项关键冲突，再观察一项，其余暂不处理。',marketContext:'未提供权威市场环境。',portfolioRiskLevel:'moderate',priorityStocks:[{symbol:symbols[0],priority:'high',reason:'当前事实存在需要优先复核的冲突。',focus:'确认计划与风险前提。',planRelation:'只作复核，不直接执行。'},{symbol:symbols[1],priority:'high',reason:'当前事实存在第二项需要优先复核的冲突。',focus:'确认关键前提。',planRelation:'只作复核，不直接执行。'},{symbol:symbols[2],priority:'medium',reason:'值得观察但没有立即冲突。',focus:'等待更多确认。',planRelation:'保持观察。'}],riskAttention:[],planWatch:[],candidateReview:[],portfolioRisks:['所选股票存在需要关注的组合风险。'],todayFocus:['先复核高关注事项。'],dataLimitations:['当前没有权威市场环境判断。'],confidence:'medium'};
+        state.portfolioReview={current:{reviewDate,generatedAt,savedAt:generatedAt,selectedSymbols:symbols,planReferences:base.planReferences,review},history:[]};
+        const context=DecisionCompressionContext.buildDecisionContext(state.portfolioReview.current,state.stocks,{allStocks:state.stocks,reviewDate,generatedAt,planReviewStore:state.planReviews}),pickState=facts=>facts.allowedPlanStates.find(value=>!['likely_invalid_unconfirmed'].includes(value))||'no_current_plan',pickBlockers=facts=>{const required=facts.plans.some(plan=>plan.priceTrigger==='triggered'&&plan.fullConditions!=='confirmed')?['full_conditions_unproven']:[];return [...required,...Object.keys(facts.eligibleBlockers).filter(key=>facts.eligibleBlockers[key]&&!required.includes(key))].slice(0,2)};
+        const decision={decisionCompression:{reviewDate,overallSummary:'今天先复核两项关键冲突，再观察一项，其余两只暂不处理。',items:context.stocks.slice(0,3).map((facts,index)=>({symbol:facts.symbol,priority:index<2?'high':'medium',actionCategory:index<2?'review_now':'watch',reason:index<2?'当前关键事实存在冲突，先复核有效性与确认条件。':'当前没有立即冲突，今天保持观察并等待确认。',blockers:pickBlockers(facts),planState:pickState(facts),confidence:facts.technical.todayUse==='current'?'medium':'low'})),noActionSymbols:context.stocks.slice(3).map(facts=>facts.symbol),confidence:'medium',limitations:['当前没有权威市场环境判断，相关结论保持谨慎。']}};
+        const validated=DecisionCompressionContract.validate(decision,{context});if(!validated.ok)throw new Error(validated.message);
+        const snapshot=DecisionCompressionContract.buildSnapshot(validated,context,{savedAt:generatedAt});state.decisionCompression={schemaVersion:DecisionCompressionContract.STORE_SCHEMA_VERSION,current:snapshot,history:[snapshot]};
+        render();PortfolioReviewUI.open();
+      `);
+      document.body.dataset.ready='true';
+    });
+  </script>
+</body>
+</html>
