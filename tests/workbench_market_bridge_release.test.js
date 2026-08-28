@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Decision Compression Fix 1 cache-busts the bridge and changed Workbench modules',()=>{
+test('Mobile Clipboard Reliability cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='decision-compression-fix1-20260828';
+  const version='mobile-clipboard-reliability-20260828';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
@@ -119,6 +119,7 @@ test('Decision Compression Fix 1 cache-busts the bridge and changed Workbench mo
     'src/market-data-bridge.js',
     'src/plan-update-draft.js',
     'src/rebalance.js',
+    'src/clipboard.js',
     'src/ui-render.js',
     'src/batch-technical-review.js',
     'src/multi-stock-analysis.js',

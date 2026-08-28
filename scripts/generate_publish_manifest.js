@@ -27,6 +27,7 @@ roleByPath.set('src/plan-v2.js','Plan V2 canonical schema, lifecycle, migration,
 roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime');
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
+roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
 roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
@@ -48,7 +49,8 @@ const paths=[...new Set([
   'src/portfolio-review-ui.js',
   'src/plan-v2.js',
   'src/plan-review.js',
-  'src/plan-review-ui.js'
+  'src/plan-review-ui.js',
+  'src/clipboard.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -66,8 +68,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'decision-compression-fix1-20260828',
-  dataMode:'program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
+  assetVersion:'mobile-clipboard-reliability-20260828',
+  dataMode:'verified shared mobile clipboard plumbing + program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
