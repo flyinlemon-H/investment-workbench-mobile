@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "2f5cf8bebd0b76cba54325356533849f056a5441",
-  "assetVersion": "mobile-clipboard-reliability-20260828",
-  "dataMode": "verified shared mobile clipboard plumbing + program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence",
+  "sourceCommit": "9c43896ede708567eee5cb207c74d40274c38c49",
+  "assetVersion": "single-stock-discussion-workbench-v1-20260831",
+  "dataMode": "program-owned Single Stock Discussion anchors and references + AI judgment-only archive contract + user-confirmed Current State history + existing verified clipboard, Plan, Portfolio Review, Decision Compression, market bridge, and browser persistence",
   "files": [
     {
       "path": ".nojekyll",
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1779980,
-      "sha256": "ca6d119d7ebf897ff9bc40117ed83b59d310239e9bc723e960bb341657568075"
+      "bytes": 1786180,
+      "sha256": "44ddc19fc36b730280d4aa83f4ab38fcbc05317e4f2b59abfd62d0d443f49a4e"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1282,
-      "sha256": "13ec6a824b7d0328c4fc97fc4b323b0611cd887691ea6bcd649ebc27d8838130"
+      "sha256": "dd8d62f7213931bcbfa416a7195b047be7b7c884e54409e5661b43748efff4b0"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 46692,
-      "sha256": "7a5b3d43fd1c6157bc1b9d790a42ff5a69e75afbd2fbe01d7320ef251daeff2b"
+      "bytes": 49500,
+      "sha256": "f46c50138043cd3cf66bddaf2dc4d0defc166a3ddc75bda39c6537c72efa7000"
     },
     {
       "path": "social_posts.json",
@@ -125,10 +125,22 @@
       "sha256": "6141e86802602da95ba3b943411335ece1800cc546d361a7423cc9e412aeb52e"
     },
     {
+      "path": "src/discussion-state-contract.js",
+      "role": "Single Stock Discussion strict archive contract and protected atomic save runtime",
+      "bytes": 9238,
+      "sha256": "7d7e01c29d3fe1080a938b12982f7251de9e5f61b7ca1efa132540b1b0773d84"
+    },
+    {
+      "path": "src/discussion-workbench.js",
+      "role": "Single Stock Discussion State schema, anchors, incremental context, and prompt runtime",
+      "bytes": 29546,
+      "sha256": "fa2223c3d20ba0ae5c1dd0ec13d6d75c89ec61ee1eef85a86cb6cec590b96f28"
+    },
+    {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7265,
-      "sha256": "2e15bd679e562d34e5d667caa76d36facdba492fdbb92f618112e529842665bd"
+      "bytes": 7273,
+      "sha256": "504f270eaa6ffaff0d87bdcf7ab6b00bceb2071e1b281faa6fa1297b1c3adfda"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -228,9 +240,9 @@
     },
     {
       "path": "src/state.js",
-      "role": "Batch Plan Review state normalization plus existing Workbench state runtime",
-      "bytes": 121250,
-      "sha256": "b7b854270d9186e04363e3d8a097a2073e26c8f99b5937cbfb514adc54d95576"
+      "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
+      "bytes": 121433,
+      "sha256": "8e46832c8302dd89aff414bd31ab4933244c6d63143de9f98774e2615c0e0248"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -283,8 +295,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "Plan V2 and separate PlanReview candidate storage validation runtime",
-      "bytes": 6009,
-      "sha256": "99a61a9130ba69419747a546e5d44729dd5999b8bd3e2709fe59311a3060cb70"
+      "bytes": 6369,
+      "sha256": "ee4cc9c9580516f72991c1c3900278a4332273c1d3c7afb31cb65bd031a8b49d"
     },
     {
       "path": "src/symbol-identity.js",
@@ -300,9 +312,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "Batch Plan Review entry point plus existing mobile Workbench rendering runtime",
-      "bytes": 621883,
-      "sha256": "81f3a90cd9e5b3bd9712695f8b970886b0979b3ff2118e323ff80867ca54ecac"
+      "role": "Single Stock Discussion Workbench mobile continuity, preview, and history UI",
+      "bytes": 634789,
+      "sha256": "c2da1a28f588418742bffd7b13ee13c4841c8e04b14fcc4a7de50736239beeaf"
     },
     {
       "path": "src/universe-handoff.js",
