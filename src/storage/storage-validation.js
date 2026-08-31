@@ -47,6 +47,10 @@
         if(!isPlainObject(plan))fail('validation.state.plan');
         if(plan.schemaVersion==='plan.v2'&&global.PlanV2&&typeof global.PlanV2.validatePlan==='function'&&!global.PlanV2.validatePlan(plan).ok)fail('validation.state.planV2');
       });
+      if(stock.discussionState!==undefined){
+        if(!isPlainObject(stock.discussionState))fail('validation.state.discussionState');
+        if(global.DiscussionWorkbench&&typeof global.DiscussionWorkbench.validateStore==='function'&&!global.DiscussionWorkbench.validateStore(stock.discussionState).ok)fail('validation.state.discussionStateStore');
+      }
       if(isExemptIdentityRow(stock))return;
       const symbol=canonicalSymbol(stock);
       if(!symbol)return;

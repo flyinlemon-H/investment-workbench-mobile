@@ -2053,6 +2053,7 @@ function normalizeStockAnalysis(stock,context={}){
   updateTechnicalDataFromPriceHistory(stock);
   stock.technicalReview=normalizeTechnicalReview(stock.technicalReview,stock);
   stock.technicalData=technicalDataFromReview(stock.technicalReview,stock);
+  if(typeof DiscussionWorkbench!=='undefined'&&typeof DiscussionWorkbench.normalizeStore==='function')stock.discussionState=DiscussionWorkbench.normalizeStore(stock.discussionState);
   stock.riskManagement=normalizeRiskManagement(stock.riskManagement);
   stock.riskManagement=calculateRiskManagement(stock);
   stock.etfAnalysis=normalizeEtfAnalysis(stock.etfAnalysis,stock);

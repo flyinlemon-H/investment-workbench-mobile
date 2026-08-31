@@ -155,7 +155,7 @@ test('mobile detail tabs remain a 4 by 2 grid without horizontal scrolling',()=>
   const html=read('index.html');
   assert.match(html,/@media\(max-width:768px\)\{\.workspace-tablist\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(html,/\.workspace-tablist\{[^}]*overflow:visible/);
-  const labels=['AI讨论','计划','操作记录','技术面','新闻催化','基本面','估值/配置','长期逻辑'];
+  const labels=['讨论','计划','操作记录','技术面','新闻催化','基本面','估值/配置','长期逻辑'];
   const source=read('src/ui-render.js');
   labels.forEach(label=>assert.match(source,new RegExp(`label:'${label}'`)));
 });

@@ -14,7 +14,7 @@ test('INT-01/02 preserves the eight-tab detail workspace and session preference 
   const source=read('src/ui-render.js');
   assert.match(source,/DETAIL_WORKSPACE_TABS=Object\.freeze\(\['ai','plan','operation','technical','news','fundamental','valuation','longterm'\]\)/);
   assert.match(source,/DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1'/);
-  for(const label of ['AI讨论','计划','操作记录','技术面','新闻催化','基本面','估值\/配置','长期逻辑']){
+  for(const label of ['讨论','计划','操作记录','技术面','新闻催化','基本面','估值\/配置','长期逻辑']){
     assert.match(source,new RegExp(`label:'${label}'`));
   }
   assert.match(source,/loadDetailWorkspacePreference/);
