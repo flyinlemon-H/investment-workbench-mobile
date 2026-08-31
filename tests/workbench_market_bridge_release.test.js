@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Mobile Clipboard Reliability cache-busts the bridge and Workbench modules',()=>{
+test('Single Stock Discussion Workbench V1 cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='mobile-clipboard-reliability-20260828';
+  const version='single-stock-discussion-workbench-v1-20260831';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
@@ -120,6 +120,8 @@ test('Mobile Clipboard Reliability cache-busts the bridge and Workbench modules'
     'src/plan-update-draft.js',
     'src/rebalance.js',
     'src/clipboard.js',
+    'src/discussion-workbench.js',
+    'src/discussion-state-contract.js',
     'src/ui-render.js',
     'src/batch-technical-review.js',
     'src/multi-stock-analysis.js',

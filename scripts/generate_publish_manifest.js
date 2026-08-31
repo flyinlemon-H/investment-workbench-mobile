@@ -16,8 +16,8 @@ roleByPath.set('src/multi-stock-analysis.js','M05C_1 Real Trial Fix 1 two-module
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
-roleByPath.set('src/state.js','Batch Plan Review state normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','Batch Plan Review entry point plus existing mobile Workbench rendering runtime');
+roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
+roleByPath.set('src/ui-render.js','Single Stock Discussion Workbench mobile continuity, preview, and history UI');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
 roleByPath.set('src/decision-compression-context.js','Decision Compression compact context with program-owned blocker facts and audit references');
@@ -28,6 +28,8 @@ roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/p
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
+roleByPath.set('src/discussion-workbench.js','Single Stock Discussion State schema, anchors, incremental context, and prompt runtime');
+roleByPath.set('src/discussion-state-contract.js','Single Stock Discussion strict archive contract and protected atomic save runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
 roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
@@ -50,7 +52,9 @@ const paths=[...new Set([
   'src/plan-v2.js',
   'src/plan-review.js',
   'src/plan-review-ui.js',
-  'src/clipboard.js'
+  'src/clipboard.js',
+  'src/discussion-workbench.js',
+  'src/discussion-state-contract.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -68,8 +72,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'mobile-clipboard-reliability-20260828',
-  dataMode:'verified shared mobile clipboard plumbing + program-owned Decision Compression scope and blocker facts + separate snapshots + user-confirmed Plan mutations + add-only mobile universe handoff + delivered daily market bridge + browser local persistence',
+  assetVersion:'single-stock-discussion-workbench-v1-20260831',
+  dataMode:'program-owned Single Stock Discussion anchors and references + AI judgment-only archive contract + user-confirmed Current State history + existing verified clipboard, Plan, Portfolio Review, Decision Compression, market bridge, and browser persistence',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
