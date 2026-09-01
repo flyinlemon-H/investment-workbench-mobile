@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "b3b077a8935cdf18726479095b2aa4a963ac8fcd",
-  "assetVersion": "shared-strict-ai-json-import-reliability-fix2-20260901",
-  "dataMode": "shared strict JSON structural quote recovery for U+201C, U+201D, and U+FF02 with Chinese content quote preservation and fail-closed ambiguity; Current State v2 schema and protected context, Plan, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
+  "sourceCommit": "ff724f696430ef5472de186c87a74c877f320985",
+  "assetVersion": "discussion-to-plan-v1-20260901",
+  "dataMode": "same-conversation Discussion-to-Plan V1 with confirmed Current State binding, exact Plan version and snapshot binding, strict shared JSON parsing, preview-before-write, explicit canonical Plan confirmation, and no automatic trading; PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 55166,
-      "sha256": "47bcd7a21a281f310b74cce444946d45d6fd918d24a21a6a16bfe68cf1a0bfe6"
+      "bytes": 55365,
+      "sha256": "6fcf199270827d6318a46215e0d055a476fa39e50ab21089d5a180accba44a6f"
     },
     {
       "path": "social_posts.json",
@@ -123,6 +123,12 @@
       "role": "Decision Compression AI emphasis-only contract and atomic snapshot runtime",
       "bytes": 19248,
       "sha256": "a316ed13b9d99921dcbe8ca9bd65798cba1ef8fc5aa628912b1238b7397c4389"
+    },
+    {
+      "path": "src/discussion-plan-workflow.js",
+      "role": "Discussion-to-Plan same-conversation prompt, strict draft validation, preview, binding, and confirmed canonical Plan mutation runtime",
+      "bytes": 27072,
+      "sha256": "1a2c500beb00d2f32854d3013679a3d0454ab09bac1d8b2b584fde25a96d9d24"
     },
     {
       "path": "src/discussion-state-contract.js",
@@ -319,8 +325,8 @@
     {
       "path": "src/ui-render.js",
       "role": "mobile-first Current State decision hierarchy, import preview, legacy fallback, and existing Workbench UI runtime",
-      "bytes": 648755,
-      "sha256": "3521a5f6665894ff5d744571054812934864266abf7dc0003a58193e3351dc77"
+      "bytes": 656621,
+      "sha256": "62ba604547f56a98fc534e63685e897e00c81313a3f547539866142e3f04e6df"
     },
     {
       "path": "src/universe-handoff.js",
