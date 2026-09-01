@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Shared Strict AI JSON Reliability Fix 3 cache-busts the bridge and Workbench modules',()=>{
+test('Standalone Plan Draft Session release cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='shared-strict-ai-json-import-reliability-fix3-20260901';
+  const version='standalone-plan-draft-session-20260902';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',

@@ -77,8 +77,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'shared-strict-ai-json-import-reliability-fix3-20260901',
-  dataMode:'shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery and hardened Current State v2 Archive Prompt; same-conversation Discussion-to-Plan V1, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
+  assetVersion:'standalone-plan-draft-session-20260902',
+  dataMode:'standalone Plan Draft Session bound to canonical Plan and holding facts with optional Current State and Discussion provenance; shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
