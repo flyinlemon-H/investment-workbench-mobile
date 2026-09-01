@@ -1,11 +1,14 @@
 (function(root,factory){
-  const api=factory(typeof module==='object'&&module.exports?require('./discussion-workbench.js'):root&&root.DiscussionWorkbench);
+  const workbench=typeof module==='object'&&module.exports?require('./discussion-workbench.js'):root&&root.DiscussionWorkbench;
+  const strictAiJson=typeof module==='object'&&module.exports?require('./strict-ai-json.js'):root&&root.StrictAiJson;
+  const api=factory(workbench,strictAiJson);
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DiscussionStateContract=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(Workbench){
+})(typeof globalThis!=='undefined'?globalThis:this,function(Workbench,StrictAiJson){
   'use strict';
 
   if(!Workbench)throw new Error('DiscussionWorkbench is required.');
+  if(!StrictAiJson||typeof StrictAiJson.parseStrictAiJson!=='function')throw new Error('StrictAiJson is required.');
   const RESULT_FIELDS=Object.freeze(['symbol','sourceDiscussionVersion','stage','summary','keyChanges','risks','watchPoints','planRelation','confidence']);
   const object=value=>value&&typeof value==='object'&&!Array.isArray(value)?value:{};
   const array=value=>Array.isArray(value)?value:[];
@@ -13,8 +16,8 @@
   const clone=value=>JSON.parse(JSON.stringify(value));
   function invalid(code,message,input=null){return {ok:false,previewReady:false,writes:0,code,message,input,currentState:null}}
   function parse(raw){
-    if(typeof raw!=='string'||!raw.trim())return {ok:false,error:'请输入 AI 返回的严格 JSON。'};
-    try{return {ok:true,value:JSON.parse(raw.trim()),input:raw.trim()}}catch(_error){return {ok:false,error:'JSON 解析失败；请删除 Markdown 围栏或额外说明后重试。'}}
+    const result=StrictAiJson.parseStrictAiJson(raw);
+    return result.ok?result:{ok:false,error:result.userMessage,input:result.input,reason:result.reason};
   }
   function validateJudgment(value,expected={}){
     const source=object(value),errors=[],keys=Object.keys(source),extra=keys.filter(key=>!RESULT_FIELDS.includes(key)),missing=RESULT_FIELDS.filter(key=>!Object.prototype.hasOwnProperty.call(source,key));
@@ -36,9 +39,9 @@
   function process(raw,options={}){
     const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
     const top=object(parsed.value),topKeys=Object.keys(top);
-    if(topKeys.length!==1||topKeys[0]!=='currentState')return invalid('schema_error','顶层只能包含 currentState。',parsed.input);
+    if(topKeys.length!==1||topKeys[0]!=='currentState')return invalid('schema_error',StrictAiJson.contractMessage('顶层只能包含 currentState。'),parsed.input);
     const validation=validateJudgment(top.currentState,{symbol:options.expectedSymbol,sourceDiscussionVersion:options.sourceDiscussionVersion});
-    if(!validation.ok)return invalid('validation_error',validation.errors.join('；'),parsed.input);
+    if(!validation.ok)return invalid('validation_error',StrictAiJson.contractMessage(validation.errors.join('；')),parsed.input);
     return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论已通过严格校验，尚未写入。',input:parsed.input,currentState:validation.judgment};
   }
   function findStock(state,symbol){const target=Workbench.canonical(symbol),stocks=array(state&&state.stocks),index=stocks.findIndex(stock=>Workbench.canonical(stock)===target);return {stocks,index,stock:index>=0?stocks[index]:null}}

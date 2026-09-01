@@ -250,7 +250,11 @@
     const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,example={currentState:{symbol,sourceDiscussionVersion,stage:'继续观察',summary:'用不超过800字概括本轮确认结论。',keyChanges:[],risks:[],watchPoints:[],planRelation:'说明结论与当前有效计划的关系。',confidence:'medium'}};
     const request=[
       '请把刚才的讨论整理为可归档结论。',
-      '只输出严格 JSON，不要 Markdown、代码围栏或额外解释。顶层只能有 currentState。',
+      '只输出一个严格 JSON 对象，顶层只能有 currentState。',
+      '不要 Markdown 代码围栏。',
+      '不要额外解释。',
+      'JSON 结构键和值必须使用英文半角双引号 "。',
+      '字符串正文可以正常使用中文标点和中文引号。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
       'currentState 只能包含 symbol、sourceDiscussionVersion、stage、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       'stage 是不换行的简短中文；三个数组最多各12项；confidence 只能为 high、medium、low。不要输出日期、技术锚点、哈希、引用、stateId 或任何程序字段。',

@@ -1,12 +1,14 @@
 (function(root,factory){
   const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
-  const api=factory(identity);
+  const strictAiJson=typeof module==='object'&&module.exports?require('./strict-ai-json.js'):root&&root.StrictAiJson;
+  const api=factory(identity,strictAiJson);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.BatchTechnicalReview=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,StrictAiJson){
   'use strict';
 
   if(!SymbolIdentity||typeof SymbolIdentity.canonicalSymbol!=='function')throw new Error('SymbolIdentity helper 不可用。');
+  if(!StrictAiJson||typeof StrictAiJson.parseStrictAiJson!=='function')throw new Error('StrictAiJson helper 不可用。');
   const canonicalSymbol=SymbolIdentity.canonicalSymbol;
 
   const STATUS=Object.freeze({
@@ -42,113 +44,10 @@
     return {batchStatus:'invalid',summary:emptySummary(),items:[],error:{code,reason,type},errorType:type,input};
   }
 
-  function stripWrappingMarkdownFence(raw){
-    const trimmed=String(raw??'').trim();
-    const match=trimmed.match(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i);
-    return match?{text:match[1].trim(),removed:true}:{text:trimmed,removed:false};
-  }
-
-  function nextNonWhitespace(text,start){
-    for(let index=start;index<text.length;index++)if(!/\s/.test(text[index]))return text[index];
-    return '';
-  }
-
-  function normalizeStructuralSmartQuotes(text){
-    const stack=[];
-    let rootState='value';
-    let mode='syntax';
-    let stringRole='';
-    let escaped=false;
-    let nestedSmartQuotes=0;
-    let output='';
-
-    const top=()=>stack[stack.length-1]||null;
-    const canStartKey=()=>{const current=top();return Boolean(current&&current.type==='object'&&current.state==='keyOrEnd')};
-    const canStartValue=()=>{const current=top();return current?((current.type==='object'&&current.state==='value')||(current.type==='array'&&current.state==='valueOrEnd')):rootState==='value'};
-    const markValue=()=>{const current=top();if(!current)rootState='end';else current.state='commaOrEnd'};
-    const finishString=()=>{
-      const current=top();
-      if(stringRole==='key'&&current&&current.type==='object')current.state='colon';
-      else markValue();
-      stringRole='';
-    };
-    const smartQuoteCanClose=(index)=>{
-      const next=nextNonWhitespace(text,index+1);
-      if(stringRole==='key')return next===':';
-      const current=top();
-      if(!current)return next==='';
-      return current.type==='object'?(next===','||next==='}'):(next===','||next===']');
-    };
-
-    for(let index=0;index<text.length;index++){
-      const char=text[index];
-      if(mode==='asciiString'){
-        output+=char;
-        if(escaped){escaped=false;continue}
-        if(char==='\\'){escaped=true;continue}
-        if(char==='"'){mode='syntax';finishString()}
-        continue;
-      }
-      if(mode==='smartString'){
-        if(escaped){output+=char;escaped=false;continue}
-        if(char==='\\'){output+=char;escaped=true;continue}
-        if(char==='“'){nestedSmartQuotes+=1;output+=char;continue}
-        if(char==='”'&&nestedSmartQuotes>0){nestedSmartQuotes-=1;output+=char;continue}
-        if(char==='”'&&smartQuoteCanClose(index)){
-          output+='"';mode='syntax';finishString();continue;
-        }
-        output+=char;
-        continue;
-      }
-      if(char==='"'){
-        stringRole=canStartKey()?'key':(canStartValue()?'value':'');
-        mode='asciiString';output+=char;continue;
-      }
-      if(char==='“'&&(canStartKey()||canStartValue())){
-        stringRole=canStartKey()?'key':'value';
-        mode='smartString';nestedSmartQuotes=0;output+='"';continue;
-      }
-      output+=char;
-      if(/\s/.test(char))continue;
-      const current=top();
-      if(char==='{'){
-        if(canStartValue())markValue();
-        stack.push({type:'object',state:'keyOrEnd'});
-      }else if(char==='['){
-        if(canStartValue())markValue();
-        stack.push({type:'array',state:'valueOrEnd'});
-      }else if(char==='}'||char===']'){
-        stack.pop();
-      }else if(char===':'&&current&&current.type==='object'&&current.state==='colon'){
-        current.state='value';
-      }else if(char===','&&current&&current.state==='commaOrEnd'){
-        current.state=current.type==='object'?'keyOrEnd':'valueOrEnd';
-      }else if(canStartValue()){
-        markValue();
-      }
-    }
-    return output;
-  }
-
   function parseAiBatchJsonInput(raw){
-    const cleaned=stripWrappingMarkdownFence(raw);
-    const input={fenceRemoved:cleaned.removed,smartQuotesDetected:/[“”]/.test(cleaned.text),smartQuoteRecoveryAttempted:false,smartQuotesRecovered:false,normalizations:cleaned.removed?['markdown_fence']:[]};
-    if(!cleaned.text)return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:'JSON 解析失败：输入为空。'}};
-    try{
-      return {ok:true,value:JSON.parse(cleaned.text),input,error:null};
-    }catch(firstError){
-      if(!input.smartQuotesDetected)return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:`JSON 解析失败：${firstError&&firstError.message?firstError.message:String(firstError)}`}};
-      input.smartQuoteRecoveryAttempted=true;
-      const recovered=normalizeStructuralSmartQuotes(cleaned.text);
-      try{
-        const value=JSON.parse(recovered);
-        input.smartQuotesRecovered=true;
-        input.normalizations.push('smart_quotes');
-        return {ok:true,value,input,error:null};
-      }catch(recoveryError){
-        return {ok:false,value:null,input,error:{code:'parse_error',type:ERROR_TYPES.PARSE,reason:`检测到非标准引号，自动修复失败。JSON 解析失败：${recoveryError&&recoveryError.message?recoveryError.message:String(recoveryError)}`}};
-      }
-    }
+    const result=StrictAiJson.parseStrictAiJson(raw);
+    if(result.ok)return result;
+    return {...result,error:{...result.error,type:ERROR_TYPES.PARSE}};
   }
 
   function stockSymbol(stock){
@@ -426,7 +325,7 @@
     };
   }
 
-  return {STATUS,ERROR_TYPES,TREND_STATUSES,RISK_FLAGS,CONFIDENCE_LEVELS,contract,V2_REVIEW_FIELDS,parseAiBatchJsonInput,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
+  return {STATUS,ERROR_TYPES,TREND_STATUSES,RISK_FLAGS,CONFIDENCE_LEVELS,contract,V2_REVIEW_FIELDS,preprocessStrictAiJson:StrictAiJson.preprocessStrictAiJson,parseAiBatchJsonInput,technicalReviewFromJudgment,process,renderResult,buildStockIndex,eligibleEntries,buildCandidate,commit,createCommitController,createWorkbenchCandidateSaver};
 });
 
 (function(root){

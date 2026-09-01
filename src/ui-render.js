@@ -6864,10 +6864,12 @@ function sentimentSearchPromptText(stock){
     '8. 不构成买卖指令。',
     `9. ${chineseOutputPromptRule()}`,
     '',
-    '请先给简短可读结论，最后输出可导入投资手册的 JSON：',
+    '只输出一个严格 JSON 对象。',
+    '不要 Markdown 代码围栏。',
+    '不要额外解释。',
+    'JSON 结构键和值必须使用英文半角双引号 "。',
+    '字符串正文可以正常使用中文标点和中文引号。',
     JSON.stringify(schema,null,2),
-    '',
-    'JSON 必须使用英文半角双引号，不要使用中文弯引号。'
   ].join('\n');
 }
 function longTermLogicPromptText(stock){
@@ -6919,7 +6921,11 @@ function longTermLogicPromptText(stock){
     '- nextReviewDate：下次复核日期',
     '- sourceSummary：资料来源摘要',
     '',
-    '只输出严格 JSON，不要 Markdown，不要解释文字。',
+    '只输出一个严格 JSON 对象。',
+    '不要 Markdown 代码围栏。',
+    '不要额外解释。',
+    'JSON 结构键和值必须使用英文半角双引号 "。',
+    '字符串正文可以正常使用中文标点和中文引号。',
     JSON.stringify(schema,null,2)
   ].join('\n');
 }
@@ -6963,7 +6969,7 @@ function recentCatalystPromptText(stock){
     '12. 如果无当天公告但近30天存在 AI服务器、GB300、AI ASIC、CPO、800G 等明确产业催化，应给 partial，而不是 none。',
     '13. 操作提示避免追涨，应使用条件化表达。',
     '14. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
-    '15. 只输出严格 JSON，不要 Markdown，不要解释文字。',
+    '15. 只输出一个严格 JSON 对象，不要 Markdown 代码围栏，不要额外解释。JSON 结构键和值必须使用英文半角双引号 "；字符串正文可以正常使用中文标点和中文引号。',
     JSON.stringify(schema,null,2)
   ].join('\n');
 }
@@ -6994,7 +7000,7 @@ function shortTermSentimentPromptText(stock){
     '4. 对成长股和主题股重点关注预期变化、板块热度和资金流；对资源股/宽基 ETF 不要过度解读社媒。',
     '5. 不确定时降低 confidence。',
     '6. 请使用中文输出自然语言字段；枚举字段可以使用英文固定值。',
-    '7. 只输出严格 JSON，不要 Markdown，不要解释文字。',
+    '7. 只输出一个严格 JSON 对象，不要 Markdown 代码围栏，不要额外解释。JSON 结构键和值必须使用英文半角双引号 "；字符串正文可以正常使用中文标点和中文引号。',
     JSON.stringify(schema,null,2)
   ].join('\n');
 }
@@ -7033,10 +7039,12 @@ function ensureSentimentImportModal(){
   el.className='modal-bg import-layer';
   el.id='sentimentImportModal';
   el.innerHTML=`<div class="modal"><h2 id="sentimentImportTitle">导入新闻 / 情绪 JSON</h2><div class="modal-sub" id="sentimentImportSub">支持 sentimentReview、shortTermSentiment、recentCatalyst、eventExplanation 或 informationCompleteness。导入后不会自动修改配置决策或当前操作建议。</div><div class="form-row"><label id="sentimentImportLabel">粘贴 JSON</label><textarea id="sentimentImportText" style="min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{\"recentCatalyst\":{\"todayCatalyst\":\"...\"},\"eventExplanation\":{\"canExplainTodayMove\":false}}'></textarea></div><div class="modal-actions"><button class="btn ghost" id="sentimentImportCancelBtn" type="button">取消</button><button class="btn" id="sentimentImportSaveBtn" type="button">导入</button></div></div>`;
+  const status=document.createElement('div');status.id='sentimentImportStatus';status.className='card-note import-json-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');el.querySelector('.modal-actions').before(status);
   document.body.appendChild(el);
   el.addEventListener('click',e=>{if(e.target.id==='sentimentImportModal')closeSentimentImportModal()});
   document.getElementById('sentimentImportCancelBtn').addEventListener('click',closeSentimentImportModal);
   document.getElementById('sentimentImportSaveBtn').addEventListener('click',importSentimentReviewJson);
+  document.getElementById('sentimentImportText').addEventListener('input',()=>{const currentStatus=document.getElementById('sentimentImportStatus'),button=document.getElementById('sentimentImportSaveBtn');if(currentStatus){currentStatus.textContent='';currentStatus.classList.remove('alert')}if(button)button.disabled=false});
   return el;
 }
 function sentimentImportModalCopy(kind='general'){
@@ -7084,6 +7092,9 @@ function openSentimentImportModal(kind='general'){
     text.value='';
     text.placeholder=copy.placeholder;
   }
+  const status=document.getElementById('sentimentImportStatus'),button=document.getElementById('sentimentImportSaveBtn');
+  if(status){status.textContent='';status.classList.remove('alert')}
+  if(button)button.disabled=false;
   modal.classList.add('show');
   setTimeout(()=>document.getElementById('sentimentImportText').focus(),50);
 }
@@ -7101,10 +7112,12 @@ function ensureLongTermLogicImportModal(){
   el.className='modal-bg import-layer';
   el.id='longTermLogicImportModal';
   el.innerHTML=`<div class="modal"><h2>导入长期逻辑 JSON</h2><div class="modal-sub">仅用于导入 longTermLogic。长期逻辑只回答“为什么长期持有”，不会修改新闻、情绪、基本面、配置决策或当前操作建议。</div><div class="form-row"><label>粘贴长期逻辑 JSON</label><textarea id="longTermLogicImportText" style="min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{\"longTermLogic\":{\"investmentThesis\":\"...\",\"industryDrivers\":[],\"companyDrivers\":[],\"portfolioDrivers\":[],\"longTermRisks\":[],\"logicStatus\":\"valid\",\"confidence\":\"medium\"}}'></textarea></div><div class="modal-actions"><button class="btn ghost" id="longTermLogicImportCancelBtn" type="button">取消</button><button class="btn" id="longTermLogicImportSaveBtn" type="button">导入长期逻辑</button></div></div>`;
+  const status=document.createElement('div');status.id='longTermLogicImportStatus';status.className='card-note import-json-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');el.querySelector('.modal-actions').before(status);
   document.body.appendChild(el);
   el.addEventListener('click',e=>{if(e.target.id==='longTermLogicImportModal')closeLongTermLogicImportModal()});
   document.getElementById('longTermLogicImportCancelBtn').addEventListener('click',closeLongTermLogicImportModal);
   document.getElementById('longTermLogicImportSaveBtn').addEventListener('click',importLongTermLogicJson);
+  document.getElementById('longTermLogicImportText').addEventListener('input',()=>{const currentStatus=document.getElementById('longTermLogicImportStatus'),button=document.getElementById('longTermLogicImportSaveBtn');if(currentStatus){currentStatus.textContent='';currentStatus.classList.remove('alert')}if(button)button.disabled=false});
   return el;
 }
 function openLongTermLogicImportModal(){
@@ -7112,6 +7125,9 @@ function openLongTermLogicImportModal(){
   if(!stock)return;
   const modal=ensureLongTermLogicImportModal();
   document.getElementById('longTermLogicImportText').value='';
+  const status=document.getElementById('longTermLogicImportStatus'),button=document.getElementById('longTermLogicImportSaveBtn');
+  if(status){status.textContent='';status.classList.remove('alert')}
+  if(button)button.disabled=false;
   modal.classList.add('show');
   setTimeout(()=>document.getElementById('longTermLogicImportText').focus(),50);
 }
@@ -7119,27 +7135,24 @@ function closeLongTermLogicImportModal(){
   const modal=document.getElementById('longTermLogicImportModal');
   if(modal)modal.classList.remove('show');
 }
-function jsonErrorLineColumn(text,position){
-  const source=String(text||'');
-  const pos=Number(position);
-  if(!isFinite(pos)||pos<0)return '';
-  const before=source.slice(0,pos);
-  const lines=before.split(/\r\n|\r|\n/);
-  return `位置 ${pos}（第 ${lines.length} 行，第 ${lines[lines.length-1].length+1} 列）`;
-}
-function parseJsonImportErrorMessage(err,source){
-  const message=err&&err.message?String(err.message):String(err||'未知错误');
-  const match=message.match(/position\s+(\d+)/i);
-  const loc=match?jsonErrorLineColumn(source,Number(match[1])):'';
-  return `JSON.parse 错误：${message}${loc?`；${loc}`:''}`;
-}
 function parseSentimentImportJson(text){
-  const normalized=normalizeJsonLikeText(stripJsonFence(text));
-  try{return JSON.parse(normalized)}catch(firstErr){
-    try{return extractFirstJsonObject(text)}catch(secondErr){
-      throw new Error(parseJsonImportErrorMessage(firstErr,normalized));
-    }
-  }
+  const parser=globalThis.StrictAiJson||(window&&window.StrictAiJson);
+  if(!parser||typeof parser.parseStrictAiJson!=='function'){const error=new Error('JSON 格式无法识别，请重新复制完整结果');error.importFailureType='parse';throw error}
+  const result=parser.parseStrictAiJson(text);
+  if(!result.ok){const error=new Error(result.userMessage);error.importFailureType='parse';error.parseReason=result.reason;throw error}
+  return result.value;
+}
+function strictImportMessage(error){
+  if(error&&error.importFailureType==='parse')return error.message;
+  const detail=error&&error.message?error.message:String(error||'字段校验失败');
+  const parser=globalThis.StrictAiJson||(window&&window.StrictAiJson);
+  return parser&&typeof parser.contractMessage==='function'?parser.contractMessage(detail):`JSON 已解析，但字段不符合导入要求：${detail}`;
+}
+function showStrictImportFailure(options,message){
+  const onlyLongTerm=Boolean(options&&options.onlyLongTerm),doc=typeof document==='object'?document:null,status=doc&&doc.getElementById(onlyLongTerm?'longTermLogicImportStatus':'sentimentImportStatus'),button=doc&&doc.getElementById(onlyLongTerm?'longTermLogicImportSaveBtn':'sentimentImportSaveBtn');
+  if(status){status.textContent=message;status.classList.add('alert')}
+  if(button)button.disabled=true;
+  if(!status)alert('导入失败：'+message);
 }
 function validateRecentCatalystImportPayload(parsed){
   const data=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:null;
@@ -7152,6 +7165,7 @@ function validateRecentCatalystImportPayload(parsed){
   assertObject('sentimentReview',data.sentimentReview);
   assertObject('eventExplanation',data.eventExplanation);
   assertObject('informationCompleteness',data.informationCompleteness);
+  assertObject('longTermLogic',data.longTermLogic);
   const rc=data.recentCatalyst||data;
   if(rc.recentEvents!==undefined){
     if(!Array.isArray(rc.recentEvents))throw new Error('字段校验错误：recentCatalyst.recentEvents 必须是数组。');
@@ -7178,9 +7192,16 @@ async function importSentimentPayloadFromText(text,options={}){
     dataFreshness:JSON.parse(JSON.stringify(stock.dataFreshness||{}))
   };
   let parsed;
-  try{parsed=parseSentimentImportJson(text);validateRecentCatalystImportPayload(parsed)}catch(e){alert('导入失败：'+(e&&e.message?e.message:String(e)));return}
   try{
-    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('JSON 必须是对象。');
+    parsed=parseSentimentImportJson(text);validateRecentCatalystImportPayload(parsed);
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('JSON 根对象必须是对象。');
+    const longTermPayload=parsed.longTermLogic&&typeof parsed.longTermLogic==='object'&&!Array.isArray(parsed.longTermLogic)?parsed.longTermLogic:parsed;
+    const recognizedLongTerm=['logicStatus','investmentThesis','fundamentalSupport','coreDrivers','industryDrivers','companyDrivers','portfolioDrivers','longTermRisks','sourceSummary','validUntil','nextReviewDate'].some(key=>Object.prototype.hasOwnProperty.call(longTermPayload,key));
+    const recognizedAny=Boolean(recognizedLongTerm||parsed.recentCatalyst||parsed.shortTermSentiment||parsed.sentimentReview||parsed.eventExplanation||parsed.informationCompleteness||parsed.analysisDate||parsed.todayCatalyst||parsed.weeklyCatalysts||parsed.monthlyCatalysts||parsed.recentEvents||parsed.marketMood||parsed.marketSentiment||parsed.sentiment||parsed.fundFlowView||parsed.fundFlow||parsed.fundFlowSummary||parsed.capitalFlow||parsed.moneyFlowView||parsed.sectorHeat||parsed.sectorMomentum||parsed.sectorHotness||parsed.themeHeat||parsed.industryHeat||parsed.institutionalView||parsed.institutionalOpinion||parsed.institutionalViews||parsed.brokerView||parsed.analystView||parsed.conclusion||parsed.newsSummary||parsed.positivePoints||parsed.missingItems||parsed.overall||parsed.catalyst||parsed.fundamentals);
+    if(options.onlyLongTerm&&!recognizedLongTerm)throw new Error('未识别 longTermLogic。请粘贴包含 longTermLogic 的 JSON，或直接粘贴长期逻辑对象。');
+    if(!recognizedAny)throw new Error('未识别到可导入字段。');
+  }catch(e){showStrictImportFailure(options,strictImportMessage(e));return}
+  try{
     let changed=false;
     const looksLikeLongTerm=Boolean(parsed.longTermLogic||parsed.logicStatus||parsed.investmentThesis||parsed.fundamentalSupport||parsed.coreDrivers||parsed.industryDrivers||parsed.companyDrivers||parsed.portfolioDrivers||parsed.longTermRisks);
     const looksLikeRecentCatalyst=Boolean(parsed.recentCatalyst||parsed.analysisDate||parsed.todayCatalyst||parsed.weeklyCatalysts||parsed.monthlyCatalysts||parsed.recentEvents||parsed.latestSourceDate||parsed.freshnessStatus||parsed.catalystCoverage);
@@ -7222,8 +7243,7 @@ async function importSentimentPayloadFromText(text,options={}){
       stock.informationCompleteness=normalizeInformationCompleteness(parsed.informationCompleteness||(looksLikeInformationCompleteness?parsed:{}),stock);
       changed=true;
     }
-    if(options.onlyLongTerm&&!looksLikeLongTerm)throw new Error('未识别 longTermLogic。请粘贴包含 longTermLogic 的 JSON，或直接粘贴长期逻辑对象。');
-    if(!changed)throw new Error('未识别到可导入字段。情绪资金 JSON 请包含 shortTermSentiment，或包含 marketMood / marketSentiment / fundFlowView / fundFlow / sectorHeat / institutionalView 等字段。');
+    if(!changed)throw new Error('未识别到可导入字段。');
     normalizeStockAnalysis(stock);
     markV13DecisionReviewDirty(stock.id,options.onlyLongTerm?'longTermLogic':'recentCatalyst');
     await saveState(state,{critical:true});

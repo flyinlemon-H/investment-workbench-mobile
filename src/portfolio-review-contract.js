@@ -1,10 +1,10 @@
 (function portfolioReviewContractModule(root,factory){
   const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
-  const batch=typeof module==='object'&&module.exports?require('./batch-technical-review.js'):root&&root.BatchTechnicalReview;
-  const api=factory(identity,batch);
+  const strictAiJson=typeof module==='object'&&module.exports?require('./strict-ai-json.js'):root&&root.StrictAiJson;
+  const api=factory(identity,strictAiJson);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.PortfolioReviewContract=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,BatchTechnicalReview){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,StrictAiJson){
   'use strict';
   const PORTFOLIO_RISK_LEVELS=Object.freeze(['low','moderate','high','unclear']);
   const PRIORITY_LEVELS=Object.freeze(['high','medium','low']);
@@ -70,8 +70,8 @@
     return {ok:true,code:'valid',message:'组合复核结果校验通过。',input:null,value:{portfolioReview:clone(review)},review:clone(review)};
   }
   function process(raw,options={}){
-    if(!BatchTechnicalReview||typeof BatchTechnicalReview.parseAiBatchJsonInput!=='function')return fail('parser_unavailable','安全 JSON 解析器不可用。');
-    const parsed=BatchTechnicalReview.parseAiBatchJsonInput(raw);if(!parsed.ok)return fail('parse_error',parsed.error.reason,parsed.input);
+    if(!StrictAiJson||typeof StrictAiJson.parseStrictAiJson!=='function')return fail('parser_unavailable','安全 JSON 解析器不可用。');
+    const parsed=StrictAiJson.parseStrictAiJson(raw);if(!parsed.ok)return fail('parse_error',parsed.userMessage,parsed.input);
     const result=validate(parsed.value,options);result.input=parsed.input;return result;
   }
   function buildSnapshot(result,options={}){

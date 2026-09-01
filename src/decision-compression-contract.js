@@ -1,15 +1,15 @@
 (function decisionCompressionContractModule(root,factory){
   const identity=typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity;
   const planV2=typeof module==='object'&&module.exports?require('./plan-v2.js'):root&&root.PlanV2;
-  const batch=typeof module==='object'&&module.exports?require('./batch-technical-review.js'):root&&root.BatchTechnicalReview;
+  const strictAiJson=typeof module==='object'&&module.exports?require('./strict-ai-json.js'):root&&root.StrictAiJson;
   const contextBuilder=typeof module==='object'&&module.exports?require('./decision-compression-context.js'):root&&root.DecisionCompressionContext;
-  const api=factory(identity,planV2,batch,contextBuilder);
+  const api=factory(identity,planV2,strictAiJson,contextBuilder);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.DecisionCompressionContract=Object.freeze(api);
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,PlanV2,BatchTechnicalReview,DecisionCompressionContext){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,PlanV2,StrictAiJson,DecisionCompressionContext){
   'use strict';
 
-  if(!SymbolIdentity||!PlanV2||!BatchTechnicalReview||!DecisionCompressionContext)throw new Error('Decision Compression contract dependencies are unavailable.');
+  if(!SymbolIdentity||!PlanV2||!StrictAiJson||!DecisionCompressionContext)throw new Error('Decision Compression contract dependencies are unavailable.');
   const SNAPSHOT_SCHEMA_VERSION='decision-compression.snapshot.v1';
   const STORE_SCHEMA_VERSION='decision-compression.store.v1';
   const PRIORITIES=Object.freeze(['high','medium','low']);
@@ -88,7 +88,7 @@
     const missing=expected.filter(symbol=>!seen.has(symbol));if(missing.length)return invalid('missing_symbol',`以下所选股票未被覆盖：${missing.join('、')}。`);
     return {ok:true,previewReady:true,writes:0,code:'valid',message:'今日处理结果已通过严格校验，尚未写入。',input:null,value:{decisionCompression:clone(decision)},decision:clone(decision)};
   }
-  function process(raw,options={}){const parsed=BatchTechnicalReview.parseAiBatchJsonInput(raw);if(!parsed.ok)return invalid('parse_error',parsed.error.reason,parsed.input);const result=validate(parsed.value,options);result.input=parsed.input;return result}
+  function process(raw,options={}){const parsed=StrictAiJson.parseStrictAiJson(raw);if(!parsed.ok)return invalid('parse_error',parsed.userMessage,parsed.input);const result=validate(parsed.value,options);result.input=parsed.input;return result}
   function auditHash(context){return `decisionctx_${PlanV2.hash({reviewDate:context.reviewDate,auditReferences:context.auditReferences,stocks:context.stocks.map(stock=>({symbol:stock.symbol,holding:stock.holding,plans:stock.plans,allocationConflict:stock.allocationConflict,technical:stock.technical,keyLimitations:stock.keyLimitations}))})}`}
   function buildSnapshot(result,context,options={}){if(!result||!result.ok||!result.previewReady)throw new Error('只有校验通过的今日处理结果可以创建快照。');if(!context||context.schemaVersion!==DecisionCompressionContext.SCHEMA_VERSION)throw new Error('决策压缩上下文无效。');const savedAt=text(options.savedAt)||new Date().toISOString(),snapshotId=`decision_${PlanV2.hash(`${savedAt}|${auditHash(context)}|${PlanV2.stable(result.decision)}`)}`;return {snapshotId,schemaVersion:SNAPSHOT_SCHEMA_VERSION,reviewDate:result.decision.reviewDate,generatedAt:context.generatedAt,savedAt,selectedSymbols:context.portfolio.selectedSymbols.slice(),contextHash:auditHash(context),auditReferences:clone(context.auditReferences),decision:clone(result.decision)}}
   function validateSnapshot(snapshot){const source=object(snapshot)?snapshot:{},errors=[];if(source.schemaVersion!==SNAPSHOT_SCHEMA_VERSION)errors.push('Decision Compression snapshot schema invalid');if(!text(source.snapshotId)||!/^\d{4}-\d{2}-\d{2}$/.test(text(source.reviewDate))||!text(source.savedAt)||!Array.isArray(source.selectedSymbols)||!text(source.contextHash)||!object(source.auditReferences)||!object(source.decision))errors.push('Decision Compression snapshot shape invalid');return {ok:errors.length===0,errors}}

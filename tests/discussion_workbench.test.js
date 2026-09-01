@@ -137,7 +137,7 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
-  assert.ok(archive.request.length<2500);assert.match(archive.request,/只输出严格 JSON/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
+  assert.ok(archive.request.length<2500);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
   assert.doesNotMatch(archive.request,/priceHistory|完整日线|technicalSnapshot/);
 });
 

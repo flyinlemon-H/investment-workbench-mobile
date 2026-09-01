@@ -38,6 +38,7 @@ test('390px layout keeps 4x2 tabs, 2x2 primary actions and touch-size controls',
   assert.match(html,/\.discussion-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(html,/button,.btn,.btn\.small[\s\S]*?min-height:44px/);
   assert.match(fixture,/max-width:390px/);assert.match(fixture,/min-height:844px/);assert.match(fixture,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);assert.match(fixture,/min-height:44px/);
+  assert.match(ui,/discussionImportConfirmBtn[^\n]+disabled/);assert.match(ui,/confirmButton\.disabled=true/);assert.match(ui,/import-json-status/);assert.doesNotMatch(ui,/JSON\.parse 错误|Unrecognized token|Unable to parse JSON string/);
 });
 
 test('isolated acceptance fixture contains prior conclusion, anchor, four new bars, preview and history',()=>{
