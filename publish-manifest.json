@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "93179632775cbcb22645a687bf9f168f8ffccc35",
-  "assetVersion": "shared-strict-ai-json-import-reliability-fix1-20260901",
-  "dataMode": "shared strict presentation-only AI JSON preprocessing + standard JSON.parse authority + contract validation before mutation across Discussion, Long-Term, News/Sentiment, Batch Technical, Plan, Portfolio Review, and Decision Compression; existing verified clipboard, market bridge, and browser persistence preserved",
+  "sourceCommit": "3ddb97d7b0af949c90512bfb55ae4fe94cb96c43",
+  "assetVersion": "mobile-discussion-ux-cleanup-20260901",
+  "dataMode": "Chinese-first mobile Discussion workflow with protected direct archive/import context preparation + Tools-only storage maintenance and concise abnormal warning; Discussion schema, strict AI JSON contracts, Plan, holdings, allocation, long-term logic, market bridge, clipboard, and browser persistence preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 50151,
-      "sha256": "de83a4e9dd4d6811f80ec0e0cd4774b9d35d55899b355532c3b28a21d26f7230"
+      "bytes": 50529,
+      "sha256": "396b0cbe019631e5794fcaea3bf9e48c04d709ed3276d0f358848cdbae275c06"
     },
     {
       "path": "social_posts.json",
@@ -96,9 +96,9 @@
     },
     {
       "path": "src/app.js",
-      "role": "browser runtime dependency",
-      "bytes": 31030,
-      "sha256": "49f21672509e7e7ec0ab132e94db9e8297ce6c812446fbe563613cf82bfa6ce6"
+      "role": "browser bootstrap, storage recovery, and Tools-only storage maintenance runtime",
+      "bytes": 32482,
+      "sha256": "3bb66759c2564da00ded328575829cf5a98e2ef755e173afde2c56dac5daed41"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -127,20 +127,20 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Discussion shared strict JSON archive contract and protected atomic save runtime",
-      "bytes": 9456,
-      "sha256": "610471c4994cc039d1792b161c767cab0b911d7eb2e6e36cbb756ffff493d230"
+      "bytes": 9450,
+      "sha256": "7bcdead00109f2ee93250c9700d6d7123ea4f95246289ffe8edce2ad346caed9"
     },
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Discussion State schema, anchors, incremental context, and prompt runtime",
-      "bytes": 29724,
-      "sha256": "eb9e194e94367d526c92c4053514ad99787f436365b1b02ac4a49199ba6432f0"
+      "bytes": 29720,
+      "sha256": "fcb3cb487026490c11b499441cd2297285c43ce543dd696496e4ac4d7fe24524"
     },
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7283,
-      "sha256": "e79376f3761bb94b8bd090d451edce9f7c9755a02072f08c07272c5703ba8c0d"
+      "bytes": 7265,
+      "sha256": "90179cbec423c2e16639ddc52256e05edfade03fb0b5df1d24bf8d61b5d3adfa"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -318,9 +318,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "shared strict AI JSON import status, Long-Term, News/Sentiment, and Workbench UI runtime",
-      "bytes": 638715,
-      "sha256": "74ca155b9527f7c604cb3b8afa5d92cecf233691404f28cc2f070bada924637d"
+      "role": "mobile Discussion workflow, Chinese state presentation, Tools maintenance, and existing Workbench UI runtime",
+      "bytes": 640412,
+      "sha256": "9d87f0db979f5629a9a0ab4065b3bc5e5360e281e47b4711055ac5de1b69a006"
     },
     {
       "path": "src/universe-handoff.js",
