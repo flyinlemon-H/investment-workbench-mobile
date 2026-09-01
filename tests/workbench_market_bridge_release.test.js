@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Discussion Prompt Modal UX Repair cache-busts the bridge and Workbench modules',()=>{
+test('Current State Decision Layer cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='discussion-prompt-modal-ux-repair-20260901';
+  const version='current-state-decision-layer-20260901';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
