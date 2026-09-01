@@ -22,6 +22,7 @@ const smartStructure=value=>{
     return char;
   }).join('');
 };
+const fullwidthStructure=value=>JSON.stringify(value).replace(/"/g,'＂');
 
 test('valid strict JSON is accepted unchanged before any presentation repair',()=>{
   const raw='  {"sourceSummary":"按“行业长期逻辑—公司专属护城河—组合角色价值”三层结构整理"}\n';
@@ -47,11 +48,50 @@ test('structural smart quotes recover while nested Chinese content quotes remain
   assert.deepEqual(result.repairs,[Strict.REPAIRS.STRUCTURAL_SMART_QUOTES]);
 });
 
+test('required structural quote delimiters parse across compact objects and arrays',()=>{
+  const standard='{"currentState":{"symbol":"2899.HK","summary":"测试"}}',standardResult=Strict.parseStrictAiJson(standard);
+  assert.equal(standardResult.ok,true);assert.equal(standardResult.normalizedText,standard);assert.deepEqual(standardResult.repairs,[]);
+  const curly=Strict.parseStrictAiJson('{“currentState”:{“symbol”:“2899.HK”,“summary”:“测试”,“risks”:[“风险一”,“风险二”]}}');
+  assert.equal(curly.ok,true);assert.equal(curly.value.currentState.summary,'测试');assert.deepEqual(curly.value.currentState.risks,['风险一','风险二']);
+  const fullwidth=Strict.parseStrictAiJson('{＂currentState＂:{＂symbol＂:＂2899.HK＂}}');
+  assert.equal(fullwidth.ok,true);assert.equal(fullwidth.value.currentState.symbol,'2899.HK');assert.equal(fullwidth.input.repairedStructuralQuotes,6);assert.deepEqual(fullwidth.input.quoteTypesEncountered,['U+FF02']);
+  assert.equal(fullwidth.diagnostics.originalParseFailed,true);assert.match(fullwidth.diagnostics.originalParseError,/JSON/);assert.equal(fullwidth.diagnostics.normalizedParseError,null);assert.equal(fullwidth.diagnostics.repairClassification,'structural_quotes_repaired');assert.equal(fullwidth.diagnostics.firstSuspiciousQuote.codePoint,'U+FF02');assert.equal(fullwidth.diagnostics.repairAttemptCount,1);assert.equal(fullwidth.diagnostics.structuralQuoteRepairCounts['U+FF02'],6);
+  const standardArray='{"risks":["风险一","风险二"]}',standardArrayResult=Strict.parseStrictAiJson(standardArray);
+  assert.equal(standardArrayResult.ok,true);assert.equal(standardArrayResult.normalizedText,standardArray);assert.deepEqual(standardArrayResult.repairs,[]);
+});
+
+test('valid content quotation and escape forms preserve exact values',()=>{
+  const standard='{"summary":"当前进入“高位回撤”观察窗口。"}',standardResult=Strict.parseStrictAiJson(standard);
+  assert.equal(standardResult.ok,true);assert.equal(standardResult.normalizedText,standard);assert.equal(standardResult.value.summary,'当前进入“高位回撤”观察窗口。');assert.deepEqual(standardResult.repairs,[]);
+  const single=Strict.parseStrictAiJson('{“summary”:“当前进入‘高位回撤’观察窗口。”}');
+  assert.equal(single.ok,true);assert.equal(single.value.summary,'当前进入‘高位回撤’观察窗口。');
+  const double=Strict.parseStrictAiJson('{“summary”:“当前进入“高位回撤”观察窗口。”}');
+  assert.equal(double.ok,true);assert.equal(double.value.summary,'当前进入“高位回撤”观察窗口。');
+  const escaped='{"summary":"他说：\\"继续观察\\""}',escapedResult=Strict.parseStrictAiJson(escaped);
+  assert.equal(escapedResult.ok,true);assert.equal(escapedResult.normalizedText,escaped);assert.equal(escapedResult.value.summary,'他说："继续观察"');
+});
+
+test('complete Current State v2 reaches existing schema validation after fullwidth structural repair',()=>{
+  const sourceDiscussionVersion='discussion_v2_9a35cb46';
+  const payload={currentState:{symbol:'2899.HK',sourceDiscussionVersion,actionAssessment:{category:'hold_watch',priority:'medium',headline:'中期趋势未确认破坏，短线弱势需要重点观察。',reasons:['日线仍在中期结构内，但短线修复尚未确认。'],upgradeConditions:['放量收复近期压力位。'],downgradeConditions:['跌破中期结构支撑且无法快速收回。']},attentionLevel:'focused',trendAssessment:{overall:'uptrend',timeframes:[{timeframe:'日线',status:'recovery',explanation:'短线仍处于“弱势修复”阶段。'},{timeframe:'周线',status:'uptrend',explanation:'中期上升趋势暂未确认破坏。'}]},structureAssessment:[{timeframe:'日线',type:'pullback',status:'forming',source:'ai_chart_judgment',sourceAsOf:'2026-08-31',shortReason:'回撤结构仍在形成，需要等待量价确认。'}],stage:'中期上升中的短线回撤',focusPoints:['关注“量价确认”与压力位收复。'],summary:'紫金矿业中期上升趋势暂未确认破坏，但短线弱势已经进一步确认。',keyChanges:['短线修复强度较上次讨论减弱。'],risks:['若中期支撑失守，回撤可能演变为趋势破坏。'],watchPoints:['观察日线压力位与成交量变化。'],planRelation:{status:'aligned',summary:'与现有观察计划方向一致，价格触发不代表完整条件满足。'},confidence:'medium'}};
+  const parsed=Strict.parseStrictAiJson(fullwidthStructure(payload));
+  assert.equal(parsed.ok,true);assert.equal(parsed.value.currentState.summary,payload.currentState.summary);assert.ok(parsed.input.repairedStructuralQuotes>40);
+  const result=Discussion.process(fullwidthStructure(payload),{expectedSymbol:'2899.HK',sourceDiscussionVersion,holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false});
+  assert.equal(result.ok,true,result.message);assert.equal(result.previewReady,true);assert.equal(result.writes,0);assert.equal(result.currentState.trendAssessment.timeframes.length,2);assert.equal(result.currentState.structureAssessment[0].source,'ai_chart_judgment');
+  const stale=Discussion.process(fullwidthStructure(payload),{expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_stale',holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false});
+  assert.equal(stale.ok,false);assert.equal(stale.code,'validation_error');assert.match(stale.message,/结论来源版本已过期或不一致/);
+});
+
 test('fenced structural smart quotes recover and ambiguous content quotes fail closed',()=>{
   const recovered=Strict.parseStrictAiJson('```json\n{“x”:“正文“引用”结束”}\n```');
   assert.equal(recovered.ok,true);assert.deepEqual(recovered.repairs,[Strict.REPAIRS.MARKDOWN_FENCE,Strict.REPAIRS.STRUCTURAL_SMART_QUOTES]);assert.equal(recovered.value.x,'正文“引用”结束');
   const ambiguous=Strict.parseStrictAiJson('{“x”:“正文“引用未闭合”}');
-  assert.equal(ambiguous.ok,false);assert.equal(ambiguous.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguous.userMessage,'检测到非标准 JSON 引号，自动修复失败');
+  assert.equal(ambiguous.ok,false);assert.equal(ambiguous.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguous.userMessage,'检测到非标准 JSON 引号，已尝试自动修复，但内容仍不是可解析的完整 JSON。 首个异常字符：“');
+  assert.equal(ambiguous.diagnostics.repairClassification,'ambiguous_structural_quotes');assert.equal(ambiguous.diagnostics.firstSuspiciousQuote.codePoint,'U+201C');assert.equal(ambiguous.diagnostics.firstSuspiciousQuote.index,1);assert.match(ambiguous.diagnostics.firstSuspiciousQuote.context,/“x”/);
+  const malformed=Strict.parseStrictAiJson('{＂x＂:[1,]}');
+  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.diagnostics.repairClassification,'structural_quote_repair_parse_failed');assert.match(malformed.diagnostics.normalizedParseError,/JSON/);assert.equal(malformed.diagnostics.repairedStructuralQuotes,2);assert.match(malformed.userMessage,/已尝试自动修复/);
+  const ambiguousFullwidth=Strict.parseStrictAiJson('{＂x＂:＂a＂ ＂y＂:＂b＂}');
+  assert.equal(ambiguousFullwidth.ok,false);assert.equal(ambiguousFullwidth.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguousFullwidth.diagnostics.repairClassification,'ambiguous_structural_quotes');
 });
 
 test('only document-boundary BOM and zero-width artifacts are removed',()=>{
@@ -63,6 +103,7 @@ test('only document-boundary BOM and zero-width artifacts are removed',()=>{
 test('malformed and truncated JSON are classified without inventing syntax',()=>{
   const cases=[
     ['{"x":',Strict.REASONS.TRUNCATED],['{"x":"unterminated',Strict.REASONS.TRUNCATED],['{"x":[1,2',Strict.REASONS.TRUNCATED],
+    ['{"x":1 "y":2}',Strict.REASONS.MALFORMED],
     ['{"x":"bad\\q"}',Strict.REASONS.MALFORMED],['{"x":[1,}',Strict.REASONS.MALFORMED],['{"x":1,}',Strict.REASONS.MALFORMED]
   ];
   for(const [raw,reason] of cases){const result=Strict.parseStrictAiJson(raw);assert.equal(result.ok,false,raw);assert.equal(result.reason,reason,raw)}
