@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "3ddb97d7b0af949c90512bfb55ae4fe94cb96c43",
-  "assetVersion": "mobile-discussion-ux-cleanup-20260901",
-  "dataMode": "Chinese-first mobile Discussion workflow with protected direct archive/import context preparation + Tools-only storage maintenance and concise abnormal warning; Discussion schema, strict AI JSON contracts, Plan, holdings, allocation, long-term logic, market bridge, clipboard, and browser persistence preserved",
+  "sourceCommit": "9043d10651cf3aaac005bf38723dfabc58cf787b",
+  "assetVersion": "discussion-prompt-modal-ux-repair-20260901",
+  "dataMode": "focused modal-first Discussion and Archive Prompt presentation with compact summaries, in-modal verified copy feedback, selectable failure fallback, and hidden duplicate inline Prompt UI; Discussion context/version semantics, strict AI JSON contracts, Plan, holdings, allocation, long-term logic, market bridge, shared clipboard runtime, and browser persistence preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 50529,
-      "sha256": "396b0cbe019631e5794fcaea3bf9e48c04d709ed3276d0f358848cdbae275c06"
+      "bytes": 52360,
+      "sha256": "91032a4bc4fa2a698699778ce687d814c3eaf5debbcd34b7027961b8af2766e3"
     },
     {
       "path": "social_posts.json",
@@ -139,8 +139,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7265,
-      "sha256": "90179cbec423c2e16639ddc52256e05edfade03fb0b5df1d24bf8d61b5d3adfa"
+      "bytes": 7270,
+      "sha256": "36d39c740218681287a87479dadac3d1d4cd7e887a936772b2ba325d9a9b4451"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -318,9 +318,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "mobile Discussion workflow, Chinese state presentation, Tools maintenance, and existing Workbench UI runtime",
-      "bytes": 640412,
-      "sha256": "9d87f0db979f5629a9a0ab4065b3bc5e5360e281e47b4711055ac5de1b69a006"
+      "role": "focused Discussion and Archive Prompt modal workflow, Chinese state presentation, Tools maintenance, and existing Workbench UI runtime",
+      "bytes": 644831,
+      "sha256": "81a901d0b016e25491397e6b7ffffd00901b2c15bcb50a18a9b2a47f428d28b3"
     },
     {
       "path": "src/universe-handoff.js",
