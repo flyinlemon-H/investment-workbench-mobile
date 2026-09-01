@@ -67,9 +67,61 @@ test('storage safety controls and recovery capabilities remain wired',()=>{
   assert.match(app,/recoverUsingLegacy/);assert.match(app,/从最新 JSON 备份恢复/);assert.match(app,/Semantic checksum/);
 });
 
-test('prepared prompt remains selectable and shared clipboard helper is reused',()=>{
-  assert.match(ui,/id="discussionPreparedPrompt" readonly/);assert.match(ui,/copyText\(payload\.request/);assert.match(ui,/sourceElement:document\.getElementById\('discussionPreparedPrompt'\)/);
+test('prepared prompt remains selectable in the focused modal and shared clipboard helper is reused',()=>{
+  assert.match(ui,/id="discussionPreparedPrompt" readonly/);assert.match(ui,/copyText\(payload\.request/);assert.match(ui,/selectableElement:field,detailsElement:details,manualCopy:false,notify:false/);
   assert.doesNotMatch(ui,/function copyDiscussionPrepared[\s\S]{0,900}navigator\.clipboard/);
+});
+
+test('开始讨论 prepares the current request and opens its modal immediately without rendering or scrolling the page',()=>{
+  const action=ui.slice(ui.indexOf('function startStockDiscussion'),ui.indexOf('function prepareDiscussionArchive'));
+  assert.match(action,/buildDiscussionRequest\(stock,discussionOptions\(\)\)/);assert.match(action,/discussionPreparedContexts\.set/);assert.match(action,/openDiscussionPromptDialog\(stock,'discussion'\)/);
+  assert.doesNotMatch(action,/renderStockDetail|scrollIntoView|scrollTo|saveState/);
+});
+
+test('整理结论 directly prepares protected archive context and opens the archive modal',()=>{
+  const action=ui.slice(ui.indexOf('function prepareDiscussionArchive'),ui.indexOf('function ensureDiscussionArchiveContext'));
+  assert.match(action,/ensureDiscussionArchiveContext\(stock\)/);assert.match(action,/openDiscussionPromptDialog\(stock,'archive'\)/);assert.doesNotMatch(action,/renderStockDetail|scrollIntoView|saveState/);
+  assert.match(ui,/整理结论已准备/);assert.match(ui,/用于把刚才的讨论整理成可导入结论，不会修改计划或持仓/);assert.match(ui,/保存前仍需回到程序导入并确认/);
+});
+
+test('outbound prompt modal is compact by default with visible copy and close actions plus expandable complete text',()=>{
+  const modal=ui.slice(ui.indexOf('function ensureDiscussionPromptDialog'),ui.indexOf('function openDiscussionPromptDialog'));
+  assert.match(modal,/role','dialog'/);assert.match(modal,/aria-modal','true'/);assert.match(modal,/讨论上下文|discussionPromptTitle/);
+  assert.match(modal,/>关闭<\/button>/);assert.match(modal,/>复制给AI<\/button>/);assert.match(modal,/<summary>查看完整 Prompt<\/summary>/);assert.match(modal,/textarea id="discussionPreparedPrompt" readonly/);
+  const open=ui.slice(ui.indexOf('function openDiscussionPromptDialog'),ui.indexOf('function closeDiscussionPromptDialog'));
+  assert.match(open,/details\.open=false/);assert.match(open,/discussionPromptCopyBtn[^\n]+focus/);assert.match(open,/discussion-prompt-open/);
+});
+
+test('discussion modal summary covers first use, incremental bars, zero new bars, and included facts without internal identifiers',()=>{
+  const summary=ui.slice(ui.indexOf('function discussionPromptSummary'),ui.indexOf('function ensureDiscussionPromptDialog'));
+  for(const wording of ['技术数据截至','新增日K：','自上次确认后暂无新的完整日K','首次讨论基线：','已带入：','当前结论','持仓','计划状态'])assert.match(summary,new RegExp(wording));
+  for(const internal of ['sourceDiscussionVersion','protectedHash','schemaVersion','tokens','context hash'])assert.doesNotMatch(summary,new RegExp(internal));
+});
+
+test('copy result feedback stays inside modal and failure immediately exposes selectable full Prompt',()=>{
+  const copy=ui.slice(ui.indexOf('async function copyDiscussionPrepared'),ui.indexOf('function toggleDiscussionHistory'));
+  assert.match(copy,/已复制，可以前往 AI 继续讨论/);assert.match(copy,/复制失败，请长按复制/);assert.match(copy,/details\.open=true/);assert.match(copy,/field\.select\(\)/);assert.match(copy,/feedback\.textContent/);
+  assert.doesNotMatch(copy,/alert\(/);assert.match(ui,/const notify=options\.notify!==false/);
+});
+
+test('closing and reopening preserves the in-memory prepared request and restores focus safely',()=>{
+  const close=ui.slice(ui.indexOf('function closeDiscussionPromptDialog'),ui.indexOf('async function copyDiscussionPrepared'));
+  assert.doesNotMatch(close,/discussionPreparedContexts\.(delete|clear)/);assert.match(close,/discussionPromptReturnFocus/);assert.match(close,/target\.isConnected/);assert.match(close,/focus\(\{preventScroll:true\}\)/);
+  const importSave=ui.slice(ui.indexOf('async function confirmDiscussionImport'),ui.indexOf('function aiDiscussionWorkspacePanel'));
+  assert.match(importSave,/discussionPreparedContexts\.delete/);
+});
+
+test('normal page no longer renders a duplicate generated Prompt block',()=>{
+  const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
+  assert.doesNotMatch(panel,/discussionPreparedPanel|discussionPreparedPrompt|字符 .*tokens|连续讨论 Prompt/);
+  assert.doesNotMatch(ui,/function discussionPreparedPanel/);
+});
+
+test('outbound modal presentation is write-free and import remains the only confirmed Discussion State write path',()=>{
+  const outbound=ui.slice(ui.indexOf('function startStockDiscussion'),ui.indexOf('function toggleDiscussionHistory'));
+  for(const write of ['saveState','DiscussionStateContract.commit','PlanReview.commit','allocationDecision','longTermLogic=','stock.shares='])assert.doesNotMatch(outbound,new RegExp(write.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  const imported=ui.slice(ui.indexOf('function ensureDiscussionImportDialog'),ui.indexOf('function aiDiscussionWorkspacePanel'));
+  assert.match(imported,/DiscussionStateContract\.commit/);assert.match(imported,/确认保存/);assert.match(imported,/discussionImportDialog/);
 });
 
 test('state normalization and storage validation include optional discussionState',()=>{
@@ -84,6 +136,19 @@ test('390px layout keeps 4x2 tabs, 2x2 primary actions and touch-size controls',
   assert.match(html,/button,.btn,.btn\.small[\s\S]*?min-height:44px/);
   assert.match(fixture,/max-width:390px/);assert.match(fixture,/min-height:844px/);assert.match(fixture,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);assert.match(fixture,/min-height:44px/);
   assert.match(ui,/discussionImportConfirmBtn[^\n]+disabled/);assert.match(ui,/confirmButton\.disabled=true/);assert.match(ui,/import-json-status/);assert.doesNotMatch(ui,/JSON\.parse 错误|Unrecognized token|Unable to parse JSON string/);
+});
+
+test('390x844 prompt modal fits the viewport, locks the page, and keeps full Prompt scrolling internal',()=>{
+  assert.match(html,/body\.discussion-prompt-open\{overflow:hidden\}/);assert.match(html,/discussion-prompt-modal[^}]*max-height:min\(92dvh,780px\)[^}]*overflow:hidden[^}]*display:flex/);
+  assert.match(html,/discussion-prompt-details textarea[^}]*max-height:34vh[^}]*overflow:auto/);assert.match(html,/discussion-prompt-actions \.btn,.discussion-prompt-details>summary\{min-height:44px\}/);
+  assert.match(html,/@media\(max-width:768px\)[\s\S]*?discussion-prompt-modal\{padding:17px;max-height:calc\(100dvh - 24px\)/);
+  assert.match(fixture,/body\.prompt-open\{overflow:hidden\}/);assert.match(fixture,/max-height:calc\(100dvh - 24px\)/);assert.match(fixture,/prompt-details textarea[^}]*height:32vh[^}]*overflow:auto/);
+});
+
+test('isolated mobile fixture includes deterministic scenarios A-F and no inline Prompt hunting',()=>{
+  assert.match(fixture,/params\.has\('first'\)/);assert.match(fixture,/params\.has\('zero'\)/);assert.match(fixture,/params\.has\('copyfail'\)/);assert.match(fixture,/establishPrior\(!params\.has\('zero'\)\)/);
+  assert.match(fixture,/showPrompt\(prepared,'discussion'\)/);assert.match(fixture,/showPrompt\(context\.archive,'archive'\)/);assert.match(fixture,/复制失败，请长按复制/);assert.match(fixture,/已复制，可以前往 AI 继续讨论/);
+  assert.doesNotMatch(fixture,/id="prepared"|id="request" class="prompt"/);
 });
 
 test('isolated acceptance fixture contains prior conclusion, anchor, four new bars, preview and history',()=>{

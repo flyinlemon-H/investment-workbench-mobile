@@ -23,6 +23,7 @@ let detailWorkspace='plan';
 const discussionPreparedContexts=new Map();
 const discussionHistoryVisibility=new Set();
 let discussionImportPreview=null;
+let discussionPromptReturnFocus=null;
 const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm']);
 const DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1';
 function normalizeDetailWorkspace(value){return DETAIL_WORKSPACE_TABS.includes(String(value||''))?String(value):'plan'}
@@ -512,12 +513,13 @@ function updateChecklistPanel(){
   return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)"><div class="card-title">待更新清单（${rows.length} 只）</div><div class="modal-actions" style="justify-content:flex-start;margin:0 0 10px;flex-wrap:wrap"><button class="btn ghost small" id="copyUpdateCodesBtn" type="button">复制待更新股票代码</button><button class="btn ghost small" id="copyUpdatePromptBtn" type="button">复制待更新任务提示词</button></div><div class="trig-list">${rows.map(x=>`<div class="trig-row ${x.isHolding?'buy':''}" data-update-stock="${esc(x.s.id)}" style="cursor:pointer"><div class="trig-name">${esc(x.s.name||'—')} <span class="muted" style="font-weight:400">· ${esc(x.s.code||'无代码')} · ${x.isHolding?'持仓':'观察'}</span></div><div class="trig-dist">${esc(x.oldest)}</div><div class="trig-desc">需要更新：${x.items.map(esc).join('、')}${x.focus?' · 重点关注':''}</div></div>`).join('')}</div></div>`;
 }
 async function copyText(text,okMsg,options={}){
+  const notify=options.notify!==false,clipboardOptions={...options};delete clipboardOptions.notify;
   if(!window.ClipboardUtils||typeof window.ClipboardUtils.copyTextWithFallback!=='function'){
-    alert('复制失败，请长按复制');
+    if(notify)alert('复制失败，请长按复制');
     return {ok:false,error:new Error('Clipboard helper unavailable')};
   }
-  const result=await window.ClipboardUtils.copyTextWithFallback(text,options);
-  alert(result.ok?okMsg:'复制失败，请长按复制');
+  const result=await window.ClipboardUtils.copyTextWithFallback(text,clipboardOptions);
+  if(notify)alert(result.ok?okMsg:'复制失败，请长按复制');
   return result;
 }
 function copyUpdateCodes(){
@@ -5184,11 +5186,11 @@ function discussionStockKey(stock){return window.DiscussionWorkbench?window.Disc
 function discussionOptions(){return {state,allStocks:state.stocks,planReviewStore:state.planReviews,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'}}
 function startStockDiscussion(stock){
   if(!window.DiscussionWorkbench)return alert('讨论工作台模块未加载。');
-  try{const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);renderStockDetail()}
+  try{const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);openDiscussionPromptDialog(stock,'discussion')}
   catch(error){alert(`无法开始讨论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionArchive(stock){
-  try{ensureDiscussionArchiveContext(stock);renderStockDetail()}
+  try{ensureDiscussionArchiveContext(stock);openDiscussionPromptDialog(stock,'archive')}
   catch(error){alert(`无法整理结论：${error&&error.message?error.message:error}`)}
 }
 function ensureDiscussionArchiveContext(stock){
@@ -5198,11 +5200,54 @@ function ensureDiscussionArchiveContext(stock){
   if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
   prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
-function copyDiscussionPrepared(stock,kind){
-  const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
+function discussionPromptSummary(prepared,kind){
+  if(kind==='archive')return {title:'整理结论已准备',intro:'用于把刚才的讨论整理成可导入结论，不会修改计划或持仓。',lines:['用于整理本轮讨论的最终结论','保存前仍需回到程序导入并确认']};
+  const context=prepared.context||{},facts=context.currentFacts||{},technical=facts.technical||{},bars=Array.isArray(technical.bars)?technical.bars:[],included=[];
+  if(context.currentState)included.push('当前结论');
+  if(facts.holding&&(Number(facts.holding.shares)>0||facts.holding.type==='holding'))included.push('持仓');
+  if(Array.isArray(facts.plans)&&facts.plans.length)included.push('计划状态');
+  const barLine=context.mode==='continuation'&&!bars.length?'自上次确认后暂无新的完整日K':(context.mode==='continuation'?`新增日K：${bars.length}根`:`首次讨论基线：${bars.length}根完整日K`);
+  return {title:'讨论上下文已准备',intro:'当前上下文已经准备好，可以复制给 AI 继续讨论。',lines:[`技术数据截至 ${technical.technicalAsOf||'—'}`,barLine,included.length?`已带入：${included.join('、')}`:'已带入：当前技术事实']};
+}
+function ensureDiscussionPromptDialog(){
+  let el=document.getElementById('discussionPromptDialog');if(el)return el;
+  el=document.createElement('div');el.className='modal-bg import-layer discussion-prompt-bg';el.id='discussionPromptDialog';
+  el.innerHTML=`<div class="modal discussion-prompt-modal" role="document"><h2 id="discussionPromptTitle"></h2><div id="discussionPromptIntro" class="modal-sub"></div><div id="discussionPromptSummary" class="discussion-prompt-summary"></div><div id="discussionPromptFeedback" class="discussion-prompt-feedback" role="status" aria-live="polite"></div><div class="modal-actions discussion-prompt-actions"><button class="btn ghost discussion-prompt-close" id="discussionPromptCloseBtn" type="button">关闭</button><button class="btn discussion-prompt-copy" id="discussionPromptCopyBtn" type="button">复制给AI</button></div><details id="discussionPromptDetails" class="discussion-prompt-details"><summary>查看完整 Prompt</summary><textarea id="discussionPreparedPrompt" readonly spellcheck="false" aria-label="完整 Prompt"></textarea></details></div>`;
+  el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','discussionPromptTitle');
+  document.body.appendChild(el);
+  el.addEventListener('click',event=>{if(event.target===el)closeDiscussionPromptDialog()});
+  el.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeDiscussionPromptDialog()}});
+  document.getElementById('discussionPromptCloseBtn').addEventListener('click',closeDiscussionPromptDialog);
+  document.getElementById('discussionPromptCopyBtn').addEventListener('click',copyDiscussionPrepared);
+  return el;
+}
+function openDiscussionPromptDialog(stock,kind){
+  const prepared=discussionPreparedContexts.get(discussionStockKey(stock)),payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
+  if(!payload||!payload.request)throw new Error('对应的 Prompt 尚未准备。');
+  const summary=discussionPromptSummary(prepared,kind),el=ensureDiscussionPromptDialog(),details=document.getElementById('discussionPromptDetails');
+  discussionPromptReturnFocus=document.activeElement;el.dataset.stockId=stock.id;el.dataset.kind=kind;
+  document.getElementById('discussionPromptTitle').textContent=summary.title;document.getElementById('discussionPromptIntro').textContent=summary.intro;
+  document.getElementById('discussionPromptSummary').innerHTML=summary.lines.map(line=>`<div>${esc(line)}</div>`).join('');
+  document.getElementById('discussionPreparedPrompt').value=payload.request;document.getElementById('discussionPromptFeedback').textContent='';details.open=false;
+  el.classList.add('show');document.body.classList.add('discussion-prompt-open');
+  requestAnimationFrame(()=>{const button=document.getElementById('discussionPromptCopyBtn');if(!button)return;try{button.focus({preventScroll:true})}catch(_){button.focus()}});
+}
+function closeDiscussionPromptDialog(){
+  const el=document.getElementById('discussionPromptDialog');if(!el)return;
+  el.classList.remove('show');document.body.classList.remove('discussion-prompt-open');
+  const target=discussionPromptReturnFocus;discussionPromptReturnFocus=null;
+  setTimeout(()=>{if(!target||!target.isConnected||typeof target.focus!=='function')return;try{target.focus({preventScroll:true})}catch(_){target.focus()}},0);
+}
+async function copyDiscussionPrepared(){
+  const dialog=document.getElementById('discussionPromptDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),kind=dialog&&dialog.dataset.kind,prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));
   const payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
-  if(!payload||!payload.request)return alert('请先生成对应的 Prompt。');
-  copyText(payload.request,kind==='archive'?'归档 Prompt 已复制。':'连续讨论 Prompt 已复制。',{sourceElement:document.getElementById('discussionPreparedPrompt')});
+  if(!payload||!payload.request)return;
+  const field=document.getElementById('discussionPreparedPrompt'),details=document.getElementById('discussionPromptDetails'),feedback=document.getElementById('discussionPromptFeedback'),button=document.getElementById('discussionPromptCopyBtn');
+  feedback.textContent='正在复制…';button.disabled=true;
+  const result=await copyText(payload.request,'',{selectableElement:field,detailsElement:details,manualCopy:false,notify:false});button.disabled=false;
+  if(result.ok){feedback.textContent='已复制，可以前往 AI 继续讨论';return}
+  feedback.textContent='复制失败，请长按复制';details.open=true;
+  try{field.focus({preventScroll:true});field.select();field.setSelectionRange(0,field.value.length)}catch(_){}
 }
 function toggleDiscussionHistory(stock){const key=discussionStockKey(stock);if(discussionHistoryVisibility.has(key))discussionHistoryVisibility.delete(key);else discussionHistoryVisibility.add(key);renderStockDetail();setTimeout(()=>document.getElementById('discussionHistoryPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
 function discussionStatusPresentation(stock){
@@ -5250,15 +5295,10 @@ async function confirmDiscussionImport(){
   if(result.status!=='completed'){document.getElementById('discussionImportMessage').textContent=result.error&&result.error.message?result.error.message:'保存失败，数据未确认写入。';state=original;return}
   discussionPreparedContexts.delete(discussionStockKey(stock));closeDiscussionImportDialog();renderStockDetail();alert('当前结论已确认保存；上一个结论已移入历史。');
 }
-function discussionPreparedPanel(stock){
-  const prepared=discussionPreparedContexts.get(discussionStockKey(stock));if(!prepared)return '';
-  const archive=prepared.view==='archive'&&prepared.archive,payload=archive?prepared.archive:prepared,title=archive?'归档结论 Prompt':'连续讨论 Prompt',copyKind=archive?'archive':'discussion';
-  return `<div class="card discussion-prepared"><div class="card-title">${title} 已准备</div><div class="card-note">字符 ${payload.metrics.characters} · 约 ${payload.metrics.approxTokens} tokens · ${payload.metrics.kilobytes} KB。复制失败时可在下方长按选择。</div><textarea id="discussionPreparedPrompt" readonly spellcheck="false">${esc(payload.request)}</textarea><div class="modal-actions discussion-actions"><button class="btn small" type="button" data-discussion-copy="${copyKind}">复制给 AI</button></div></div>`;
-}
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
   const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口';
-  return `<div class="discussion-workbench"><div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">当前状态</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论会写入。</div></div>${current?discussionStateCard(current,'当前结论'):''}${discussionPreparedPanel(stock)}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
+  return `<div class="discussion-workbench"><div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">当前状态</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论会写入。</div></div>${current?discussionStateCard(current,'当前结论'):''}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
   {key:'ai',label:'讨论'},
@@ -7625,7 +7665,6 @@ function bindStockDetailActions(stock){
     e.stopPropagation();
     handleDetailAction(btn.dataset.detailAction,stock);
   }));
-  mainEl.querySelectorAll('[data-discussion-copy]').forEach(btn=>btn.addEventListener('click',e=>{e.preventDefault();copyDiscussionPrepared(stock,btn.dataset.discussionCopy)}));
 }
 function renderStockDetail(){
   const s=state.stocks.find(x=>x.id===detailStockId);
