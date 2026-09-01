@@ -21,8 +21,10 @@ let v13DecisionReviewDirty={};
 let v13DecisionReviewCloseContext=null;
 let detailWorkspace='plan';
 const discussionPreparedContexts=new Map();
+const discussionPlanPreparedContexts=new Map();
 const discussionHistoryVisibility=new Set();
 let discussionImportPreview=null;
+let discussionPlanImportPreview=null;
 let discussionPromptReturnFocus=null;
 const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm']);
 const DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1';
@@ -5006,7 +5008,9 @@ function renderPlanCenter(){
   const plans=v13DisplayActivePlans(s.plans);
   const refresh=v13PlanCenterRefreshInfo(s,plans);
   document.getElementById('summary').innerHTML=`计划中心 · <strong>${esc(s.name||'标的')}</strong> · ${esc(s.code||s.symbol||'—')}`;
-  document.getElementById('main').innerHTML=`<div class="card detail-title-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'未命名标的')}</div><div class="entry-code">计划中心 · ${esc(s.code||s.symbol||'无代码')}</div></div><div class="detail-title-actions"><button class="btn small" id="planCenterBatchReviewBtn" type="button">批量复核</button><button class="btn ghost small" id="planCenterRefreshBtn" type="button">刷新计划</button><button class="btn ghost small" id="planCenterBackBtn" type="button">返回分析</button></div></div></div><div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)"><div class="card-title">最近刷新</div><div class="dash" style="margin:0"><div><div class="card-title">刷新时间</div><div class="card-num" style="font-size:20px">${esc(refresh.updated||'尚未刷新')}</div></div><div><div class="card-title">明确有效期</div><div class="card-note">${refresh.validUntil?`至 ${esc(refresh.validUntil)}`:'未设置'}</div></div><div style="grid-column:span 2"><div class="card-title">说明</div><div class="card-note">价格触发只是一项程序事实，不代表完整计划条件已经满足。</div></div></div></div><div class="card" style="margin-bottom:14px"><div class="card-title">当前计划</div><div class="card-note">有效计划和需复核计划会明确区分；已经结束的计划只保留在历史区。</div>${v13PlanCenterSummary(s)}</div><details class="card" style="margin-bottom:14px"><summary class="card-title" style="cursor:pointer">查看详细计划</summary><div style="margin-top:10px">${v13PlanCenterDetailSections(s)}</div></details><details class="card" style="margin-bottom:14px"><summary class="card-title" style="cursor:pointer">历史计划</summary><div style="margin-top:10px">${v13PlanCenterHistory(s)}</div></details>`;
+  document.getElementById('main').innerHTML=`<div class="card detail-title-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'未命名标的')}</div><div class="entry-code">计划中心 · ${esc(s.code||s.symbol||'无代码')}</div></div><div class="detail-title-actions"><button class="btn small" id="planCenterPreparePlanBtn" type="button">整理计划</button><button class="btn ghost small" id="planCenterImportPlanBtn" type="button">导入计划</button><button class="btn ghost small" id="planCenterBatchReviewBtn" type="button">批量复核</button><button class="btn ghost small" id="planCenterRefreshBtn" type="button">刷新计划</button><button class="btn ghost small" id="planCenterBackBtn" type="button">返回分析</button></div></div></div><div class="card" style="margin-bottom:14px;border-left:4px solid var(--gold)"><div class="card-title">最近刷新</div><div class="dash" style="margin:0"><div><div class="card-title">刷新时间</div><div class="card-num" style="font-size:20px">${esc(refresh.updated||'尚未刷新')}</div></div><div><div class="card-title">明确有效期</div><div class="card-note">${refresh.validUntil?`至 ${esc(refresh.validUntil)}`:'未设置'}</div></div><div style="grid-column:span 2"><div class="card-title">说明</div><div class="card-note">价格触发只是一项程序事实，不代表完整计划条件已经满足。</div></div></div></div><div class="card" style="margin-bottom:14px"><div class="card-title">当前计划</div><div class="card-note">有效计划和需复核计划会明确区分；已经结束的计划只保留在历史区。</div>${v13PlanCenterSummary(s)}</div><details class="card" style="margin-bottom:14px"><summary class="card-title" style="cursor:pointer">查看详细计划</summary><div style="margin-top:10px">${v13PlanCenterDetailSections(s)}</div></details><details class="card" style="margin-bottom:14px"><summary class="card-title" style="cursor:pointer">历史计划</summary><div style="margin-top:10px">${v13PlanCenterHistory(s)}</div></details>`;
+  document.getElementById('planCenterPreparePlanBtn').addEventListener('click',()=>prepareDiscussionPlan(s));
+  document.getElementById('planCenterImportPlanBtn').addEventListener('click',()=>openDiscussionPlanImportDialog(s));
   document.getElementById('planCenterBatchReviewBtn').addEventListener('click',()=>window.PlanReviewUI&&window.PlanReviewUI.open());
   document.getElementById('planCenterRefreshBtn').addEventListener('click',()=>openV13PlanRefreshTool(s.id));
   document.getElementById('planCenterBackBtn').addEventListener('click',closePlanCenter);
@@ -5089,12 +5093,13 @@ function planWorkspacePanel(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
   const refresh=v13PlanCenterRefreshInfo(stock,plans);
   const readiness=planGenerationGateResult(stock);
+  const discussionPlanPanel=`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--teal)"><div class="card-title">从本轮讨论整理计划</div><div class="card-note">先确认讨论结论，再在刚才同一个 AI 对话中整理计划草案。无需先进入计划复核。</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn small" type="button" data-detail-action="prepare-discussion-plan">整理计划</button><button class="btn ghost small" type="button" data-detail-action="import-discussion-plan">导入计划</button></div></div>`;
   const refreshPanel=`<div class="card" style="margin-bottom:12px;background:rgba(255,255,255,.56)"><div class="card-title">刷新计划</div><div class="card-note">刷新时间 ${esc(refresh.updated||'尚未刷新')} · 下次建议刷新 ${esc(refresh.validUntil||'尚未刷新')}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn small" type="button" data-detail-action="open-plan-refresh" ${readiness.canGenerate?'':'disabled'}>刷新计划</button></div></div>`;
   const planSummary=`<div class="card" style="margin-bottom:12px"><div class="card-title">当前有效计划摘要</div>${v13PlanCompactSummary(stock)}</div>`;
   const reviewRows=window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.recordsForStock==='function'?window.AiDecisionReviewReader.recordsForStock(stock):[];
   const planReview=reviewRows.find(record=>record.isCurrent&&record.outcomeType==='plan_update')||reviewRows.find(record=>record.outcomeType==='plan_update');
   const planUpdate=planReview?(planReview.resolutionType==='plan_applied'?`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="card-title">计划更新已应用</div><div class="card-note">应用时间 ${esc(planReview.applicationAppliedAt||planReview.resolvedAt||'—')} · 新增 ${esc(planReview.createdPlanCount||0)} 条 · 归档 ${esc(planReview.archivedPlanCount||0)} 条 · 审计编号 ${esc(planReview.applicationAuditId||planReview.sourceApplicationId||'—')}</div></div>`:v13PlanUpdateDraftPanel(stock,planReview)):'';
-  return `${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
+  return `${discussionPlanPanel}${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
 }
 function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--teal)',copyAction='',importAction='',extraAction='',extraLabel=''){
   const rows=(Array.isArray(items)?items:[]).filter(Boolean).slice(0,4);
@@ -5193,6 +5198,11 @@ function prepareDiscussionArchive(stock){
   try{ensureDiscussionArchiveContext(stock);openDiscussionPromptDialog(stock,'archive')}
   catch(error){alert(`无法整理结论：${error&&error.message?error.message:error}`)}
 }
+function prepareDiscussionPlan(stock){
+  if(!window.DiscussionPlanWorkflow)return alert('计划整理模块未加载。');
+  try{const prepared=window.DiscussionPlanWorkflow.prepare(stock);discussionPlanPreparedContexts.set(discussionStockKey(stock),prepared);openDiscussionPromptDialog(stock,'plan')}
+  catch(error){alert(`无法整理计划：${error&&error.message?error.message:error}`)}
+}
 function ensureDiscussionArchiveContext(stock){
   if(!window.DiscussionWorkbench)throw new Error('讨论工作台模块未加载。');
   const key=discussionStockKey(stock);let prepared=discussionPreparedContexts.get(key);
@@ -5201,6 +5211,7 @@ function ensureDiscussionArchiveContext(stock){
   prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
 function discussionPromptSummary(prepared,kind){
+  if(kind==='plan')return {title:'计划整理已准备',intro:'请在刚才同一个 AI 对话中继续发送此 Prompt。AI 将基于本轮讨论整理计划草案。',lines:['沿用刚才同一个 AI 对话','只整理已经达成的计划结论','导入和确认前不会修改正式计划']};
   if(kind==='archive')return {title:'整理结论已准备',intro:'用于把刚才的讨论整理成可导入结论，不会修改计划或持仓。',lines:['用于整理本轮讨论的最终结论','保存前仍需回到程序导入并确认']};
   const context=prepared.context||{},facts=context.currentFacts||{},technical=facts.technical||{},bars=Array.isArray(technical.bars)?technical.bars:[],included=[];
   if(context.currentState)included.push('当前结论');
@@ -5222,7 +5233,7 @@ function ensureDiscussionPromptDialog(){
   return el;
 }
 function openDiscussionPromptDialog(stock,kind){
-  const prepared=discussionPreparedContexts.get(discussionStockKey(stock)),payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
+  const prepared=kind==='plan'?discussionPlanPreparedContexts.get(discussionStockKey(stock)):discussionPreparedContexts.get(discussionStockKey(stock)),payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
   if(!payload||!payload.request)throw new Error('对应的 Prompt 尚未准备。');
   const summary=discussionPromptSummary(prepared,kind),el=ensureDiscussionPromptDialog(),details=document.getElementById('discussionPromptDetails');
   discussionPromptReturnFocus=document.activeElement;el.dataset.stockId=stock.id;el.dataset.kind=kind;
@@ -5239,13 +5250,13 @@ function closeDiscussionPromptDialog(){
   setTimeout(()=>{if(!target||!target.isConnected||typeof target.focus!=='function')return;try{target.focus({preventScroll:true})}catch(_){target.focus()}},0);
 }
 async function copyDiscussionPrepared(){
-  const dialog=document.getElementById('discussionPromptDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),kind=dialog&&dialog.dataset.kind,prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));
+  const dialog=document.getElementById('discussionPromptDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),kind=dialog&&dialog.dataset.kind,prepared=stock&&(kind==='plan'?discussionPlanPreparedContexts.get(discussionStockKey(stock)):discussionPreparedContexts.get(discussionStockKey(stock)));
   const payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
   if(!payload||!payload.request)return;
   const field=document.getElementById('discussionPreparedPrompt'),details=document.getElementById('discussionPromptDetails'),feedback=document.getElementById('discussionPromptFeedback'),button=document.getElementById('discussionPromptCopyBtn');
   feedback.textContent='正在复制…';button.disabled=true;
   const result=await copyText(payload.request,'',{selectableElement:field,detailsElement:details,manualCopy:false,notify:false});button.disabled=false;
-  if(result.ok){feedback.textContent='已复制，可以前往 AI 继续讨论';return}
+  if(result.ok){feedback.textContent=kind==='plan'?'已复制，可以在当前 AI 对话中继续':'已复制，可以前往 AI 继续讨论';return}
   feedback.textContent='复制失败，请长按复制';details.open=true;
   try{field.focus({preventScroll:true});field.select();field.setSelectionRange(0,field.value.length)}catch(_){}
 }
@@ -5299,10 +5310,42 @@ async function confirmDiscussionImport(){
   if(result.status!=='completed'){document.getElementById('discussionImportMessage').textContent=result.error&&result.error.message?result.error.message:'保存失败，数据未确认写入。';state=original;return}
   discussionPreparedContexts.delete(discussionStockKey(stock));closeDiscussionImportDialog();renderStockDetail();alert('当前结论已确认保存；上一个结论已移入历史。');
 }
+function ensureDiscussionPlanImportDialog(){
+  let el=document.getElementById('discussionPlanImportDialog');if(el)return el;
+  el=document.createElement('div');el.className='modal-bg import-layer';el.id='discussionPlanImportDialog';
+  el.innerHTML=`<div class="modal discussion-plan-import-modal"><h2>导入计划</h2><div class="modal-sub">粘贴 AI 返回的严格计划草案 JSON。预览不会写入；只有最后确认才会创建、更新或结束正式计划。</div><div class="form-row"><label for="discussionPlanImportText">AI 返回的严格 JSON</label><textarea id="discussionPlanImportText" class="discussion-plan-import-text" placeholder='{"schemaVersion":"discussion-plan-draft.v1",...}'></textarea></div><div id="discussionPlanImportMessage" class="card-note" role="status" aria-live="polite"></div><div id="discussionPlanImportPreview"></div><div class="modal-actions discussion-plan-import-actions"><button class="btn ghost" id="discussionPlanImportCancelBtn" type="button">取消</button><button class="btn ghost" id="discussionPlanImportPreviewBtn" type="button">预览</button><button class="btn" id="discussionPlanImportConfirmBtn" type="button" disabled>确认保存计划</button></div></div>`;
+  document.body.appendChild(el);el.addEventListener('click',event=>{if(event.target===el)closeDiscussionPlanImportDialog()});
+  document.getElementById('discussionPlanImportCancelBtn').addEventListener('click',closeDiscussionPlanImportDialog);
+  document.getElementById('discussionPlanImportPreviewBtn').addEventListener('click',previewDiscussionPlanImport);
+  document.getElementById('discussionPlanImportConfirmBtn').addEventListener('click',confirmDiscussionPlanImport);
+  document.getElementById('discussionPlanImportText').addEventListener('input',()=>{discussionPlanImportPreview=null;document.getElementById('discussionPlanImportConfirmBtn').disabled=true;document.getElementById('discussionPlanImportPreview').innerHTML='';document.getElementById('discussionPlanImportMessage').textContent='内容已变化，请重新预览。'});
+  return el;
+}
+function openDiscussionPlanImportDialog(stock){
+  if(!window.DiscussionPlanWorkflow)return alert('计划整理模块未加载。');
+  try{
+    const prepared=window.DiscussionPlanWorkflow.prepare(stock);discussionPlanPreparedContexts.set(discussionStockKey(stock),prepared);discussionPlanImportPreview=null;
+    const el=ensureDiscussionPlanImportDialog();el.dataset.stockId=stock.id;document.getElementById('discussionPlanImportText').value='';document.getElementById('discussionPlanImportMessage').textContent='当前讨论结论和计划快照已锁定。粘贴后先预览。';document.getElementById('discussionPlanImportPreview').innerHTML='';document.getElementById('discussionPlanImportConfirmBtn').disabled=true;document.getElementById('discussionPlanImportConfirmBtn').textContent='确认保存计划';el.classList.add('show');
+  }catch(error){alert(`无法准备计划导入：${error&&error.message?error.message:error}`)}
+}
+function closeDiscussionPlanImportDialog(){document.getElementById('discussionPlanImportDialog')?.classList.remove('show');discussionPlanImportPreview=null}
+function previewDiscussionPlanImport(){
+  const dialog=document.getElementById('discussionPlanImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPlanPreparedContexts.get(discussionStockKey(stock)),message=document.getElementById('discussionPlanImportMessage'),preview=document.getElementById('discussionPlanImportPreview'),confirmButton=document.getElementById('discussionPlanImportConfirmBtn');
+  if(!stock||!prepared){message.textContent='本次计划上下文已丢失，请关闭后重新整理计划。';confirmButton.disabled=true;return}
+  const result=window.DiscussionPlanWorkflow.process(document.getElementById('discussionPlanImportText').value,{stock,prepared});discussionPlanImportPreview=result;
+  message.textContent=result.message;preview.innerHTML=window.DiscussionPlanWorkflow.renderPreview(result);confirmButton.disabled=!result.confirmReady;
+  if(result.ok&&result.draft.operation==='update')confirmButton.textContent='确认更新计划';else if(result.ok&&result.draft.operation==='invalidate')confirmButton.textContent='确认计划失效';else if(result.ok&&result.draft.operation==='complete')confirmButton.textContent='确认计划完成';else confirmButton.textContent='确认保存计划';
+}
+async function confirmDiscussionPlanImport(){
+  const dialog=document.getElementById('discussionPlanImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId));if(!stock||!discussionPlanImportPreview||!discussionPlanImportPreview.confirmReady)return;
+  const original=state,result=await window.DiscussionPlanWorkflow.commit(discussionPlanImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}});
+  if(result.status!=='completed'){state=original;document.getElementById('discussionPlanImportMessage').textContent=result.error&&result.error.message?result.error.message:'保存失败，正式计划未改变。';return}
+  discussionPlanPreparedContexts.delete(discussionStockKey(stock));closeDiscussionPlanImportDialog();renderStockDetail();alert('计划已确认保存；未执行任何交易，持仓保持不变。');
+}
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
   const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口';
-  const hero=`<div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">当前状态</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论会写入。</div></div>`,decision=current?discussionStateCard(current,'当前结论'):'';
+  const hero=`<div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">当前状态</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn small" data-detail-action="prepare-discussion-plan" type="button">整理计划</button><button class="btn ghost small" data-detail-action="import-discussion-plan" type="button">导入计划</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></div>`,decision=current?discussionStateCard(current,'当前结论'):'';
   return `<div class="discussion-workbench">${current&&current.actionAssessment?decision+hero:hero+decision}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
@@ -7428,6 +7471,8 @@ function handleDetailAction(action,stock){
   if(action==='start-stock-discussion'&&s)startStockDiscussion(s);
   if(action==='prepare-discussion-archive'&&s)prepareDiscussionArchive(s);
   if(action==='import-discussion-state'&&s)openDiscussionImportDialog(s);
+  if(action==='prepare-discussion-plan'&&s)prepareDiscussionPlan(s);
+  if(action==='import-discussion-plan'&&s)openDiscussionPlanImportDialog(s);
   if(action==='toggle-discussion-history'&&s)toggleDiscussionHistory(s);
   if(action==='edit'&&s)openModal(s.id);
   if(action==='ai-assistant')openAiAssistant();
