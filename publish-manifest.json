@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "5e07372df1f181e8dee6443f22cf576e5b1511c3",
-  "assetVersion": "current-state-decision-layer-20260901",
-  "dataMode": "decision-oriented Single Stock Current State v2 with action review direction, independent urgency, multi-timeframe trend, structure lifecycle and provenance, focus and upgrade/downgrade conditions, Plan relationship classification, mobile-first preview, and legacy v1 rendering; Plan, PlanReview, holdings, allocation, long-term logic, strict AI JSON parser, clipboard, market bridge, and storage runtime preserved",
+  "sourceCommit": "b3b077a8935cdf18726479095b2aa4a963ac8fcd",
+  "assetVersion": "shared-strict-ai-json-import-reliability-fix2-20260901",
+  "dataMode": "shared strict JSON structural quote recovery for U+201C, U+201D, and U+FF02 with Chinese content quote preservation and fail-closed ambiguity; Current State v2 schema and protected context, Plan, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -25,14 +25,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1786180,
-      "sha256": "44ddc19fc36b730280d4aa83f4ab38fcbc05317e4f2b59abfd62d0d443f49a4e"
+      "bytes": 1789330,
+      "sha256": "c2b90d131d8c2d4280ba101910d82c8c20dda01eebcd6eb2b730ca7477c1013d"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1282,
-      "sha256": "dd8d62f7213931bcbfa416a7195b047be7b7c884e54409e5661b43748efff4b0"
+      "sha256": "da4623078f7262c23e38cd2a527c19e3efec2efbb9868d9668334b5f2aac8635"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 54382,
-      "sha256": "3beabc27f5a5a64d29bb68a6102eb7b364f6561f3c405bf8b060ce5ac21e8515"
+      "bytes": 55166,
+      "sha256": "47bcd7a21a281f310b74cce444946d45d6fd918d24a21a6a16bfe68cf1a0bfe6"
     },
     {
       "path": "social_posts.json",
@@ -139,8 +139,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7266,
-      "sha256": "07107106fd1fa8c079d25ef27dba653ee33009742c4bbf931968f4090896413a"
+      "bytes": 7284,
+      "sha256": "56e8cd131c276ab1fc45aff8374aa4281ac28b2ab5b2b9de0ad40e239eb0f0e1"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -301,8 +301,8 @@
     {
       "path": "src/strict-ai-json.js",
       "role": "shared strict AI JSON presentation preprocessor and parser runtime",
-      "bytes": 10848,
-      "sha256": "c2a33755414dd4f1d556d257c2a0db96460d05b2fcaa62e32ccdec10240a3bed"
+      "bytes": 14246,
+      "sha256": "0ac8d732471f0fd9030e1d3428d92edb191b75435307c4c7b7273bf059c6c29b"
     },
     {
       "path": "src/symbol-identity.js",
