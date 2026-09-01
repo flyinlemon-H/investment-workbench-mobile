@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "9043d10651cf3aaac005bf38723dfabc58cf787b",
-  "assetVersion": "discussion-prompt-modal-ux-repair-20260901",
-  "dataMode": "focused modal-first Discussion and Archive Prompt presentation with compact summaries, in-modal verified copy feedback, selectable failure fallback, and hidden duplicate inline Prompt UI; Discussion context/version semantics, strict AI JSON contracts, Plan, holdings, allocation, long-term logic, market bridge, shared clipboard runtime, and browser persistence preserved",
+  "sourceCommit": "5e07372df1f181e8dee6443f22cf576e5b1511c3",
+  "assetVersion": "current-state-decision-layer-20260901",
+  "dataMode": "decision-oriented Single Stock Current State v2 with action review direction, independent urgency, multi-timeframe trend, structure lifecycle and provenance, focus and upgrade/downgrade conditions, Plan relationship classification, mobile-first preview, and legacy v1 rendering; Plan, PlanReview, holdings, allocation, long-term logic, strict AI JSON parser, clipboard, market bridge, and storage runtime preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 52360,
-      "sha256": "91032a4bc4fa2a698699778ce687d814c3eaf5debbcd34b7027961b8af2766e3"
+      "bytes": 54382,
+      "sha256": "3beabc27f5a5a64d29bb68a6102eb7b364f6561f3c405bf8b060ce5ac21e8515"
     },
     {
       "path": "social_posts.json",
@@ -126,21 +126,21 @@
     },
     {
       "path": "src/discussion-state-contract.js",
-      "role": "Single Stock Discussion shared strict JSON archive contract and protected atomic save runtime",
-      "bytes": 9450,
-      "sha256": "7bcdead00109f2ee93250c9700d6d7123ea4f95246289ffe8edce2ad346caed9"
+      "role": "Single Stock Current State fail-closed decision archive contract and protected atomic save runtime",
+      "bytes": 18303,
+      "sha256": "c3d75f3a93cd99c8d21028d1db3eb6bc605ed9f088cdfb44bb8c7f1e9a0c6b84"
     },
     {
       "path": "src/discussion-workbench.js",
-      "role": "Single Stock Discussion State schema, anchors, incremental context, and prompt runtime",
-      "bytes": 29720,
-      "sha256": "fcb3cb487026490c11b499441cd2297285c43ce543dd696496e4ac4d7fe24524"
+      "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and prompt runtime",
+      "bytes": 42069,
+      "sha256": "2d815900513d162dfeec15cfbd8d32b4cffb71be005334dfa53d25b44720aac4"
     },
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7270,
-      "sha256": "36d39c740218681287a87479dadac3d1d4cd7e887a936772b2ba325d9a9b4451"
+      "bytes": 7266,
+      "sha256": "07107106fd1fa8c079d25ef27dba653ee33009742c4bbf931968f4090896413a"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -318,9 +318,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "focused Discussion and Archive Prompt modal workflow, Chinese state presentation, Tools maintenance, and existing Workbench UI runtime",
-      "bytes": 644831,
-      "sha256": "81a901d0b016e25491397e6b7ffffd00901b2c15bcb50a18a9b2a47f428d28b3"
+      "role": "mobile-first Current State decision hierarchy, import preview, legacy fallback, and existing Workbench UI runtime",
+      "bytes": 648755,
+      "sha256": "3521a5f6665894ff5d744571054812934864266abf7dc0003a58193e3351dc77"
     },
     {
       "path": "src/universe-handoff.js",
