@@ -18,7 +18,8 @@ roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','shared strict AI JSON import status, Long-Term, News/Sentiment, and Workbench UI runtime');
+roleByPath.set('src/ui-render.js','mobile Discussion workflow, Chinese state presentation, Tools maintenance, and existing Workbench UI runtime');
+roleByPath.set('src/app.js','browser bootstrap, storage recovery, and Tools-only storage maintenance runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
 roleByPath.set('src/decision-compression-context.js','Decision Compression compact context with program-owned blocker facts and audit references');
@@ -74,8 +75,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'shared-strict-ai-json-import-reliability-fix1-20260901',
-  dataMode:'shared strict presentation-only AI JSON preprocessing + standard JSON.parse authority + contract validation before mutation across Discussion, Long-Term, News/Sentiment, Batch Technical, Plan, Portfolio Review, and Decision Compression; existing verified clipboard, market bridge, and browser persistence preserved',
+  assetVersion:'mobile-discussion-ux-cleanup-20260901',
+  dataMode:'Chinese-first mobile Discussion workflow with protected direct archive/import context preparation + Tools-only storage maintenance and concise abnormal warning; Discussion schema, strict AI JSON contracts, Plan, holdings, allocation, long-term logic, market bridge, clipboard, and browser persistence preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
