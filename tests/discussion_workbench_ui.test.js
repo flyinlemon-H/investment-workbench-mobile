@@ -7,6 +7,9 @@ const test=require('node:test');
 
 const root=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(root,'src','ui-render.js'),'utf8');
+const app=fs.readFileSync(path.join(root,'src','app.js'),'utf8');
+const workbench=fs.readFileSync(path.join(root,'src','discussion-workbench.js'),'utf8');
+const contract=fs.readFileSync(path.join(root,'src','discussion-state-contract.js'),'utf8');
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const fixture=fs.readFileSync(path.join(root,'tests','fixtures','discussion-workbench-mobile-acceptance.html'),'utf8');
 
@@ -20,6 +23,48 @@ test('workbench exposes the concise four-action Chinese workflow and no prohibit
   for(const label of ['开始讨论','整理结论','导入结论','查看历史'])assert.match(panel,new RegExp(label));
   for(const label of ['AI刷新','生成分析','刷新计划'])assert.doesNotMatch(panel,new RegExp(label));
   assert.match(ui,/预览结果/);assert.match(ui,/确认保存/);assert.match(ui,/保存后将成为下次讨论的起点/);
+  assert.doesNotMatch(panel,/\bCurrent\b|Current State|needs_review|superseded|Discussion State/);
+  assert.match(panel,/当前状态/);assert.match(panel,/当前结论/);assert.match(ui,/历史结论/);
+});
+
+test('first-use actions are enabled and archive/import prepare protected context directly',()=>{
+  const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
+  assert.doesNotMatch(panel,/data-detail-action="prepare-discussion-archive"[^>]*disabled/);
+  assert.doesNotMatch(panel,/data-detail-action="import-discussion-state"[^>]*disabled/);
+  assert.match(ui,/function ensureDiscussionArchiveContext\(stock\)/);
+  assert.match(ui,/if\(!prepared\)prepared=window\.DiscussionWorkbench\.buildDiscussionRequest\(stock,discussionOptions\(\)\)/);
+  assert.match(ui,/if\(!prepared\.archive\)prepared\.archive=window\.DiscussionWorkbench\.buildArchiveRequest\(prepared\)/);
+  assert.match(ui,/本次结论的受保护上下文已准备/);
+});
+
+test('first-use empty state is compact and not duplicated',()=>{
+  const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
+  assert.match(ui,/尚无讨论结论/);assert.match(ui,/首次保存结论后，程序将从这里继续跟踪后续变化/);
+  assert.doesNotMatch(panel,/尚无已确认讨论结论|首次讨论将建立后续连续分析的起点/);
+  assert.doesNotMatch(panel,/current\?discussionStateCard\(current,'当前结论'\):'<div class="card"/);
+});
+
+test('normal Discussion UI and messages do not leak internal English labels',()=>{
+  const rendered=ui.slice(ui.indexOf('function discussionStatusPresentation'),ui.indexOf('const DETAIL_WORKSPACE_META'));
+  for(const label of ['Current State','superseded','Discussion State'])assert.doesNotMatch(rendered,new RegExp(label));
+  assert.doesNotMatch(workbench,/Current State/);
+  assert.doesNotMatch(contract,/sourceDiscussionVersion 已过期或不一致/);
+  assert.match(contract,/结论来源版本已过期或不一致/);
+});
+
+test('storage maintenance is mounted only inside Tools with compact abnormal warning',()=>{
+  assert.match(ui,/id="storageMaintenanceSection"/);assert.match(ui,/数据维护/);assert.match(ui,/导出备份/);assert.match(ui,/数据恢复/);assert.match(ui,/存储状态/);assert.match(ui,/高级存储信息/);
+  assert.match(app,/document\.getElementById\('storageMaintenancePanelMount'\)/);
+  assert.doesNotMatch(app,/main\.parentNode\.insertBefore\(panel,main\)/);
+  assert.match(app,/本地数据状态异常，请检查数据维护/);
+  assert.match(app,/storageMaintenanceNeedsAttention\(record\).*record\.status==='failed'/);
+  assert.match(ui,/showDiagnostics=currentTab==='tools'/);
+  assert.match(ui,/id="backendToolStatus"/);
+});
+
+test('storage safety controls and recovery capabilities remain wired',()=>{
+  for(const capability of ['exportShadowVerificationBackup','runShadowMigration','clearMigrationStaging','executeActiveCutover','getMigrationStatus','getShadowMigrationPreflight'])assert.match(app,new RegExp(capability));
+  assert.match(app,/recoverUsingLegacy/);assert.match(app,/从最新 JSON 备份恢复/);assert.match(app,/Semantic checksum/);
 });
 
 test('prepared prompt remains selectable and shared clipboard helper is reused',()=>{
@@ -44,6 +89,8 @@ test('390px layout keeps 4x2 tabs, 2x2 primary actions and touch-size controls',
 test('isolated acceptance fixture contains prior conclusion, anchor, four new bars, preview and history',()=>{
   assert.match(fixture,/首次结论：修复观察/);assert.match(fixture,/2026-08-25/);
   for(const date of ['2026-08-26','2026-08-27','2026-08-28','2026-08-31'])assert.match(fixture,new RegExp(date));
-  assert.match(fixture,/预览结果/);assert.match(fixture,/Current State/);assert.match(fixture,/已被替代/);
+  assert.match(fixture,/预览结果/);assert.match(fixture,/当前结论/);assert.match(fixture,/历史结论/);
+  assert.doesNotMatch(fixture,/Current State|\bCurrent\b|needs_review|superseded/);
+  assert.match(fixture,/src\/strict-ai-json\.js/);
   assert.doesNotMatch(fixture,/localStorage|indexedDB|fetch\(/);
 });

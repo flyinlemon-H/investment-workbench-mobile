@@ -154,7 +154,7 @@
     const bars=rows.slice(index+1,index+1+INCREMENTAL_LIMIT);
     let prior=currentAnchor;
     for(const bar of bars){const gap=(Date.parse(`${bar.date}T00:00:00Z`)-Date.parse(`${prior.date}T00:00:00Z`))/86400000;if(gap>10)warnings.push(`${prior.date} 至 ${bar.date} 的日线间隔异常，请核对停牌或数据缺口。`);prior=bar}
-    if(rows.length-index-1>INCREMENTAL_LIMIT)warnings.push(`锚点后的日线超过 ${INCREMENTAL_LIMIT} 根，已截断，请重新建立 Current State。`);
+    if(rows.length-index-1>INCREMENTAL_LIMIT)warnings.push(`锚点后的日线超过 ${INCREMENTAL_LIMIT} 根，已截断，请重新建立当前结论。`);
     return {mode:'incremental',bars,warnings:uniqueStrings(warnings,6),message:bars.length?`提供锚点后 ${bars.length} 根完整日线。`:'自上次确认后暂无新的完整日K'};
   }
   function technicalSnapshot(stock){
@@ -190,7 +190,7 @@
   }
   function changedModule(current,prior,key,content){const before=prior&&prior.modules&&prior.modules[key];return !prior||!before||before.hash!==current.modules[key].hash?content:null}
   function stateFreshness(stock,current,options={}){
-    if(!current)return {status:'absent',reason:'尚未保存 Current State。'};
+    if(!current)return {status:'absent',reason:'尚未保存讨论结论。'};
     const now=references(stock,options),increment=barsAfter(stock,current.technicalSnapshot.anchorBar,{symbol:current.symbol}),reasons=[];
     if(canonical(stock)!==current.symbol)reasons.push('股票代码已变化');
     if(increment.mode!=='incremental')reasons.push(increment.message);
@@ -236,7 +236,7 @@
     const request=[
       `请和我一起复盘 ${context.name||context.symbol}（${context.symbol}）。这是一场延续性的单股讨论，不是一次性从头分析。`,
       '',
-      '请先用自然中文说明：从上次 Current State 到现在真正变化了什么、哪些风险需要优先确认、当前计划与长期逻辑是否仍协调，以及接下来最值得观察的事实。若是首次讨论，请建立简洁基线。',
+      '请先用自然中文说明：从上次已确认结论到现在真正变化了什么、哪些风险需要优先确认、当前计划与长期逻辑是否仍协调，以及接下来最值得观察的事实。若是首次讨论，请建立简洁基线。',
       '程序提供的持仓、完整日线、技术日期、计划版本和引用关系是受保护事实；不要重算或改写。价格触发不等于完整计划条件满足。不要发明新闻、财务、仓位或市场背景，也不要给确定性买卖指令。',
       `如需判断今天盘中强弱，请结合用户随后提供的分时截图；程序当前只提供截至 ${context.currentFacts.technical.technicalAsOf||'尚未确认日期'} 的完整日K事实。`,
       '基于上次已确认状态和之后新增事实，继续讨论这只股票。先识别哪些旧结论仍成立、哪些发生变化，再结合用户随后提供的分时/截图回答问题。不要自动生成正式存档，除非用户明确要求整理结论。',
@@ -246,7 +246,7 @@
     return {...prepared,request,metrics:requestMetrics(request)};
   }
   function buildArchiveRequest(prepared){
-    if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先开始讨论并生成当前上下文。');
+    if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
     const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,example={currentState:{symbol,sourceDiscussionVersion,stage:'继续观察',summary:'用不超过800字概括本轮确认结论。',keyChanges:[],risks:[],watchPoints:[],planRelation:'说明结论与当前有效计划的关系。',confidence:'medium'}};
     const request=[
       '请把刚才的讨论整理为可归档结论。',

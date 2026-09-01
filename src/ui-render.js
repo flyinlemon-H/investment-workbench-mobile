@@ -83,7 +83,10 @@ function renderSyncHint(){
   const local=(state.updatedAt?'最后修改 · '+new Date(state.updatedAt).toLocaleString('zh-CN'):'')+backupReminderText();
   const invalidCount=window.UniverseHandoff?window.UniverseHandoff.invalidStockCount(state):0;
   const universeText=invalidCount?`${invalidCount}只代码需检查`:'';
-  el.textContent=[universeText,local,backendHealthText()].filter(Boolean).join(' · ');
+  const backend=backendHealthText(),showDiagnostics=currentTab==='tools'&&!detailStockId;
+  el.textContent=[universeText,local,showDiagnostics?backend:''].filter(Boolean).join(' · ');
+  const backendStatus=document.getElementById('backendToolStatus');
+  if(backendStatus)backendStatus.textContent=backend;
 }
 function renderPcSyncStatus(){
   const control=document.getElementById('pcSyncControl');
@@ -2577,6 +2580,7 @@ function render(){
   else if(currentTab==='edit')renderEditCenter();
   else if(currentTab==='tools')renderTools();
   else renderTable();
+  if(typeof syncStorageMaintenanceUi==='function')syncStorageMaintenanceUi();
 }
 function renderDashboard(){
   const summary=document.getElementById('summary');
@@ -2680,7 +2684,10 @@ function renderTools(){
   const last=state.updatedAt?new Date(state.updatedAt).toLocaleString('zh-CN'):'—';
   const count=state.stocks.length;
   document.getElementById('summary').innerHTML=`工具 · 标的 <strong>${count}</strong> 只 · 本地最后修改 <strong>${esc(last)}</strong>`;
-  document.getElementById('main').innerHTML=`<div class="hint"><b>系统工具集中区：</b>导入、导出、汇率、价格刷新、新增标的和清空本地数据已集中到这里。总览、个股、ETF、观察和分析总览页面只保留分析内容。</div><div class="dash"><div class="card"><div class="card-title">数据导入 / 备份</div><div class="text" style="max-width:none">使用上方按钮导入旧版 JSON、导出当前完整数据，或导入同目录社媒数据。导入前程序仍会按原逻辑提示备份。</div></div><div class="card"><div class="card-title">行情 / 汇率</div><div class="text" style="max-width:none">使用上方「汇率」设置 HKD→CNY，或「刷新全部价格」更新价格。刷新失败时仍保留旧价格。</div></div><div class="card"><div class="card-title">标的维护</div><div class="text" style="max-width:none">新增标的、清空本地数据等低频管理操作统一放在工具页，避免干扰个股分析。</div></div><div class="card"><div class="card-title">远程控制预留</div><div class="text" style="max-width:none">手机远程触发仍使用 <code>docs/remote_control.html</code> 和 <code>remote_commands/command.json</code>。未来云端/远程入口也建议集中放在本页。</div></div></div>`;
+  document.getElementById('main').innerHTML=`<div class="hint"><b>系统工具集中区：</b>导入、导出、汇率、价格刷新、新增标的和清空本地数据已集中到这里。总览、个股、ETF、观察和分析总览页面只保留分析内容。</div><div class="dash"><div class="card"><div class="card-title">数据导入 / 备份</div><div class="text" style="max-width:none">使用上方按钮导入旧版 JSON、导出当前完整数据，或导入同目录社媒数据。导入前程序仍会按原逻辑提示备份。</div></div><div class="card"><div class="card-title">行情 / 汇率</div><div class="text" style="max-width:none">使用上方「汇率」设置 HKD→CNY，或「刷新全部价格」更新价格。刷新失败时仍保留旧价格。</div></div><div class="card"><div class="card-title">标的维护</div><div class="text" style="max-width:none">新增标的、清空本地数据等低频管理操作统一放在工具页，避免干扰个股分析。</div></div><div class="card"><div class="card-title">远程控制预留</div><div class="text" style="max-width:none">手机远程触发仍使用 <code>docs/remote_control.html</code> 和 <code>remote_commands/command.json</code>。未来云端/远程入口也建议集中放在本页。</div></div></div><section class="card" id="storageMaintenanceSection"><div class="card-title">数据维护</div><div class="card-note">备份、恢复和本地存储检查集中在这里；正常分析页面不再显示技术诊断。</div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:10px"><button class="btn ghost small" id="toolsExportBackupBtn" type="button">导出备份</button><button class="btn ghost small" id="toolsRestoreBackupBtn" type="button">数据恢复</button><button class="btn ghost small" id="toolsStorageStatusBtn" type="button">存储状态</button></div><details id="storageAdvancedDetails" class="technical-layer-details" style="margin-top:12px"><summary class="card-title" style="cursor:pointer">高级存储信息</summary><div class="card-note">包含存储引擎、旧数据回退、校验摘要、迁移时间和验证副本维护。</div><div id="storageMaintenancePanelMount"></div></details><details class="technical-layer-details" style="margin-top:12px"><summary class="card-title" style="cursor:pointer">系统连接状态</summary><div id="backendToolStatus" class="card-note">${esc(backendHealthText())}</div></details></section>`;
+  document.getElementById('toolsExportBackupBtn')?.addEventListener('click',exportData);
+  document.getElementById('toolsRestoreBackupBtn')?.addEventListener('click',importData);
+  document.getElementById('toolsStorageStatusBtn')?.addEventListener('click',()=>{const details=document.getElementById('storageAdvancedDetails');if(details)details.open=true;if(typeof refreshShadowMigrationPanel==='function')void refreshShadowMigrationPanel()});
 }
 function editCenterTypeLabel(type){
   return type==='etf'?'ETF':(type==='watching'?'观察':'个股');
@@ -5181,10 +5188,15 @@ function startStockDiscussion(stock){
   catch(error){alert(`无法开始讨论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionArchive(stock){
-  const key=discussionStockKey(stock),prepared=discussionPreparedContexts.get(key);
-  if(!prepared)return alert('请先点击“开始讨论”，确保归档结论对应当前上下文。');
-  try{prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);prepared.view='archive';discussionPreparedContexts.set(key,prepared);renderStockDetail()}
+  try{ensureDiscussionArchiveContext(stock);renderStockDetail()}
   catch(error){alert(`无法整理结论：${error&&error.message?error.message:error}`)}
+}
+function ensureDiscussionArchiveContext(stock){
+  if(!window.DiscussionWorkbench)throw new Error('讨论工作台模块未加载。');
+  const key=discussionStockKey(stock);let prepared=discussionPreparedContexts.get(key);
+  if(!prepared)prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());
+  if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
+  prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
 function copyDiscussionPrepared(stock,kind){
   const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
@@ -5195,8 +5207,8 @@ function copyDiscussionPrepared(stock,kind){
 function toggleDiscussionHistory(stock){const key=discussionStockKey(stock);if(discussionHistoryVisibility.has(key))discussionHistoryVisibility.delete(key);else discussionHistoryVisibility.add(key);renderStockDetail();setTimeout(()=>document.getElementById('discussionHistoryPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
 function discussionStatusPresentation(stock){
   const store=window.DiscussionWorkbench.normalizeStore(stock.discussionState),fresh=window.DiscussionWorkbench.stateFreshness(stock,store.current,discussionOptions());
-  if(!store.current)return {label:'尚未建立',className:'',reason:'第一次讨论将建立有限历史基线。',current:null,store};
-  return {label:fresh.status==='current'?'Current':(fresh.status==='needs_review'?'需复核':'历史'),className:fresh.status==='current'?'buy':'sell',reason:fresh.reason,current:store.current,store};
+  if(!store.current)return {label:'尚无讨论结论',className:'',reason:'首次保存结论后，程序将从这里继续跟踪后续变化。',current:null,store};
+  return {label:fresh.status==='current'?'当前':(fresh.status==='needs_review'?'需复核':'历史结论'),className:fresh.status==='current'?'buy':'sell',reason:fresh.reason,current:store.current,store};
 }
 function discussionStateCard(item,label){
   if(!item)return '';
@@ -5205,12 +5217,12 @@ function discussionStateCard(item,label){
 }
 function discussionHistoryPanel(stock,presentation){
   const open=discussionHistoryVisibility.has(discussionStockKey(stock)),history=presentation.store.history.slice().reverse();
-  return `<details id="discussionHistoryPanel" class="discussion-history"${open?' open':''}><summary>查看历史（${history.length}）</summary><div class="discussion-history-body">${history.length?history.map((item,index)=>discussionStateCard(item,`已被替代 ${index+1}`)).join(''):'<div class="empty" style="padding:24px">暂无历史 Current State。</div>'}</div></details>`;
+  return `<details id="discussionHistoryPanel" class="discussion-history"${open?' open':''}><summary>查看历史（${history.length}）</summary><div class="discussion-history-body">${history.length?history.map(item=>discussionStateCard(item,'历史结论')).join(''):'<div class="empty" style="padding:24px">暂无历史结论。</div>'}</div></details>`;
 }
 function ensureDiscussionImportDialog(){
   let el=document.getElementById('discussionImportDialog');if(el)return el;
   el=document.createElement('div');el.className='modal-bg import-layer';el.id='discussionImportDialog';
-  el.innerHTML=`<div class="modal"><h2>导入讨论结论</h2><div class="modal-sub">严格校验 AI JSON；预览不会写入，只有“确认保存”会更新 Current State。</div><div class="alert">AI 不能提供日期、技术锚点、引用或内部编号；这些字段由程序从刚才准备的上下文中补齐。保存后将成为下次讨论的起点。</div><div class="form-row"><label for="discussionImportText">AI 返回的严格 JSON</label><textarea id="discussionImportText" style="min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"currentState":{...}}'></textarea></div><div id="discussionImportMessage" class="card-note"></div><div id="discussionImportPreview"></div><div class="modal-actions"><button class="btn ghost" id="discussionImportCancelBtn" type="button">取消</button><button class="btn ghost" id="discussionImportPreviewBtn" type="button">预览结果</button><button class="btn" id="discussionImportConfirmBtn" type="button" disabled>确认保存</button></div></div>`;
+  el.innerHTML=`<div class="modal"><h2>导入讨论结论</h2><div class="modal-sub">严格校验 AI JSON；预览不会写入，只有“确认保存”会更新当前结论。</div><div class="alert">AI 不能提供日期、技术锚点、引用或内部编号；这些字段由程序从本次受保护上下文中补齐。保存后将成为下次讨论的起点。</div><div class="form-row"><label for="discussionImportText">AI 返回的严格 JSON</label><textarea id="discussionImportText" style="min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{"currentState":{...}}'></textarea></div><div id="discussionImportMessage" class="card-note"></div><div id="discussionImportPreview"></div><div class="modal-actions"><button class="btn ghost" id="discussionImportCancelBtn" type="button">取消</button><button class="btn ghost" id="discussionImportPreviewBtn" type="button">预览结果</button><button class="btn" id="discussionImportConfirmBtn" type="button" disabled>确认保存</button></div></div>`;
   document.body.appendChild(el);el.addEventListener('click',event=>{if(event.target===el)closeDiscussionImportDialog()});
   document.getElementById('discussionImportCancelBtn').addEventListener('click',closeDiscussionImportDialog);
   document.getElementById('discussionImportPreviewBtn').addEventListener('click',previewDiscussionImport);
@@ -5219,10 +5231,10 @@ function ensureDiscussionImportDialog(){
   return el;
 }
 function openDiscussionImportDialog(stock){
-  const prepared=discussionPreparedContexts.get(discussionStockKey(stock));if(!prepared)return alert('请先点击“开始讨论”。');
-  if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
-  prepared.view='archive';discussionPreparedContexts.set(discussionStockKey(stock),prepared);discussionImportPreview=null;
-  const el=ensureDiscussionImportDialog();el.dataset.stockId=stock.id;document.getElementById('discussionImportText').value='';document.getElementById('discussionImportMessage').textContent='粘贴 AI 返回内容后先预览。';document.getElementById('discussionImportPreview').innerHTML='';document.getElementById('discussionImportConfirmBtn').disabled=true;el.classList.add('show');
+  try{
+    ensureDiscussionArchiveContext(stock);discussionImportPreview=null;
+    const el=ensureDiscussionImportDialog();el.dataset.stockId=stock.id;document.getElementById('discussionImportText').value='';document.getElementById('discussionImportMessage').textContent='本次结论的受保护上下文已准备。粘贴 AI 返回内容后先预览。';document.getElementById('discussionImportPreview').innerHTML='';document.getElementById('discussionImportConfirmBtn').disabled=true;el.classList.add('show');
+  }catch(error){alert(`无法准备导入上下文：${error&&error.message?error.message:error}`)}
 }
 function closeDiscussionImportDialog(){document.getElementById('discussionImportDialog')?.classList.remove('show');discussionImportPreview=null}
 function previewDiscussionImport(){
@@ -5236,7 +5248,7 @@ async function confirmDiscussionImport(){
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));if(!stock||!prepared||!discussionImportPreview||!discussionImportPreview.ok)return;
   const original=state,result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
   if(result.status!=='completed'){document.getElementById('discussionImportMessage').textContent=result.error&&result.error.message?result.error.message:'保存失败，数据未确认写入。';state=original;return}
-  discussionPreparedContexts.delete(discussionStockKey(stock));closeDiscussionImportDialog();renderStockDetail();alert('Current State 已确认保存；上一个状态已移入历史。');
+  discussionPreparedContexts.delete(discussionStockKey(stock));closeDiscussionImportDialog();renderStockDetail();alert('当前结论已确认保存；上一个结论已移入历史。');
 }
 function discussionPreparedPanel(stock){
   const prepared=discussionPreparedContexts.get(discussionStockKey(stock));if(!prepared)return '';
@@ -5246,7 +5258,7 @@ function discussionPreparedPanel(stock){
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
   const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口';
-  return `<div class="discussion-workbench"><div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">单股连续讨论</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'尚无已确认讨论结论')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button"${discussionPreparedContexts.has(discussionStockKey(stock))?'':' disabled'}>整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button"${discussionPreparedContexts.has(discussionStockKey(stock))?'':' disabled'}>导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论会写入。</div></div>${current?discussionStateCard(current,'Current State'):'<div class="card"><div class="empty" style="padding:28px">尚无已确认讨论结论<br>首次讨论将建立后续连续分析的起点</div></div>'}${discussionPreparedPanel(stock)}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
+  return `<div class="discussion-workbench"><div class="card discussion-hero"><div class="discussion-status-line"><div><div class="card-title">当前状态</div><div class="card-num" style="font-size:20px">${esc(status.label)}</div></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span></div><div class="card-note">${esc(status.reason)}</div><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="modal-actions discussion-actions"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn ghost small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论会写入。</div></div>${current?discussionStateCard(current,'当前结论'):''}${discussionPreparedPanel(stock)}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
   {key:'ai',label:'讨论'},

@@ -290,11 +290,11 @@ function isCurrentShadowReady(record,preflight){
 function ensureShadowMigrationPanel(){
   let panel=document.getElementById('shadowMigrationPanel');
   if(panel)return panel;
-  const main=document.getElementById('main');
-  if(!main||!main.parentNode||typeof main.parentNode.insertBefore!=='function')return null;
+  const mount=document.getElementById('storageMaintenancePanelMount');
+  if(!mount||typeof mount.appendChild!=='function')return null;
   panel=document.createElement('section');
   panel.id='shadowMigrationPanel';
-  panel.className='card';
+  panel.className='storage-maintenance-advanced';
   const guidance=document.createElement('div');
   guidance.id='shadowMigrationGuidance';
   guidance.textContent='建议先导出 JSON 备份，再进行本地存储升级验证。请使用普通 Safari / Chrome；不要使用私密浏览或 Lockdown Mode；验证过程中不要关闭页面，完成后普通刷新一次。';
@@ -342,7 +342,7 @@ function ensureShadowMigrationPanel(){
   panel.appendChild(cancelButton);
   panel.appendChild(clearButton);
   panel.appendChild(cutoverButton);
-  main.parentNode.insertBefore(panel,main);
+  mount.appendChild(panel);
   exportButton.addEventListener('click',()=>{if(typeof exportShadowVerificationBackup==='function')exportShadowVerificationBackup()});
   backupCheckbox.addEventListener('change',()=>{shadowMigrationUiState.backupConfirmed=backupCheckbox.checked===true;updateShadowMigrationPanel(shadowMigrationUiState.record)});
   cancelButton.addEventListener('click',()=>{shadowMigrationUiState.backupConfirmed=false;backupCheckbox.checked=false;updateShadowMigrationPanel(shadowMigrationUiState.record)});
@@ -392,6 +392,7 @@ function setShadowMigrationEditLock(locked){
 }
 function updateShadowMigrationPanel(record){
   shadowMigrationUiState.record=record||null;
+  renderStorageMaintenanceWarning(record);
   const panel=ensureShadowMigrationPanel();
   if(!panel)return;
   const status=panel.querySelector?panel.querySelector('#shadowMigrationStatus'):document.getElementById('shadowMigrationStatus');
@@ -428,13 +429,29 @@ async function refreshShadowMigrationPreflight(){
   updateShadowMigrationPanel(shadowMigrationUiState.record);
 }
 async function refreshShadowMigrationPanel(){
-  const panel=ensureShadowMigrationPanel();
-  if(!panel||!StorageManager||typeof StorageManager.getMigrationStatus!=='function')return;
+  if(!StorageManager||typeof StorageManager.getMigrationStatus!=='function')return;
   try{
     updateShadowMigrationPanel(await StorageManager.getMigrationStatus());
-    await refreshShadowMigrationPreflight();
+    if(document.getElementById('storageMaintenancePanelMount'))await refreshShadowMigrationPreflight();
   }
   catch(_error){updateShadowMigrationPanel({status:'failed',sourceKeysPresent:[]})}
+}
+function storageMaintenanceNeedsAttention(record){return Boolean(record&&record.status==='failed')}
+function renderStorageMaintenanceWarning(record=shadowMigrationUiState.record){
+  let warning=document.getElementById('storageMaintenanceWarning');
+  const shouldShow=storageMaintenanceNeedsAttention(record)&&currentTab!=='tools'&&!(document.body&&document.body.dataset.storageRecoveryRequired==='true');
+  if(!shouldShow){if(warning)warning.remove();return}
+  if(warning)return;
+  const main=document.getElementById('main');if(!main||!main.parentNode)return;
+  warning=document.createElement('div');warning.id='storageMaintenanceWarning';warning.className='alert';warning.setAttribute('role','alert');
+  const text=document.createElement('span');text.textContent='本地数据状态异常，请检查数据维护。';
+  const action=document.createElement('button');action.type='button';action.className='btn ghost small';action.textContent='检查数据维护';
+  action.addEventListener('click',()=>{detailStockId=null;detailSubView='';currentTab='tools';render()});
+  warning.appendChild(text);warning.appendChild(action);main.parentNode.insertBefore(warning,main);
+}
+function syncStorageMaintenanceUi(){
+  renderStorageMaintenanceWarning(shadowMigrationUiState.record);
+  if(document.getElementById('storageMaintenancePanelMount'))updateShadowMigrationPanel(shadowMigrationUiState.record);
 }
 let applicationServicesStarted=false;
 async function activateLoadedApplication(){

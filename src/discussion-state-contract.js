@@ -25,7 +25,7 @@
     if(missing.length)errors.push(`currentState missing fields: ${missing.join(', ')}`);
     const symbol=Workbench.canonical(source.symbol),sourceDiscussionVersion=text(source.sourceDiscussionVersion),stage=text(source.stage),summary=text(source.summary),planRelation=text(source.planRelation),confidence=text(source.confidence);
     if(!symbol||symbol!==Workbench.canonical(expected.symbol))errors.push('symbol 与本次讨论不一致');
-    if(!sourceDiscussionVersion||sourceDiscussionVersion!==text(expected.sourceDiscussionVersion))errors.push('sourceDiscussionVersion 已过期或不一致');
+    if(!sourceDiscussionVersion||sourceDiscussionVersion!==text(expected.sourceDiscussionVersion))errors.push('结论来源版本已过期或不一致');
     if(!stage||stage.length>40||/[\r\n]/.test(stage))errors.push('stage 必须是不超过40字的单行文字');
     if(!summary||summary.length>800)errors.push('summary 必须为1至800字');
     if(planRelation.length>500)errors.push('planRelation 不得超过500字');
