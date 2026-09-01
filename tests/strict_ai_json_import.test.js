@@ -11,8 +11,8 @@ const Discussion=require('../src/discussion-state-contract.js');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const discussionVersion='discussion_v1_fixture';
-const discussionValue=(overrides={})=>({currentState:{symbol:'601138.SS',sourceDiscussionVersion:discussionVersion,stage:'修复观察',summary:'市场仍处于“修复观察”阶段。',keyChanges:['继续观察“行业长期逻辑”'],risks:[],watchPoints:['等待“量价确认”'],planRelation:'与“原计划”保持观察关系。',confidence:'medium',...overrides}});
-const discussionOptions={expectedSymbol:'601138.SS',sourceDiscussionVersion:discussionVersion};
+const discussionValue=(overrides={})=>({currentState:{symbol:'601138.SS',sourceDiscussionVersion:discussionVersion,actionAssessment:{category:'hold_watch',priority:'low',headline:'当前维持常规观察。',reasons:['趋势仍在修复，暂未出现仓位调整信号。'],upgradeConditions:['量价确认后提高复核优先级。'],downgradeConditions:['修复结构被破坏。']},attentionLevel:'normal',trendAssessment:{overall:'recovery',timeframes:[{timeframe:'日线',status:'recovery',explanation:'市场仍处于“修复观察”阶段。'}]},structureAssessment:[],stage:'修复观察',focusPoints:['等待“量价确认”。'],summary:'市场仍处于“修复观察”阶段。',keyChanges:['继续观察“行业长期逻辑”'],risks:[],watchPoints:['等待压力位确认。'],planRelation:{status:'neutral',summary:'与“原计划”保持观察关系；价格触发不等于完整条件满足。'},confidence:'medium',...overrides}});
+const discussionOptions={expectedSymbol:'601138.SS',sourceDiscussionVersion:discussionVersion,holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false};
 const smartStructure=value=>{
   const source=JSON.stringify(value);let inString=false,escaped=false;
   return source.split('').map(char=>{

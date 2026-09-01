@@ -10,8 +10,8 @@ function bars(count,start='2026-07-01'){return Array.from({length:count},(_,inde
 function stock(overrides={}){
   return {id:'stock-1',code:'601138.SS',name:'工业富联',type:'holding',role:'核心仓',shares:100,avgCost:42,currentPrice:55,priceUpdatedAt:'2026-08-31',priceSource:'fixture',priceHistory:bars(30),technicalData:{technicalDataStatus:'fresh',trendStatus:'uptrend',supportLevels:[50,48],resistanceLevels:[58],latestCompleteBar:dateAt(29),technicalAsOf:dateAt(29)},technicalReview:{updatedAt:'2026-08-31T08:00:00Z',shortTermTechnical:{trendStatus:'uptrend',cyclePosition:'mid_uptrend',technicalSummary:'趋势延续',riskFlags:['near_resistance'],confidence:'medium'}},plans:[],longTermLogic:{updatedAt:'2026-08-20T08:00:00Z',logicStatus:'valid',investmentThesis:'长期逻辑',coreDrivers:['增长'],longTermRisks:['波动']},...overrides};
 }
-function judgment(prepared,overrides={}){return {currentState:{symbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,stage:'修复观察',summary:'本轮确认继续观察。',keyChanges:['价格修复'],risks:['压力位风险'],watchPoints:['观察成交量'],planRelation:'当前计划仅作为观察条件，不自动修改。',confidence:'medium',...overrides}}}
-function preview(prepared,overrides={}){return Contract.process(JSON.stringify(judgment(prepared,overrides)),{expectedSymbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion})}
+function judgment(prepared,overrides={}){return {currentState:{symbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,actionAssessment:{category:'hold_watch',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势修复但尚未出现需要调整仓位的确认信号。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前修复结构被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'recovery',timeframes:[{timeframe:'日线',status:'recovery',explanation:'价格延续修复但仍需量价确认。'}]},structureAssessment:[],stage:'修复观察',focusPoints:['观察量价能否确认修复延续。'],summary:'本轮确认继续观察。',keyChanges:['价格修复'],risks:['压力位风险'],watchPoints:['观察成交量'],planRelation:{status:'neutral',summary:'当前计划仅作为观察条件，不自动修改；价格触发不等于完整条件满足。'},confidence:'medium',...overrides}}}
+function preview(prepared,overrides={}){const facts=prepared.context.currentFacts;return Contract.process(JSON.stringify(judgment(prepared,overrides)),{expectedSymbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,programProvesFullPlanConditions:false})}
 function confirmedState(sourceStock,now='2026-08-31T08:00:00Z'){
   const prepared=Workbench.buildDiscussionRequest(sourceStock),result=preview(prepared),built=Contract.buildCandidate({stocks:[sourceStock]},result,{prepared,now,timeZone:'Asia/Shanghai'});
   return {prepared,result,built,state:built.candidate.stocks[0].discussionState.current,stock:built.candidate.stocks[0]};
@@ -137,7 +137,7 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
-  assert.ok(archive.request.length<2500);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
+  assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
   assert.doesNotMatch(archive.request,/priceHistory|完整日线|technicalSnapshot/);
 });
 
