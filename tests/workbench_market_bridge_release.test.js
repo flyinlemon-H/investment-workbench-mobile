@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Single Stock Discussion Workbench V1 cache-busts the bridge and Workbench modules',()=>{
+test('Shared Strict AI JSON Import Reliability Fix 1 cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='single-stock-discussion-workbench-v1-20260831';
+  const version='shared-strict-ai-json-import-reliability-fix1-20260901';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
@@ -120,6 +120,7 @@ test('Single Stock Discussion Workbench V1 cache-busts the bridge and Workbench 
     'src/plan-update-draft.js',
     'src/rebalance.js',
     'src/clipboard.js',
+    'src/strict-ai-json.js',
     'src/discussion-workbench.js',
     'src/discussion-state-contract.js',
     'src/ui-render.js',

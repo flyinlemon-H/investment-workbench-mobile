@@ -11,13 +11,14 @@ const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
-roleByPath.set('src/batch-technical-review.js','M05B Hotfix 3 authoritative batch contract, validation, and parser runtime');
+roleByPath.set('src/strict-ai-json.js','shared strict AI JSON presentation preprocessor and parser runtime');
+roleByPath.set('src/batch-technical-review.js','Batch Technical Review contract and shared strict AI JSON consumer runtime');
 roleByPath.set('src/multi-stock-analysis.js','M05C_1 Real Trial Fix 1 two-module navigation runtime');
 roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity runtime');
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','Single Stock Discussion Workbench mobile continuity, preview, and history UI');
+roleByPath.set('src/ui-render.js','shared strict AI JSON import status, Long-Term, News/Sentiment, and Workbench UI runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
 roleByPath.set('src/decision-compression-context.js','Decision Compression compact context with program-owned blocker facts and audit references');
@@ -29,7 +30,7 @@ roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, prev
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
 roleByPath.set('src/discussion-workbench.js','Single Stock Discussion State schema, anchors, incremental context, and prompt runtime');
-roleByPath.set('src/discussion-state-contract.js','Single Stock Discussion strict archive contract and protected atomic save runtime');
+roleByPath.set('src/discussion-state-contract.js','Single Stock Discussion shared strict JSON archive contract and protected atomic save runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
 roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
@@ -39,6 +40,7 @@ roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recom
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
+  'src/strict-ai-json.js',
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
   'src/symbol-identity.js',
@@ -72,8 +74,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'single-stock-discussion-workbench-v1-20260831',
-  dataMode:'program-owned Single Stock Discussion anchors and references + AI judgment-only archive contract + user-confirmed Current State history + existing verified clipboard, Plan, Portfolio Review, Decision Compression, market bridge, and browser persistence',
+  assetVersion:'shared-strict-ai-json-import-reliability-fix1-20260901',
+  dataMode:'shared strict presentation-only AI JSON preprocessing + standard JSON.parse authority + contract validation before mutation across Discussion, Long-Term, News/Sentiment, Batch Technical, Plan, Portfolio Review, and Decision Compression; existing verified clipboard, market bridge, and browser persistence preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
