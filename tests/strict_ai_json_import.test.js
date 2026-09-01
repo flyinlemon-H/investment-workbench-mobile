@@ -32,6 +32,48 @@ test('valid strict JSON is accepted unchanged before any presentation repair',()
   assert.equal(result.input.smartQuoteRecoveryAttempted,false);
 });
 
+test('known Markdown underscore escapes recover only inside JSON strings',()=>{
+  const standard='{"category":"reduce_review"}',standardResult=Strict.parseStrictAiJson(standard);
+  assert.equal(standardResult.ok,true);assert.equal(standardResult.normalizedText,standard);assert.deepEqual(standardResult.repairs,[]);assert.equal(standardResult.input.repairedUnderscoreEscapes,0);
+
+  const single='{"category":"reduce\\_review"}',singleResult=Strict.parseStrictAiJson(single);
+  assert.equal(singleResult.ok,true);assert.deepEqual(singleResult.value,{category:'reduce_review'});assert.equal(singleResult.normalizedText,standard);assert.deepEqual(singleResult.repairs,[Strict.REPAIRS.MARKDOWN_UNDERSCORE_ESCAPE]);
+  assert.equal(singleResult.input.underscoreEscapeRecoveryAttempted,true);assert.equal(singleResult.input.repairedUnderscoreEscapes,1);assert.equal(singleResult.diagnostics.firstIllegalEscape.sequence,'\\_');assert.equal(singleResult.diagnostics.firstIllegalEscape.index,single.indexOf('_'));
+
+  const multiple='{"sourceDiscussionVersion":"discussion\\_v2\\_abc","category":"reduce\\_review"}',multipleResult=Strict.parseStrictAiJson(multiple);
+  assert.equal(multipleResult.ok,true);assert.deepEqual(multipleResult.value,{sourceDiscussionVersion:'discussion_v2_abc',category:'reduce_review'});assert.equal(multipleResult.input.repairedUnderscoreEscapes,3);assert.deepEqual(multipleResult.diagnostics.underscoreEscapeRepairPositions,[38,42,67]);assert.equal(multipleResult.input.smartQuoteRecoveryAttempted,false);
+});
+
+test('valid escapes and intended literal backslashes remain unchanged while unknown escapes fail closed',()=>{
+  const unicode='{"value":"\\u005F"}',unicodeResult=Strict.parseStrictAiJson(unicode);
+  assert.equal(unicodeResult.ok,true);assert.equal(unicodeResult.normalizedText,unicode);assert.equal(unicodeResult.value.value,'_');assert.deepEqual(unicodeResult.repairs,[]);
+
+  const literal='{"value":"literal\\\\_content"}',literalResult=Strict.parseStrictAiJson(literal);
+  assert.equal(literalResult.ok,true);assert.equal(literalResult.normalizedText,literal);assert.equal(literalResult.value.value,'literal\\_content');assert.equal(literalResult.input.repairedUnderscoreEscapes,0);
+
+  const doubled='{"value":"literal\\\\\\\\_content"}',doubledResult=Strict.parseStrictAiJson(doubled);
+  assert.equal(doubledResult.ok,true);assert.equal(doubledResult.normalizedText,doubled);assert.equal(doubledResult.value.value,'literal\\\\_content');assert.equal(doubledResult.input.repairedUnderscoreEscapes,0);
+
+  for(const raw of ['{"value":"abc\\qdef"}','{"value":"abc\\xdef"}']){
+    const result=Strict.parseStrictAiJson(raw);assert.equal(result.ok,false);assert.equal(result.reason,Strict.REASONS.MALFORMED);assert.equal(result.input.underscoreEscapeRecoveryAttempted,false);assert.equal(result.input.repairedUnderscoreEscapes,0);assert.match(result.diagnostics.finalParseError,/JSON/);
+  }
+});
+
+test('underscore recovery composes with structural quotes and one full-response fence',()=>{
+  const combined='{“currentState”:{“sourceDiscussionVersion”:“discussion\\_v2\\_abc”,“summary”:“测试”}}',combinedResult=Strict.parseStrictAiJson(combined);
+  assert.equal(combinedResult.ok,true);assert.deepEqual(combinedResult.value,{currentState:{sourceDiscussionVersion:'discussion_v2_abc',summary:'测试'}});assert.deepEqual(combinedResult.repairs,[Strict.REPAIRS.STRUCTURAL_SMART_QUOTES,Strict.REPAIRS.MARKDOWN_UNDERSCORE_ESCAPE]);assert.equal(combinedResult.input.repairedUnderscoreEscapes,2);assert.equal(combinedResult.input.smartQuotesRecovered,true);
+
+  const fenced='```json\n{"category":"reduce\\_review"}\n```',fencedResult=Strict.parseStrictAiJson(fenced);
+  assert.equal(fencedResult.ok,true);assert.deepEqual(fencedResult.value,{category:'reduce_review'});assert.deepEqual(fencedResult.repairs,[Strict.REPAIRS.MARKDOWN_FENCE,Strict.REPAIRS.MARKDOWN_UNDERSCORE_ESCAPE]);
+});
+
+test('underscore recovery remains fail closed for malformed and truncated JSON with rich diagnostics',()=>{
+  const malformed=Strict.parseStrictAiJson('{"category":"reduce\\_review",}');
+  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.input.repairedUnderscoreEscapes,1);assert.match(malformed.userMessage,/异常转义字符/);assert.match(malformed.userMessage,/首个异常转义：\\_/);assert.match(malformed.diagnostics.originalParseError,/JSON/);assert.match(malformed.diagnostics.finalParseError,/JSON/);
+  const truncated=Strict.parseStrictAiJson('{"category":"reduce\\_review"');
+  assert.equal(truncated.ok,false);assert.equal(truncated.reason,Strict.REASONS.TRUNCATED);assert.equal(truncated.input.repairedUnderscoreEscapes,1);assert.match(truncated.diagnostics.finalParseError,/JSON/);
+});
+
 test('one full labeled or unlabeled Markdown fence is recovered and wrappers stay fail-closed',()=>{
   for(const raw of ['```json\n{"x":1}\n```','```JSON\n{"x":1}\n```','```\n{"x":1}\n```']){
     const result=Strict.parseStrictAiJson(raw);assert.equal(result.ok,true);assert.deepEqual(result.value,{x:1});assert.deepEqual(result.repairs,[Strict.REPAIRS.MARKDOWN_FENCE]);
@@ -80,6 +122,18 @@ test('complete Current State v2 reaches existing schema validation after fullwid
   assert.equal(result.ok,true,result.message);assert.equal(result.previewReady,true);assert.equal(result.writes,0);assert.equal(result.currentState.trendAssessment.timeframes.length,2);assert.equal(result.currentState.structureAssessment[0].source,'ai_chart_judgment');
   const stale=Discussion.process(fullwidthStructure(payload),{expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_stale',holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false});
   assert.equal(stale.ok,false);assert.equal(stale.code,'validation_error');assert.match(stale.message,/结论来源版本已过期或不一致/);
+});
+
+test('real production Current State fixture crosses parser recovery, preserves strict schema rejection, and reaches preview only after an exact v2 structure correction',()=>{
+  const raw=fs.readFileSync(path.join(__dirname,'fixtures','production-current-state-invalid-underscore.json.txt'),'utf8').replace(/\r?\n$/,'');
+  const parsed=Strict.parseStrictAiJson(raw);
+  assert.equal(parsed.ok,true);assert.equal(parsed.input.repairedUnderscoreEscapes,3);assert.equal(parsed.input.smartQuoteRecoveryAttempted,false);assert.equal(parsed.value.currentState.sourceDiscussionVersion,'discussion_v2_9a35cb46');assert.equal(parsed.value.currentState.actionAssessment.category,'reduce_review');
+  const options={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_9a35cb46',holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false};
+  const invalid=Discussion.process(raw,options);
+  assert.equal(invalid.ok,false);assert.equal(invalid.code,'validation_error');assert.match(invalid.message,/structureAssessment\[0\] 包含未知字段：explanation/);assert.match(invalid.message,/缺少字段：timeframe, shortReason/);assert.doesNotMatch(invalid.message,/JSON 格式无法识别/);
+  const corrected=raw.replace('{"type":"pullback","status":"confirmed","source":"program","sourceAsOf":"","explanation":','{"timeframe":"日线","type":"pullback","status":"confirmed","source":"program","sourceAsOf":"","shortReason":');
+  const preview=Discussion.process(corrected,options);
+  assert.equal(preview.ok,true,preview.message);assert.equal(preview.previewReady,true);assert.equal(preview.writes,0);assert.equal(preview.input.repairedUnderscoreEscapes,3);assert.equal(preview.currentState.structureAssessment[0].timeframe,'日线');assert.equal(preview.currentState.structureAssessment[0].shortReason,parsed.value.currentState.structureAssessment[0].explanation);
 });
 
 test('fenced structural smart quotes recover and ambiguous content quotes fail closed',()=>{

@@ -138,6 +138,10 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
   assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
+  assert.match(archive.request,/下划线 _ 不需要也不得转义/);assert.ok(archive.request.includes('discussion\\_v2\\_9a35cb46'));assert.match(archive.request,/只能使用标准定义的转义/);
+  assert.match(archive.request,/trendAssessment\.timeframes 的每项必须且只能包含 timeframe、status、explanation/);assert.match(archive.request,/structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason/);assert.match(archive.request,/不得在 structureAssessment 中使用 explanation/);
+  for(const field of ['"timeframe":"60分钟"','"type":"top"','"status":"forming"','"source":"ai_chart_judgment"','"sourceAsOf":""','"shortReason":'])assert.ok(archive.request.includes(field),field);
+  assert.doesNotMatch(archive.request,/接受 explanation 作为|兼容旧字段|自动填充缺失/);
   assert.doesNotMatch(archive.request,/priceHistory|完整日线|technicalSnapshot/);
 });
 

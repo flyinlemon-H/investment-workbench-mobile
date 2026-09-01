@@ -324,20 +324,25 @@
   }
   function buildArchiveRequest(prepared){
     if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
-    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,example={currentState:{symbol,sourceDiscussionVersion,actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认并进入相关价格窗口。'],downgradeConditions:['当前结构判断被后续价格行为破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['关键结构是否确认；确认后再提高复核优先级。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前判断与既有计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'}};
+    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,example={currentState:{symbol,sourceDiscussionVersion,actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认并进入相关价格窗口。'],downgradeConditions:['当前结构判断被后续价格行为破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['关键结构是否确认；确认后再提高复核优先级。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前判断与既有计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
     const request=[
       '根据本轮讨论形成一个可持续更新的当前状态，优先明确当前关注级别、操作复核方向、趋势、结构及其生命周期、最重要观察事项和升级/降级条件。',
       '只输出一个严格 JSON 对象，顶层只能有 currentState。',
       '不要 Markdown 代码围栏。',
       '不要额外解释。',
       'JSON 结构键和值必须使用英文半角双引号 "。',
+      'JSON 只能使用标准定义的转义；下划线 _ 不需要也不得转义。不得把 Markdown 转义带进 JSON。正确：discussion_v2_9a35cb46、reduce_review、ai_chart_judgment；错误：discussion\\_v2\\_9a35cb46、reduce\\_review、ai\\_chart\\_judgment。',
       '字符串正文可以正常使用中文标点和中文引号。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
       '严格按此顺序判断并输出：actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       '固定值：category 只能为 risk_control/reduce_review/hold_watch/wait_confirmation/add_review/entry_review/no_action；priority 为 high/medium/low；attentionLevel 为 normal/focused/window；趋势 status 为 uptrend/downtrend/sideways/recovery/rebound/unclear；结构 type 为 top/bottom/breakout/pullback/recovery/consolidation/none/unclear，status 为 forming/confirmed/valid/broken/unclear，source 为 program/external_software/ai_chart_judgment/user_provided；planRelation.status 为 aligned/conflict/no_matching_plan/neutral；confidence 为 high/medium/low。',
+      'trendAssessment.timeframes 的每项必须且只能包含 timeframe、status、explanation；explanation 只属于趋势周期项。',
+      'structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason；不得在 structureAssessment 中使用 explanation，不得遗漏必填字段，不得增加未知字段。',
+      `structureAssessment 单项形状示例：${JSON.stringify(structureItemExample)}`,
       'actionAssessment.reasons 最多5项，升级/降级条件最多3项；timeframes 与 structureAssessment 最多3项；focusPoints、keyChanges、risks、watchPoints 最多5项。summary 用2–4句，关键变化只写相对上次已确认结论的变化；focusPoints 写当前优先事项，watchPoints 写更广的持续监测，不要重复。',
       `当前${held?'有持仓':'为零持仓候选'}：${held?'不得使用 entry_review；可按证据使用持有、等待、加仓、减仓或风险复核方向。':'category 只能使用 entry_review、wait_confirmation 或 no_action，不得写继续持有、加仓复核或减仓复核。'}`,
       '结构来源必须保持真实：外部软件明确提供的信号用 external_software，图形推断用 ai_chart_judgment，用户陈述用 user_provided；sourceAsOf 有明确日期/时间就保留，否则为空字符串。不同来源冲突时并列说明，不得把 AI 推断冒充软件事实。资料陈旧或缺失时使用条件性判断并降低 confidence。',
+      '不得发明结构的 timeframe 或 source。无法确认具体 timeframe 或没有足够证据形成结构项时，使用空的 structureAssessment 数组；有明确周期但结构不明确时，只能按证据使用允许的 none/unclear 表达，并仍完整输出六个必填字段。不得用 explanation 代替缺失字段。',
       '所有中文正文不得暴露英文枚举、字段名或实现术语。保留不确定性；价格触发不等于完整计划条件满足。不得修改或声称修改计划、计划复核、持仓、配置或长期逻辑；不得创建仓位数值、股数、订单或确定性买卖命令。高优先级只表示优先复核，不等于自动交易。',
       '不要输出日期、技术锚点、哈希、引用、stateId 或任何由程序补齐的字段。',
       JSON.stringify(example,null,2)
