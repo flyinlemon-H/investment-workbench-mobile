@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "ff724f696430ef5472de186c87a74c877f320985",
-  "assetVersion": "discussion-to-plan-v1-20260901",
-  "dataMode": "same-conversation Discussion-to-Plan V1 with confirmed Current State binding, exact Plan version and snapshot binding, strict shared JSON parsing, preview-before-write, explicit canonical Plan confirmation, and no automatic trading; PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
+  "sourceCommit": "082c4d4b903af8b25861189ed2307adb2cf040ba",
+  "assetVersion": "shared-strict-ai-json-import-reliability-fix3-20260901",
+  "dataMode": "shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery and hardened Current State v2 Archive Prompt; same-conversation Discussion-to-Plan V1, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 55365,
-      "sha256": "6fcf199270827d6318a46215e0d055a476fa39e50ab21089d5a180accba44a6f"
+      "bytes": 56445,
+      "sha256": "a031b842f6921ecd5743c93d9a84c94359f2be7c33467624c39a7f7cded45780"
     },
     {
       "path": "social_posts.json",
@@ -139,8 +139,8 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and prompt runtime",
-      "bytes": 42069,
-      "sha256": "2d815900513d162dfeec15cfbd8d32b4cffb71be005334dfa53d25b44720aac4"
+      "bytes": 43370,
+      "sha256": "10d7ff4ab3060aa50f73659cb984fa1a4db2db4a1f86aaf69040c9735724c6d0"
     },
     {
       "path": "src/import-export.js",
@@ -307,8 +307,8 @@
     {
       "path": "src/strict-ai-json.js",
       "role": "shared strict AI JSON presentation preprocessor and parser runtime",
-      "bytes": 14246,
-      "sha256": "0ac8d732471f0fd9030e1d3428d92edb191b75435307c4c7b7273bf059c6c29b"
+      "bytes": 18504,
+      "sha256": "6b6457f5457a2163510ee7dd3d14e33d39193e6d52aafde3174b47968582d4b7"
     },
     {
       "path": "src/symbol-identity.js",
