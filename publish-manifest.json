@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "082c4d4b903af8b25861189ed2307adb2cf040ba",
-  "assetVersion": "shared-strict-ai-json-import-reliability-fix3-20260901",
-  "dataMode": "shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery and hardened Current State v2 Archive Prompt; same-conversation Discussion-to-Plan V1, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
+  "sourceCommit": "31591b1f47f462905245e7febb9f94b5dd1ebc54",
+  "assetVersion": "standalone-plan-draft-session-20260902",
+  "dataMode": "standalone Plan Draft Session bound to canonical Plan and holding facts with optional Current State and Discussion provenance; shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56445,
-      "sha256": "a031b842f6921ecd5743c93d9a84c94359f2be7c33467624c39a7f7cded45780"
+      "bytes": 55725,
+      "sha256": "82c614e50851958023f6a80286fc012f8a9a1697ba4a0b24e431b225026b3aa3"
     },
     {
       "path": "social_posts.json",
@@ -127,8 +127,8 @@
     {
       "path": "src/discussion-plan-workflow.js",
       "role": "Discussion-to-Plan same-conversation prompt, strict draft validation, preview, binding, and confirmed canonical Plan mutation runtime",
-      "bytes": 27072,
-      "sha256": "1a2c500beb00d2f32854d3013679a3d0454ab09bac1d8b2b584fde25a96d9d24"
+      "bytes": 31360,
+      "sha256": "f237c640229cc8b91ed92e1940c5921ab897b4c3fd3159f4e624d88a8c047774"
     },
     {
       "path": "src/discussion-state-contract.js",
@@ -325,8 +325,8 @@
     {
       "path": "src/ui-render.js",
       "role": "mobile-first Current State decision hierarchy, import preview, legacy fallback, and existing Workbench UI runtime",
-      "bytes": 656621,
-      "sha256": "62ba604547f56a98fc534e63685e897e00c81313a3f547539866142e3f04e6df"
+      "bytes": 656938,
+      "sha256": "5cdc0007bddb8067d46c9553138a61600b7575f01aaf00dad5d963643e81bec9"
     },
     {
       "path": "src/universe-handoff.js",
