@@ -32,6 +32,7 @@ roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft 
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
 roleByPath.set('src/discussion-workbench.js','Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and prompt runtime');
 roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fail-closed decision archive contract and protected atomic save runtime');
+roleByPath.set('src/discussion-plan-workflow.js','Discussion-to-Plan same-conversation prompt, strict draft validation, preview, binding, and confirmed canonical Plan mutation runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
 roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
@@ -57,7 +58,8 @@ const paths=[...new Set([
   'src/plan-review-ui.js',
   'src/clipboard.js',
   'src/discussion-workbench.js',
-  'src/discussion-state-contract.js'
+  'src/discussion-state-contract.js',
+  'src/discussion-plan-workflow.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -75,8 +77,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'shared-strict-ai-json-import-reliability-fix2-20260901',
-  dataMode:'shared strict JSON structural quote recovery for U+201C, U+201D, and U+FF02 with Chinese content quote preservation and fail-closed ambiguity; Current State v2 schema and protected context, Plan, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
+  assetVersion:'discussion-to-plan-v1-20260901',
+  dataMode:'same-conversation Discussion-to-Plan V1 with confirmed Current State binding, exact Plan version and snapshot binding, strict shared JSON parsing, preview-before-write, explicit canonical Plan confirmation, and no automatic trading; PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

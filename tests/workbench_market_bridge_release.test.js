@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Shared Strict AI JSON Import Reliability Fix 2 cache-busts the bridge and Workbench modules',()=>{
+test('Discussion-to-Plan V1 cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='shared-strict-ai-json-import-reliability-fix2-20260901';
+  const version='discussion-to-plan-v1-20260901';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
@@ -123,6 +123,7 @@ test('Shared Strict AI JSON Import Reliability Fix 2 cache-busts the bridge and 
     'src/strict-ai-json.js',
     'src/discussion-workbench.js',
     'src/discussion-state-contract.js',
+    'src/discussion-plan-workflow.js',
     'src/ui-render.js',
     'src/batch-technical-review.js',
     'src/multi-stock-analysis.js',
