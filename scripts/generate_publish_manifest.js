@@ -75,8 +75,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'current-state-decision-layer-20260901',
-  dataMode:'decision-oriented Single Stock Current State v2 with action review direction, independent urgency, multi-timeframe trend, structure lifecycle and provenance, focus and upgrade/downgrade conditions, Plan relationship classification, mobile-first preview, and legacy v1 rendering; Plan, PlanReview, holdings, allocation, long-term logic, strict AI JSON parser, clipboard, market bridge, and storage runtime preserved',
+  assetVersion:'shared-strict-ai-json-import-reliability-fix2-20260901',
+  dataMode:'shared strict JSON structural quote recovery for U+201C, U+201D, and U+FF02 with Chinese content quote preservation and fail-closed ambiguity; Current State v2 schema and protected context, Plan, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
