@@ -77,8 +77,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'plan-draft-targeting-semantics-20260902',
-  dataMode:'standalone single-target Plan Draft Session bound to canonical Plan and holding facts; only explicitly discussed Plans are output, exact existing-Plan identity is required, unmentioned Plans remain untouched, and confirmed updates preserve replaced history; optional Current State and Discussion provenance, negation-aware Current State semantic guards, shared strict AI JSON reliability fix 3, strict schemas, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime are preserved',
+  assetVersion:'plan-draft-no-change-alignment-20260902',
+  dataMode:'standalone Plan Draft Session bound to canonical Plan and holding facts; targeted no_change requires exact Plan identity, unscoped null-target no_change is a zero-authority no-plan-result, scoped Sessions reject null-target no_change and create, and no Plan is inferred from prose; Current State Archive Prompt carries actual technicalDataStatus and confidence rules while freshness, source-version, protected-context, semantic, schema, shared strict AI JSON reliability fix 3, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards are preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

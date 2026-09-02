@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Plan Draft targeting semantics release cache-busts the bridge and Workbench modules',()=>{
+test('Plan Draft no-change alignment release cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='plan-draft-targeting-semantics-20260902';
+  const version='plan-draft-no-change-alignment-20260902';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',
