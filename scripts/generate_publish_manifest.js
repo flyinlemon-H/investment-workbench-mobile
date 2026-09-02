@@ -46,7 +46,8 @@ roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestrat
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
 
 const paths=[...new Set([
-  ...existing.files.map(entry=>entry.path),
+  // Custom Pages workflows do not run Jekyll; upload-pages-artifact excludes dotfiles.
+  ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'),
   'src/api/ai-api.js',
   'src/long-term-logic-contract.js',
   'src/long-term-logic-workflow.js',

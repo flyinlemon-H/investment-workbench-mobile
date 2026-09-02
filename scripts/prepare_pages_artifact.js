@@ -5,7 +5,7 @@ const path=require('node:path');
 const crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process');
 const {ALLOWLIST:MARKET_PATHS,validateBridgeContent,validateStatusContent}=require('./publish_market_bridges.js');
-const ROOT_FILES=new Set(['.nojekyll','index.html','favicon.svg','social_posts.json','social_summary.json']);
+const ROOT_FILES=new Set(['index.html','favicon.svg','social_posts.json','social_summary.json']);
 const DATA_FILES=new Set(['data/backend_config.js','data/ai_decision_review_data.js',
   'data/market_data_bridge.js','data/market_task_status_bridge.js',
   'data/operation_application_status_bridge.js','data/plan_application_status_bridge.js']);

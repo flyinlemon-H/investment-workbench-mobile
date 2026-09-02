@@ -15,8 +15,8 @@ function fixture(){
 }
 
 test('Pages path allowlist excludes Bridge, secrets, tests and path traversal',()=>{
-  for(const file of ['pc-ai-bridge/bridge.py','pc-ai-bridge/.env','.env','tests/fixtures/chrome-overrides-harness.js','scripts/prepare_pages_artifact.js','src/../pc-ai-bridge/bridge.py','src/.env','src\\app.js','data/secret.js'])assert.equal(permittedPath(file),false,file);
-  for(const file of ['index.html','.nojekyll','src/api/ai-api.js','src/long-term-logic-contract.js','data/backend_config.js'])assert.equal(permittedPath(file),true,file);
+  for(const file of ['.nojekyll','pc-ai-bridge/bridge.py','pc-ai-bridge/.env','.env','tests/fixtures/chrome-overrides-harness.js','scripts/prepare_pages_artifact.js','src/../pc-ai-bridge/bridge.py','src/.env','src\\app.js','data/secret.js'])assert.equal(permittedPath(file),false,file);
+  for(const file of ['index.html','src/api/ai-api.js','src/long-term-logic-contract.js','data/backend_config.js'])assert.equal(permittedPath(file),true,file);
 });
 
 test('Pages artifact verifies source hashes and delivers an exact effective manifest',()=>{
@@ -42,6 +42,7 @@ test('Pages workflow uploads only staged assets with read-only source credential
   assert.match(workflow,/prepare_pages_artifact\.js/);assert.match(workflow,/path: _site/);
   assert.match(workflow,/persist-credentials: false/);assert.doesNotMatch(workflow,/contents: write/);
   assert.match(workflow,/pages: write/);assert.match(workflow,/id-token: write/);
+  assert.doesNotMatch(workflow,/include-hidden-files/,'upload-pages-artifact has no such input');
 });
 
 test('independent market-only updates retain source hashes and refresh delivered market hashes',()=>{
