@@ -1,15 +1,9 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "642ef8b8c36b538f40468e77c95cec966eb9716c",
+  "sourceCommit": "07cc5f3782111e1d8d2e63943dc2d8dfad6d6306",
   "assetVersion": "pc-ai-bridge-long-term-logic-20260902",
   "dataMode": "PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered",
   "files": [
-    {
-      "path": ".nojekyll",
-      "role": "GitHub Pages control",
-      "bytes": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
     {
       "path": "data/ai_decision_review_data.js",
       "role": "safe static configuration or empty bridge",
