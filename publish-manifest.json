@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "07cc5f3782111e1d8d2e63943dc2d8dfad6d6306",
-  "assetVersion": "pc-ai-bridge-long-term-logic-20260902",
+  "sourceCommit": "81d62fc60aff616a5051822f531a4109b65ea63a",
+  "assetVersion": "pc-ai-bridge-empty-storage-hotfix-20260902",
   "dataMode": "PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered",
   "files": [
     {
@@ -49,8 +49,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56474,
-      "sha256": "abb1b85e24820d4e2f966212b94c30d15e68e53f3544b233b86818f5ba651ed2"
+      "bytes": 56779,
+      "sha256": "42679b28cf54b51d9bf290f0683171f3d49905b426714dd2ca82c6828c81db63"
     },
     {
       "path": "social_posts.json",
@@ -175,8 +175,8 @@
     {
       "path": "src/multi-tab-protection.js",
       "role": "browser runtime dependency",
-      "bytes": 12893,
-      "sha256": "b58b3f87ca676f12b7c7ccc754f21742439d49e6c70fd90b1b8f398b69f81d7d"
+      "bytes": 14052,
+      "sha256": "70bd1013570eda704b20eb3884e7fbb5e4ab0d9f9a5ea5a7759ffb84d9ed43ec"
     },
     {
       "path": "src/operation-entry.js",
@@ -259,8 +259,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 121433,
-      "sha256": "8e46832c8302dd89aff414bd31ab4933244c6d63143de9f98774e2615c0e0248"
+      "bytes": 121518,
+      "sha256": "87910fd9b21ec63ab99a3a97dfc82c904448937608f6fb2013b130d21b021ce9"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -307,8 +307,8 @@
     {
       "path": "src/storage/storage-manager.js",
       "role": "browser runtime dependency",
-      "bytes": 13085,
-      "sha256": "6c9b7fb6ffde55ec68aec68be1f1917d5736de16224c4a4735b63fe1fc6a1311"
+      "bytes": 14379,
+      "sha256": "bf277c2108be4b0779102efd689af06baced2227f230459ea1ef3fd0257601ac"
     },
     {
       "path": "src/storage/storage-validation.js",
