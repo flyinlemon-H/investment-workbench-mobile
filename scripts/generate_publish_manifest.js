@@ -31,8 +31,8 @@ roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, prev
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
 roleByPath.set('src/discussion-workbench.js','Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and prompt runtime');
-roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fail-closed decision archive contract and protected atomic save runtime');
-roleByPath.set('src/discussion-plan-workflow.js','Discussion-to-Plan same-conversation prompt, strict draft validation, preview, binding, and confirmed canonical Plan mutation runtime');
+roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime');
+roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
 roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
@@ -77,8 +77,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'standalone-plan-draft-session-20260902',
-  dataMode:'standalone Plan Draft Session bound to canonical Plan and holding facts with optional Current State and Discussion provenance; shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved',
+  assetVersion:'plan-draft-targeting-semantics-20260902',
+  dataMode:'standalone single-target Plan Draft Session bound to canonical Plan and holding facts; only explicitly discussed Plans are output, exact existing-Plan identity is required, unmentioned Plans remain untouched, and confirmed updates preserve replaced history; optional Current State and Discussion provenance, negation-aware Current State semantic guards, shared strict AI JSON reliability fix 3, strict schemas, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime are preserved',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
