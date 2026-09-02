@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "6d439dc92111608e8eee7fbc932e257a8dab9683",
-  "assetVersion": "current-state-input-boundary-20260902",
-  "dataMode": "Current State Archive Prompt separates program-owned input context from the exact AI judgment output allowlist: technicalDataStatus remains input-only for confidence, symbol and sourceDiscussionVersion remain required bindings, and unknown fields still fail closed; fenced JSON transport, freshness, source-version, protected-context, semantic, schema, Plan targeting, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards remain unchanged",
+  "sourceCommit": "642ef8b8c36b538f40468e77c95cec966eb9716c",
+  "assetVersion": "pc-ai-bridge-long-term-logic-20260902",
+  "dataMode": "PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered",
   "files": [
     {
       "path": ".nojekyll",
@@ -19,20 +19,20 @@
     {
       "path": "data/backend_config.js",
       "role": "safe static configuration or empty bridge",
-      "bytes": 43,
-      "sha256": "5f7f469a485c816299530d5e63f8c33e141fbaf2cb2a4ce71db7975fc808d952"
+      "bytes": 65,
+      "sha256": "bfab360cab391f40aac0965ec9a5df828c1ed5d3e1dba60463603dd3a9d11d89"
     },
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1789330,
-      "sha256": "c2b90d131d8c2d4280ba101910d82c8c20dda01eebcd6eb2b730ca7477c1013d"
+      "bytes": 1794023,
+      "sha256": "73b8104b9c4fe2141be6f0ada19a73077db91d8439acf553d70fffef35c69d0b"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1282,
-      "sha256": "da4623078f7262c23e38cd2a527c19e3efec2efbb9868d9668334b5f2aac8635"
+      "sha256": "5afa374e5ad70aaaeff95f15e0b1f736a9c0f1b733ecfaaae12bef8cd78c94f3"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 55680,
-      "sha256": "90751ffa12c73f19efbeec8571e8e13cd293f3e859fc5f25dc2057b6b8a791c8"
+      "bytes": 56474,
+      "sha256": "abb1b85e24820d4e2f966212b94c30d15e68e53f3544b233b86818f5ba651ed2"
     },
     {
       "path": "social_posts.json",
@@ -77,28 +77,34 @@
       "sha256": "2f05e99b620e7b4b31e0666ff14392f3667aa402d3a37fc9aadea1f55c68f7d5"
     },
     {
+      "path": "src/api/ai-api.js",
+      "role": "PC AI Bridge raw request/response transport envelope",
+      "bytes": 2249,
+      "sha256": "71ecc7e39f33428c341ef0f709551c7c442ed0e6c6f984d731b19f3271f13271"
+    },
+    {
       "path": "src/api/api-client.js",
-      "role": "browser runtime dependency",
-      "bytes": 3280,
-      "sha256": "6c5a62d5c2071a2f17be09fd0875ec6fcf825bd695289a044400c4ca0daf0b89"
+      "role": "loopback-only GET/POST transport with timeouts and Local Network Access handling",
+      "bytes": 4947,
+      "sha256": "9459b2f7110deab43de9d0553d38824d4f021a2d0cc48a58f7a9b867c36d53b1"
     },
     {
       "path": "src/api/api-errors.js",
       "role": "browser runtime dependency",
-      "bytes": 1434,
-      "sha256": "afaf4f115f4b9b3bf40d6e84c48ce79fbd8fbe86ed4bcf66a0a51e79a8ae32e3"
+      "bytes": 1527,
+      "sha256": "eef2d37fab17143a81b4d5ac3e95e080f0fe33beb13611a18290c47ef362b5f1"
     },
     {
       "path": "src/api/health-api.js",
-      "role": "browser runtime dependency",
-      "bytes": 818,
-      "sha256": "ca7ccccae7725bcfb8a092dbfcde5fd130d2c661a296b76161fb44ecafe0abad"
+      "role": "user-initiated Bridge health and AI capability checks",
+      "bytes": 1841,
+      "sha256": "125bc849154a08e7fd252b7c064cc8e537998851642c90ee46b649f0ad78549a"
     },
     {
       "path": "src/app.js",
-      "role": "browser bootstrap, storage recovery, and Tools-only storage maintenance runtime",
-      "bytes": 32482,
-      "sha256": "3bb66759c2564da00ded328575829cf5a98e2ef755e173afde2c56dac5daed41"
+      "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
+      "bytes": 33276,
+      "sha256": "5aa061865f008d002ba19cc1fc6bd1c604c023df664d00a158ecfadeac6a4368"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -147,6 +153,18 @@
       "role": "browser runtime dependency",
       "bytes": 7284,
       "sha256": "56e8cd131c276ab1fc45aff8374aa4281ac28b2ab5b2b9de0ad40e239eb0f0e1"
+    },
+    {
+      "path": "src/long-term-logic-contract.js",
+      "role": "exact Long-Term Logic binding, validation, bounded audit and atomic candidate commit",
+      "bytes": 16411,
+      "sha256": "2abcbae05e7dabae27e66200fc077f9992bf72793b6defe1d007b08a2701f9ce"
+    },
+    {
+      "path": "src/long-term-logic-workflow.js",
+      "role": "shared Manual/API Long-Term Logic Prompt and strict response processor",
+      "bytes": 4355,
+      "sha256": "3236d50fe7ad7fc9055bcf788619729008fe8870ffbfa583620bb1c038d514b9"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -300,9 +318,9 @@
     },
     {
       "path": "src/storage/storage-validation.js",
-      "role": "Plan V2 and separate PlanReview candidate storage validation runtime",
-      "bytes": 6369,
-      "sha256": "ee4cc9c9580516f72991c1c3900278a4332273c1d3c7afb31cb65bd031a8b49d"
+      "role": "candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards",
+      "bytes": 6770,
+      "sha256": "20506cf189dbddcfe2eeca227ed89bb93a854c93d4c6a1c4586ba2a232d275f5"
     },
     {
       "path": "src/strict-ai-json.js",
@@ -324,9 +342,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "mobile-first Current State decision hierarchy, fenced JSON import guidance, import preview, legacy fallback, and existing Workbench UI runtime",
-      "bytes": 657863,
-      "sha256": "b7651d061ab4c80f610195b1751986a514d2485c3b8201588a8e76cd364f46bd"
+      "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
+      "bytes": 658302,
+      "sha256": "c69434469be94ed3c7a70149208b413a78322b932689b8cb18680fbf1907b2bc"
     },
     {
       "path": "src/universe-handoff.js",
