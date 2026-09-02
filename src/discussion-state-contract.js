@@ -36,6 +36,20 @@
     const action=object(judgment.actionAssessment),trend=object(judgment.trendAssessment),relation=object(judgment.planRelation);
     return [action.headline,...array(action.reasons),...array(action.upgradeConditions),...array(action.downgradeConditions),...array(trend.timeframes).map(item=>item&&item.explanation),...array(judgment.structureAssessment).map(item=>item&&item.shortReason),judgment.stage,...array(judgment.focusPoints),judgment.summary,...array(judgment.keyChanges),...array(judgment.risks),...array(judgment.watchPoints),relation.summary].map(text).join('\n');
   }
+  const FULL_CONDITION_SATISFIED_PATTERN=/(?:完整执行条件|(?:完整)?(?:计划)?条件)(?:已经|已)(?:全部)?满足/g;
+  const LOCAL_NEGATION_SUFFIX_PATTERN=/(?:不等于|不代表|不意味着|并非|尚未|未确认|尚不能(?:确认)?|不能(?:确认)?|无法确认|没有确认|暂未确认)$/;
+  function locallyNegatedFullConditionClaim(source,index){
+    const clauseStart=Math.max(source.lastIndexOf('\n',index-1),source.lastIndexOf('。',index-1),source.lastIndexOf('！',index-1),source.lastIndexOf('？',index-1),source.lastIndexOf('；',index-1),source.lastIndexOf(';',index-1))+1;
+    return LOCAL_NEGATION_SUFFIX_PATTERN.test(source.slice(clauseStart,index).trimEnd());
+  }
+  function hasAffirmativeFullConditionClaim(source){
+    FULL_CONDITION_SATISFIED_PATTERN.lastIndex=0;
+    let match;
+    while((match=FULL_CONDITION_SATISFIED_PATTERN.exec(source))){
+      if(!locallyNegatedFullConditionClaim(source,match.index))return true;
+    }
+    return false;
+  }
   function validateJudgment(value,expected={}){
     const source=object(value),errors=[],keys=Object.keys(source),extra=keys.filter(key=>!RESULT_FIELDS.includes(key)),missing=RESULT_FIELDS.filter(key=>!Object.prototype.hasOwnProperty.call(source,key));
     if(extra.length)errors.push(`currentState contains unknown fields: ${extra.join(', ')}`);
@@ -74,7 +88,7 @@
     const prose=allNaturalText(source),internalTokens=['actionAssessment','attentionLevel','trendAssessment','structureAssessment','validityStatus','planReview','sourceDiscussionVersion','superseded','needs_review','risk_control','reduce_review','hold_watch','wait_confirmation','add_review','entry_review','no_action','uptrend','downtrend','sideways','recovery','rebound','unclear'];
     if(internalTokens.some(token=>new RegExp(`(^|[^A-Za-z_])${token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^A-Za-z_]|$)`,'i').test(prose)))errors.push('中文正文字段包含内部英文枚举或字段名');
     if(/(?:立即|今天必须|必须).{0,12}(?:买入|卖出|加仓|减仓)|买入\s*\d+\s*股|减仓至\s*\d+(?:\.\d+)?%/.test(prose))errors.push('结论包含确定性交易命令或新仓位数值');
-    if(!expected.programProvesFullPlanConditions&&/(?:完整)?(?:计划)?条件(?:已经|已)(?:全部)?满足/.test(prose))errors.push('价格触发不能被表述为完整计划条件已满足');
+    if(!expected.programProvesFullPlanConditions&&hasAffirmativeFullConditionClaim(prose))errors.push('价格触发不能被表述为完整计划条件已满足');
     return {ok:errors.length===0,errors,judgment:{symbol,sourceDiscussionVersion,actionAssessment,attentionLevel,trendAssessment,structureAssessment,stage,focusPoints,summary,keyChanges,risks,watchPoints,planRelation,confidence}};
   }
   function process(raw,options={}){

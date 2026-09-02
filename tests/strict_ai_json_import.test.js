@@ -136,6 +136,13 @@ test('real production Current State fixture crosses parser recovery, preserves s
   assert.equal(preview.ok,true,preview.message);assert.equal(preview.previewReady,true);assert.equal(preview.writes,0);assert.equal(preview.input.repairedUnderscoreEscapes,3);assert.equal(preview.currentState.structureAssessment[0].timeframe,'日线');assert.equal(preview.currentState.structureAssessment[0].shortReason,parsed.value.currentState.structureAssessment[0].explanation);
 });
 
+test('production Current State fixture with a negated full-condition statement reaches preview',()=>{
+  const raw=fs.readFileSync(path.join(__dirname,'fixtures','production-current-state-negated-full-condition.json.txt'),'utf8').replace(/\r?\n$/,''),parsed=Strict.parseStrictAiJson(raw);
+  assert.equal(parsed.ok,true);assert.equal(parsed.input.repairedUnderscoreEscapes,3);assert.equal(parsed.input.smartQuoteRecoveryAttempted,false);
+  const result=Discussion.process(raw,{expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_9a35cb46',holdingShares:100,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false});
+  assert.equal(result.ok,true,result.message);assert.equal(result.previewReady,true);assert.equal(result.writes,0);assert.equal(result.currentState.summary.includes('价格进入计划区域不等于完整条件已经满足'),true);
+});
+
 test('fenced structural smart quotes recover and ambiguous content quotes fail closed',()=>{
   const recovered=Strict.parseStrictAiJson('```json\n{“x”:“正文“引用”结束”}\n```');
   assert.equal(recovered.ok,true);assert.deepEqual(recovered.repairs,[Strict.REPAIRS.MARKDOWN_FENCE,Strict.REPAIRS.STRUCTURAL_SMART_QUOTES]);assert.equal(recovered.value.x,'正文“引用”结束');

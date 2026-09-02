@@ -84,6 +84,25 @@ test('price trigger never proves full Plan conditions and deterministic order wo
   for(const overrides of [{planRelation:{summary:'当前计划完整条件已经满足。'}},{actionAssessment:{headline:'今天必须卖出并减仓至30%。'}}]){const result=Contract.process(JSON.stringify(decision(prepared,overrides)),options(prepared,source));assert.equal(result.ok,false);assert.equal(result.writes,0)}
 });
 
+test('full-condition semantic guard allows local negation but rejects every affirmative claim',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source),allowed=[
+    '价格进入计划区域不等于完整条件已经满足。',
+    '价格触发不代表完整条件已经满足。',
+    '尚不能确认完整条件已经满足。',
+    '目前未确认完整条件已满足。',
+    '并非完整计划条件已经满足。',
+    '无法确认完整执行条件已满足。'
+  ],rejected=[
+    '完整条件已经满足，可以执行。',
+    '价格条件已触发，完整条件已满足。',
+    '计划条件已经满足。',
+    '价格触发不等于完整条件满足；目前完整条件已经满足。',
+    '价格触发不代表完整条件已经满足；但目前完整计划条件已满足。'
+  ];
+  for(const summary of allowed){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,`${summary} ${result.message}`);assert.equal(result.writes,0)}
+  for(const summary of rejected){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,false,summary);assert.equal(result.code,'validation_error');assert.match(result.message,/价格触发不能被表述为完整计划条件已满足/);assert.equal(result.writes,0)}
+});
+
 test('legacy v1 state and history remain readable without fabricated decision fields',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),result=Contract.process(JSON.stringify(decision(prepared)),options(prepared,source)),built=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-01T08:00:00Z'}),saved=built.currentState;
   const legacy={...saved,schemaVersion:Workbench.LEGACY_STATE_SCHEMA_VERSION,planRelation:'保持观察。'};for(const key of ['actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints'])delete legacy[key];
@@ -111,4 +130,3 @@ test('normal UI mappings contain Chinese labels and prose rejects internal Engli
   const ui=fs.readFileSync(path.join(root,'src','ui-render.js'),'utf8'),source=stock(),prepared=Workbench.buildDiscussionRequest(source);for(const label of ['风险控制','减仓复核','持有观察','等待确认','加仓复核','建仓复核','暂不操作','普通观察','重点观察','临近窗口'])assert.match(ui,new RegExp(label));
   const leaked=Contract.process(JSON.stringify(decision(prepared,{summary:'当前 actionAssessment 显示 recovery。'})),options(prepared,source));assert.equal(leaked.ok,false);assert.equal(leaked.writes,0);
 });
-
