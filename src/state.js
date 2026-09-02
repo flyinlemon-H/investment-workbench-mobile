@@ -2074,7 +2074,10 @@ async function loadState(){
   if(typeof createValidatedCandidateSnapshot!=='function')throw {type:'validation_failed',message:'State candidate validation is unavailable.'};
   const candidate=createValidatedCandidateSnapshot(raw===null?{stocks:[],updatedAt:null}:raw,{touchUpdatedAt:false});
   state=candidate;
-  if(typeof MultiTabProtection!=='undefined')MultiTabProtection.observeLoadedState(candidate);
+  if(typeof MultiTabProtection!=='undefined'){
+    if(raw===null)await MultiTabProtection.observeEmptyLoadedState();
+    else MultiTabProtection.observeLoadedState(candidate);
+  }
   return state;
 }
 function saveState(nextState=state,options={}){

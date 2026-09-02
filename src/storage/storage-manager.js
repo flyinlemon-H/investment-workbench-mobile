@@ -80,6 +80,27 @@
       return localAdapter.loadMainState();
     }
 
+    async function canInitializeEmptyState(){
+      if(!initialized)await initialize();
+      const pristine=()=>indexedDbAvailable&&activeSource==='localStorage'
+        &&storageState==='localstorage_active'&&sourceMarker===null&&sourceMarkerStatus==='missing'
+        &&revision===0&&persistenceStatus==='idle'&&!queue.length&&!draining&&!drainScheduled;
+      if(!pristine())return false;
+      const localEmpty=()=>{
+        const raw=localAdapter.getRawSnapshot(),keys=localAdapter.keys;
+        return Boolean(keys)&&['main','planDrafts','operationDrafts'].every(name=>raw[keys[name]]===null);
+      };
+      if(!localEmpty())return false;
+      // An absent main key is not enough: old versions, drafts or staging records
+      // must never be mistaken for a brand-new store. This proof is read-only.
+      const stores=['meta','portfolio_state','drafts','migration'];
+      const empty=await idbAdapter.runTransaction(stores,'readonly',async tx=>{
+        const rows=await Promise.all(stores.map(store=>tx.getAll(store)));
+        return rows.every(values=>Array.isArray(values)&&values.length===0);
+      });
+      return empty&&pristine()&&localEmpty();
+    }
+
     function migration(){
       if(!root.migrationV1)throw storageErrors().create('validation_failed','storageManager.migration.module');
       if(!migrationRunner)migrationRunner=root.migrationV1.create({
@@ -232,6 +253,7 @@
     const managerFacade={
       initialize,
       loadState,
+      canInitializeEmptyState,
       saveState,
       flush,
       getMigrationStatus,
@@ -262,6 +284,7 @@
   const globalManager={
     initialize:(...args)=>defaultManager().initialize(...args),
     loadState:(...args)=>defaultManager().loadState(...args),
+    canInitializeEmptyState:(...args)=>defaultManager().canInitializeEmptyState(...args),
     saveState:(...args)=>defaultManager().saveState(...args),
     flush:(...args)=>defaultManager().flush(...args),
     getMigrationStatus:(...args)=>defaultManager().getMigrationStatus(...args),

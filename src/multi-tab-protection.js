@@ -47,6 +47,7 @@
 
   function create(options={}){
     const loadCurrent=options.loadCurrent;
+    const canInitializeEmptyState=options.canInitializeEmptyState;
     const loadCurrentDraft=options.loadCurrentDraft;
     const lockManager=options.lockManager===undefined?(global.navigator&&global.navigator.locks):options.lockManager;
     const documentRef=options.document===undefined?global.document:options.document;
@@ -57,13 +58,24 @@
       try{channel=new global.BroadcastChannel(CHANNEL_NAME)}catch(_error){channel=null}
     }
     let baselineRevision='empty';let baselineKnown=false;let stale=false;let peerSeen=false;let closed=false;
+    let emptyBaselinePending=false;
     const draftBaselines=new Map();
 
     function markStale(){
       if(stale)return;
       stale=true;renderConflict(documentRef,reload);
     }
-    function observeLoadedState(value){baselineRevision=revisionOf(value);baselineKnown=true;stale=false;return baselineRevision}
+    function observeLoadedState(value){baselineRevision=revisionOf(value);baselineKnown=true;stale=false;emptyBaselinePending=false;return baselineRevision}
+    async function observeEmptyLoadedState(){
+      if(closed||baselineKnown||stale||!lockManager||typeof lockManager.request!=='function'
+        ||typeof canInitializeEmptyState!=='function')throw staleError('multiTab.initialize.empty');
+      const empty=await canInitializeEmptyState();
+      if(closed||baselineKnown||stale||empty!==true)throw staleError('multiTab.initialize.empty');
+      // Keep the actual persisted-null revision, not the normalized UI candidate.
+      // No canonical state/version is written until the normal guarded save succeeds.
+      baselineRevision='empty';baselineKnown=true;emptyBaselinePending=true;
+      return baselineRevision;
+    }
     function observeDraft(kind,id,value){const key=draftResource(kind,id),revision=draftRevisionOf(value);draftBaselines.set(key,revision);return revision}
     function getStatus(){return Object.freeze({status:stale?'stale':'fresh',baselineRevision,baselineKnown,peerSeen,draftResources:draftBaselines.size})}
     function assertFresh(){if(stale)throw staleError();return true}
@@ -108,7 +120,7 @@
 
     async function protectedOperation(snapshot,persist,runOptions){
       assertFresh();
-      const shouldVerify=runOptions.critical===true||peerSeen;
+      const shouldVerify=runOptions.critical===true||peerSeen||emptyBaselinePending;
       if(shouldVerify){
         if(typeof loadCurrent!=='function')throw staleError();
         let current;
@@ -119,8 +131,9 @@
           if(!baselineKnown&&runOptions.allowUninitialized!==true){markStale();throw staleError()}
         }
       }
+      if(emptyBaselinePending&&await canInitializeEmptyState()!==true){markStale();throw staleError('multiTab.initialize.changed')}
       const result=await persist(snapshot);
-      baselineRevision=revisionOf(snapshot);baselineKnown=true;stale=false;
+      baselineRevision=revisionOf(snapshot);baselineKnown=true;stale=false;emptyBaselinePending=false;
       if(channel)try{channel.postMessage({type:'state_saved',revision:baselineRevision})}catch(_error){}
       return result;
     }
@@ -186,7 +199,7 @@
       if(channel&&typeof channel.close==='function')channel.close();
       if(windowTarget&&typeof windowTarget.removeEventListener==='function')windowTarget.removeEventListener('storage',storageListener);
     }
-    return Object.freeze({observeLoadedState,observeDraft,runProtectedSave,runProtectedDraftSave,runExclusiveCutover,assertFresh,markStale,getStatus,receive,close});
+    return Object.freeze({observeLoadedState,observeEmptyLoadedState,observeDraft,runProtectedSave,runProtectedDraftSave,runExclusiveCutover,assertFresh,markStale,getStatus,receive,close});
   }
 
   let singleton=null;
@@ -198,12 +211,13 @@
     return values&&Object.prototype.hasOwnProperty.call(values,id)?values[id]:null;
   }
   function defaultGuard(){
-    if(!singleton)singleton=create({loadCurrent:()=>global.StorageManager.loadState(),loadCurrentDraft:loadLiveDraft});
+    if(!singleton)singleton=create({loadCurrent:()=>global.StorageManager.loadState(),canInitializeEmptyState:()=>global.StorageManager.canInitializeEmptyState(),loadCurrentDraft:loadLiveDraft});
     return singleton;
   }
   global.InvestmentMultiTab=Object.freeze({create,revisionOf,draftRevisionOf,CHANNEL_NAME,LOCK_NAME,DRAFT_LOCK_PREFIX,MAIN_KEY,DRAFT_KEYS});
   global.MultiTabProtection=Object.freeze({
     observeLoadedState:value=>defaultGuard().observeLoadedState(value),
+    observeEmptyLoadedState:()=>defaultGuard().observeEmptyLoadedState(),
     runProtectedSave:(...args)=>defaultGuard().runProtectedSave(...args),
     runProtectedDraftSave:(...args)=>defaultGuard().runProtectedDraftSave(...args),
     runExclusiveCutover:(...args)=>defaultGuard().runExclusiveCutover(...args),
