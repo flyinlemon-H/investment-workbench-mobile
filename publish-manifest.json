@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "31591b1f47f462905245e7febb9f94b5dd1ebc54",
-  "assetVersion": "standalone-plan-draft-session-20260902",
-  "dataMode": "standalone Plan Draft Session bound to canonical Plan and holding facts with optional Current State and Discussion provenance; shared strict AI JSON reliability fix 3 with JSON-string-aware Markdown underscore escape recovery, strict Current State and Plan schemas, preview-before-write, explicit confirmation, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime preserved",
+  "sourceCommit": "1b6257d15177c9999fac012ea5f65114f229cc4a",
+  "assetVersion": "plan-draft-targeting-semantics-20260902",
+  "dataMode": "standalone single-target Plan Draft Session bound to canonical Plan and holding facts; only explicitly discussed Plans are output, exact existing-Plan identity is required, unmentioned Plans remain untouched, and confirmed updates preserve replaced history; optional Current State and Discussion provenance, negation-aware Current State semantic guards, shared strict AI JSON reliability fix 3, strict schemas, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage runtime are preserved",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 55725,
-      "sha256": "82c614e50851958023f6a80286fc012f8a9a1697ba4a0b24e431b225026b3aa3"
+      "bytes": 55770,
+      "sha256": "f0c2f218db6821017cf7896aa388e60f354fdac1269753f25f9de7ba03bb48ab"
     },
     {
       "path": "social_posts.json",
@@ -126,15 +126,15 @@
     },
     {
       "path": "src/discussion-plan-workflow.js",
-      "role": "Discussion-to-Plan same-conversation prompt, strict draft validation, preview, binding, and confirmed canonical Plan mutation runtime",
-      "bytes": 31360,
-      "sha256": "f237c640229cc8b91ed92e1940c5921ab897b4c3fd3159f4e624d88a8c047774"
+      "role": "Standalone single-target Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
+      "bytes": 36776,
+      "sha256": "1a517f057b19094126c82e904a56f6203cef81b46f2d0af147d84a15ac4da600"
     },
     {
       "path": "src/discussion-state-contract.js",
-      "role": "Single Stock Current State fail-closed decision archive contract and protected atomic save runtime",
-      "bytes": 18303,
-      "sha256": "c3d75f3a93cd99c8d21028d1db3eb6bc605ed9f088cdfb44bb8c7f1e9a0c6b84"
+      "role": "Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime",
+      "bytes": 19255,
+      "sha256": "c4ed9d4e5656d78288384333017e60faffac37019b060f022fb7b3da58a53da3"
     },
     {
       "path": "src/discussion-workbench.js",
@@ -325,8 +325,8 @@
     {
       "path": "src/ui-render.js",
       "role": "mobile-first Current State decision hierarchy, import preview, legacy fallback, and existing Workbench UI runtime",
-      "bytes": 656938,
-      "sha256": "5cdc0007bddb8067d46c9553138a61600b7575f01aaf00dad5d963643e81bec9"
+      "bytes": 657554,
+      "sha256": "54634b67884d88ee34bbbeaf0ed86df7ce8193941471b5978e1e36b4add0a4cd"
     },
     {
       "path": "src/universe-handoff.js",
