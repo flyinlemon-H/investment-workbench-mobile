@@ -70,6 +70,15 @@ test('storage safety controls and recovery capabilities remain wired',()=>{
 test('prepared prompt remains selectable in the focused modal and shared clipboard helper is reused',()=>{
   assert.match(ui,/id="discussionPreparedPrompt" readonly/);assert.match(ui,/copyText\(payload\.request/);assert.match(ui,/selectableElement:field,detailsElement:details,manualCopy:false,notify:false/);
   assert.doesNotMatch(ui,/function copyDiscussionPrepared[\s\S]{0,900}navigator\.clipboard/);
+  assert.match(ui,/discussionPreparedPrompt'\)\.value=payload\.request/);
+});
+
+test('Current State and Plan imports ask for the complete JSON code block and keep transport errors distinct',()=>{
+  assert.ok((ui.match(/请完整复制 AI 返回的 JSON 代码块/g)||[]).length>=2);
+  assert.match(ui,/placeholder='\\`\\`\\`json\\n\{"currentState":\{\.\.\.\}\}\\n\\`\\`\\`'/);
+  assert.match(ui,/placeholder='\\`\\`\\`json\\n\{"schemaVersion":"discussion-plan-draft\.v1",\.\.\.\}\\n\\`\\`\\`'/);
+  assert.match(fs.readFileSync(path.join(root,'src','strict-ai-json.js'),'utf8'),/复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块/);
+  assert.match(contract,/StrictAiJson\.contractMessage/);
 });
 
 test('开始讨论 prepares the current request and opens its modal immediately without rendering or scrolling the page',()=>{

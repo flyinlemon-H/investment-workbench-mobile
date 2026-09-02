@@ -69,7 +69,7 @@ test('underscore recovery composes with structural quotes and one full-response 
 
 test('underscore recovery remains fail closed for malformed and truncated JSON with rich diagnostics',()=>{
   const malformed=Strict.parseStrictAiJson('{"category":"reduce\\_review",}');
-  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.input.repairedUnderscoreEscapes,1);assert.match(malformed.userMessage,/异常转义字符/);assert.match(malformed.userMessage,/首个异常转义：\\_/);assert.match(malformed.diagnostics.originalParseError,/JSON/);assert.match(malformed.diagnostics.finalParseError,/JSON/);
+  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.input.repairedUnderscoreEscapes,1);assert.equal(malformed.userMessage,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。');assert.equal(malformed.diagnostics.firstIllegalEscape.sequence,'\\_');assert.match(malformed.diagnostics.originalParseError,/JSON/);assert.match(malformed.diagnostics.finalParseError,/JSON/);
   const truncated=Strict.parseStrictAiJson('{"category":"reduce\\_review"');
   assert.equal(truncated.ok,false);assert.equal(truncated.reason,Strict.REASONS.TRUNCATED);assert.equal(truncated.input.repairedUnderscoreEscapes,1);assert.match(truncated.diagnostics.finalParseError,/JSON/);
 });
@@ -147,10 +147,10 @@ test('fenced structural smart quotes recover and ambiguous content quotes fail c
   const recovered=Strict.parseStrictAiJson('```json\n{“x”:“正文“引用”结束”}\n```');
   assert.equal(recovered.ok,true);assert.deepEqual(recovered.repairs,[Strict.REPAIRS.MARKDOWN_FENCE,Strict.REPAIRS.STRUCTURAL_SMART_QUOTES]);assert.equal(recovered.value.x,'正文“引用”结束');
   const ambiguous=Strict.parseStrictAiJson('{“x”:“正文“引用未闭合”}');
-  assert.equal(ambiguous.ok,false);assert.equal(ambiguous.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguous.userMessage,'检测到非标准 JSON 引号，已尝试自动修复，但内容仍不是可解析的完整 JSON。 首个异常字符：“');
+  assert.equal(ambiguous.ok,false);assert.equal(ambiguous.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguous.userMessage,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。');
   assert.equal(ambiguous.diagnostics.repairClassification,'ambiguous_structural_quotes');assert.equal(ambiguous.diagnostics.firstSuspiciousQuote.codePoint,'U+201C');assert.equal(ambiguous.diagnostics.firstSuspiciousQuote.index,1);assert.match(ambiguous.diagnostics.firstSuspiciousQuote.context,/“x”/);
   const malformed=Strict.parseStrictAiJson('{＂x＂:[1,]}');
-  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.diagnostics.repairClassification,'structural_quote_repair_parse_failed');assert.match(malformed.diagnostics.normalizedParseError,/JSON/);assert.equal(malformed.diagnostics.repairedStructuralQuotes,2);assert.match(malformed.userMessage,/已尝试自动修复/);
+  assert.equal(malformed.ok,false);assert.equal(malformed.reason,Strict.REASONS.MALFORMED);assert.equal(malformed.diagnostics.repairClassification,'structural_quote_repair_parse_failed');assert.match(malformed.diagnostics.normalizedParseError,/JSON/);assert.equal(malformed.diagnostics.repairedStructuralQuotes,2);assert.equal(malformed.userMessage,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。');
   const ambiguousFullwidth=Strict.parseStrictAiJson('{＂x＂:＂a＂ ＂y＂:＂b＂}');
   assert.equal(ambiguousFullwidth.ok,false);assert.equal(ambiguousFullwidth.reason,Strict.REASONS.AMBIGUOUS_SMART_QUOTES);assert.equal(ambiguousFullwidth.diagnostics.repairClassification,'ambiguous_structural_quotes');
 });
@@ -168,8 +168,8 @@ test('malformed and truncated JSON are classified without inventing syntax',()=>
     ['{"x":"bad\\q"}',Strict.REASONS.MALFORMED],['{"x":[1,}',Strict.REASONS.MALFORMED],['{"x":1,}',Strict.REASONS.MALFORMED]
   ];
   for(const [raw,reason] of cases){const result=Strict.parseStrictAiJson(raw);assert.equal(result.ok,false,raw);assert.equal(result.reason,reason,raw)}
-  assert.equal(Strict.parseStrictAiJson('{"x":').userMessage,'JSON 内容可能不完整，请重新复制完整结果');
-  assert.equal(Strict.parseStrictAiJson('{"x":1,}').userMessage,'JSON 格式无法识别，请重新复制完整结果');
+  assert.equal(Strict.parseStrictAiJson('{"x":').userMessage,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。');
+  assert.equal(Strict.parseStrictAiJson('{"x":1,}').userMessage,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。');
 });
 
 test('Discussion Archive accepts DA-A through DA-E and preserves quote-heavy long content',()=>{
@@ -181,7 +181,7 @@ test('Discussion Archive accepts DA-A through DA-E and preserves quote-heavy lon
 
 test('Discussion Archive parser and contract failures are distinct and always preview-only',()=>{
   const parseFailures=['{"currentState":','说明\n'+JSON.stringify(discussionValue()),JSON.stringify(discussionValue())+'\n说明'];
-  for(const raw of parseFailures){const result=Discussion.process(raw,discussionOptions);assert.equal(result.ok,false);assert.equal(result.writes,0);assert.match(result.message,/JSON (?:内容可能不完整|格式无法识别)/)}
+  for(const raw of parseFailures){const result=Discussion.process(raw,discussionOptions);assert.equal(result.ok,false);assert.equal(result.writes,0);assert.equal(result.message,'复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。')}
   for(const value of [discussionValue({symbol:'000001.SZ'}),discussionValue({sourceDiscussionVersion:'stale'}),{currentState:{...discussionValue().currentState,unknown:true}}]){
     const result=Discussion.process(JSON.stringify(value),discussionOptions);assert.equal(result.ok,false);assert.equal(result.writes,0);assert.match(result.message,/JSON 已解析，但字段不符合导入要求/);
   }

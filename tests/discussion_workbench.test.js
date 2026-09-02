@@ -137,7 +137,7 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
-  assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
+  assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出唯一一个完整的 ```json 代码块/);assert.match(archive.request,/代码块外不得有任何文字/);assert.match(archive.request,/代码块内必须是一个完整严格 JSON 对象/);assert.doesNotMatch(archive.request,/不要 Markdown 代码围栏/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
   assert.equal(archive.technicalDataStatus,'fresh');assert.match(archive.request,/程序当前 technicalDataStatus: fresh/);assert.match(archive.request,/confidence 可根据证据使用 high、medium 或 low/);assert.match(archive.request,/不得仅因为 fresh 自动使用 high/);
   assert.match(archive.request,/下划线 _ 不需要也不得转义/);assert.ok(archive.request.includes('discussion\\_v2\\_9a35cb46'));assert.match(archive.request,/只能使用标准定义的转义/);
   assert.match(archive.request,/trendAssessment\.timeframes 的每项必须且只能包含 timeframe、status、explanation/);assert.match(archive.request,/structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason/);assert.match(archive.request,/不得在 structureAssessment 中使用 explanation/);

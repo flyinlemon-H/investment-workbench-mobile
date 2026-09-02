@@ -20,7 +20,7 @@ function reducePlan(id,triggerPrice,quantity,note){return PlanV2.createPlan({id,
 
 test('整理计划 works without Discussion or Current State and adds optional current context only when available',()=>{
   const standalone=Workflow.prepare(stock({discussionState:undefined}),{sessionId:'standalone',now});
-  assert.match(standalone.request,/当前 AI 对话/);assert.match(standalone.request,/不要重新做完整分析/);assert.match(standalone.request,/不要创造/);assert.match(standalone.request,/只输出一个 JSON 对象/);
+  assert.match(standalone.request,/当前 AI 对话/);assert.match(standalone.request,/不要重新做完整分析/);assert.match(standalone.request,/不要创造/);assert.match(standalone.request,/只输出唯一一个完整的 ```json 代码块/);assert.match(standalone.request,/代码块外不得有任何文字/);assert.match(standalone.request,/代码块内必须是一个完整严格 JSON 对象/);assert.doesNotMatch(standalone.request,/不要 Markdown、代码围栏/);
   assert.equal(standalone.symbol,'601138.SS');assert.equal(standalone.context.holding.status,'held');assert.equal(standalone.hasCurrentState,false);assert.equal(standalone.context.currentState,undefined);assert.equal(standalone.binding.sourceDiscussionVersion,undefined);assert.equal(standalone.binding.currentStateId,undefined);assert.equal(standalone.binding.currentStateHash,undefined);assert.match(standalone.binding.draftSessionHash,/^plandraftsession_/);
   const prepared=Workflow.prepare(stock(),{sessionId:'with-current-state',now});assert.equal(prepared.hasCurrentState,true);assert.equal(prepared.context.currentState.actionAssessment.category,'reduce_review');
   assert.deepEqual(Object.keys(prepared.context.currentState).sort(),['actionAssessment','attentionLevel','focusPoints','planRelation','structureAssessment','trendAssessment'].sort());

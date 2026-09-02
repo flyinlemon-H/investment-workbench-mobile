@@ -20,13 +20,14 @@
     TRUNCATED:'truncated_json',
     UNSUPPORTED_WRAPPER:'unsupported_wrapper'
   });
+  const TRANSPORT_FAILURE_MESSAGE='复制的 JSON 内容发生格式异常，请重新完整复制 AI 的 JSON 代码块。';
   const USER_MESSAGES=Object.freeze({
-    [REASONS.EMPTY]:'JSON 格式无法识别，请重新复制完整结果',
-    [REASONS.AMBIGUOUS_SMART_QUOTES]:'检测到非标准 JSON 引号，已尝试自动修复，但内容仍不是可解析的完整 JSON。',
-    [REASONS.INVALID_ESCAPE]:'检测到 JSON 中存在异常转义字符，已尝试自动修复，但内容仍无法解析。',
-    [REASONS.MALFORMED]:'JSON 格式无法识别，请重新复制完整结果',
-    [REASONS.TRUNCATED]:'JSON 内容可能不完整，请重新复制完整结果',
-    [REASONS.UNSUPPORTED_WRAPPER]:'JSON 格式无法识别，请重新复制完整结果'
+    [REASONS.EMPTY]:TRANSPORT_FAILURE_MESSAGE,
+    [REASONS.AMBIGUOUS_SMART_QUOTES]:TRANSPORT_FAILURE_MESSAGE,
+    [REASONS.INVALID_ESCAPE]:TRANSPORT_FAILURE_MESSAGE,
+    [REASONS.MALFORMED]:TRANSPORT_FAILURE_MESSAGE,
+    [REASONS.TRUNCATED]:TRANSPORT_FAILURE_MESSAGE,
+    [REASONS.UNSUPPORTED_WRAPPER]:TRANSPORT_FAILURE_MESSAGE
   });
   const jsonWhitespace=char=>char===' '||char==='\t'||char==='\r'||char==='\n';
   const invisible=char=>char==='\u200B'||char==='\u200C'||char==='\u200D'||char==='\u2060';
@@ -46,9 +47,49 @@
 
   function parseErrorMessage(error){return error&&error.message?String(error.message):String(error||'JSON.parse failed')}
 
+  function codePoint(character){
+    return character?`U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')}`:null;
+  }
+
   function sourceLocation(text,index){
     const before=text.slice(0,index),lastNewline=before.lastIndexOf('\n');
     return {line:before.split('\n').length,column:index-lastNewline};
+  }
+
+  function parseErrorDetail(error,text){
+    const message=parseErrorMessage(error),positionMatch=message.match(/(?:position|at position)\s+(\d+)/i),lineColumnMatch=message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+    let index=positionMatch?Number(positionMatch[1]):null,line=lineColumnMatch?Number(lineColumnMatch[1]):null,column=lineColumnMatch?Number(lineColumnMatch[2]):null;
+    if(index===null&&line!==null&&column!==null){
+      const lines=text.split('\n');
+      if(line>=1&&line<=lines.length)index=lines.slice(0,line-1).reduce((sum,item)=>sum+item.length+1,0)+Math.max(0,column-1);
+    }
+    if(index!==null&&(line===null||column===null)){const location=sourceLocation(text,index);line=location.line;column=location.column}
+    const character=index!==null&&index<text.length?text[index]:null,start=index===null?0:Math.max(0,index-100),end=index===null?Math.min(text.length,201):Math.min(text.length,index+101);
+    return {message,index,line,column,character,codePoint:codePoint(character),context:text.slice(start,end),contextStart:start,contextEnd:end};
+  }
+
+  function rawCharacterCounts(source){
+    const count=character=>[...source].filter(item=>item===character).length;
+    return {asciiQuote:count('"'),leftSmartQuote:count('“'),rightSmartQuote:count('”'),fullwidthQuote:count('＂'),underscoreEscape:(source.match(/\\_/g)||[]).length,fullwidthColon:count('：'),fullwidthComma:count('，')};
+  }
+
+  function illegalEscapes(text){
+    const details=[];
+    let inString=false;
+    for(let index=0;index<text.length;index+=1){
+      const character=text[index];
+      if(!inString){if(character==='"')inString=true;continue}
+      if(character==='"'){inString=false;continue}
+      if(character!=='\\')continue;
+      const next=text[index+1];
+      if(next==='_'){index+=1;continue}
+      if('"\\/bfnrt'.includes(next)){index+=1;continue}
+      if(next==='u'&&/^[0-9A-Fa-f]{4}$/.test(text.slice(index+2,index+6))){index+=5;continue}
+      const location=sourceLocation(text,index),sequence=next==='u'?text.slice(index,Math.min(text.length,index+6)):text.slice(index,Math.min(text.length,index+2)),start=Math.max(0,index-100),end=Math.min(text.length,index+101);
+      details.push({sequence,index,line:location.line,column:location.column,character:next||null,codePoint:codePoint(next),context:text.slice(start,end)});
+      if(next)index+=1;
+    }
+    return details;
   }
 
   function illegalEscapeDetail(text,backslashIndex){
@@ -94,6 +135,7 @@
   function recoverStructuralSmartQuotes(text){
     const stack=[];
     let rootState='value',mode='syntax',stringRole='',escaped=false,nestedSmartQuotes=0,output='',replacements=0;
+    const replacementPositions=[];
     const replacementCounts={'U+201C':0,'U+201D':0,'U+FF02':0};
     const top=()=>stack[stack.length-1]||null;
     const canStartKey=()=>{const current=top();return Boolean(current&&current.type==='object'&&current.state==='keyOrEnd')};
@@ -111,9 +153,10 @@
       if(!current)return next==='';
       return current.type==='object'?(next===','||next==='}'):(next===','||next===']');
     };
-    const replaceStructuralQuote=char=>{
+    const replaceStructuralQuote=(char,index)=>{
       const codePoint=`U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')}`;
       replacementCounts[codePoint]=(replacementCounts[codePoint]||0)+1;
+      replacementPositions.push(index);
       replacements+=1;
       return '"';
     };
@@ -133,13 +176,13 @@
         if(char==='“'){nestedSmartQuotes+=1;output+=char;continue}
         if(char==='”'&&nestedSmartQuotes>0){nestedSmartQuotes-=1;output+=char;continue}
         if(char==='”'&&smartQuoteCanClose(index)){
-          output+=replaceStructuralQuote(char);mode='syntax';finishString();continue;
+          output+=replaceStructuralQuote(char,index);mode='syntax';finishString();continue;
         }
         if(char==='＂'&&smartQuoteCanClose(index)&&nestedSmartQuotes===0){
-          output+=replaceStructuralQuote(char);mode='syntax';finishString();continue;
+          output+=replaceStructuralQuote(char,index);mode='syntax';finishString();continue;
         }
         if(char==='＂'&&abnormalQuote(nextNonWhitespace(text,index+1))){
-          return {ok:false,text:output+text.slice(index),replacements,replacementCounts,ambiguous:true};
+          return {ok:false,text:output+text.slice(index),replacements,replacementCounts,replacementPositions,ambiguous:true};
         }
         output+=char;
         continue;
@@ -150,9 +193,9 @@
       }
       if((char==='“'||char==='＂')&&(canStartKey()||canStartValue())){
         stringRole=canStartKey()?'key':'value';
-        mode='smartString';nestedSmartQuotes=0;output+=replaceStructuralQuote(char);continue;
+        mode='smartString';nestedSmartQuotes=0;output+=replaceStructuralQuote(char,index);continue;
       }
-      if(abnormalQuote(char))return {ok:false,text:output+text.slice(index),replacements,replacementCounts,ambiguous:true};
+      if(abnormalQuote(char))return {ok:false,text:output+text.slice(index),replacements,replacementCounts,replacementPositions,ambiguous:true};
       output+=char;
       if(jsonWhitespace(char))continue;
       const current=top();
@@ -172,8 +215,8 @@
         markValue();
       }
     }
-    if(mode==='smartString'||nestedSmartQuotes!==0)return {ok:false,text:output,replacements,replacementCounts,ambiguous:true};
-    return {ok:true,text:output,replacements,replacementCounts,ambiguous:false};
+    if(mode==='smartString'||nestedSmartQuotes!==0)return {ok:false,text:output,replacements,replacementCounts,replacementPositions,ambiguous:true};
+    return {ok:true,text:output,replacements,replacementCounts,replacementPositions,ambiguous:false};
   }
 
   // A backslash before an underscore is not a JSON escape. Some Markdown
@@ -236,6 +279,7 @@
   }
 
   function legacyInput(source,repairs,diagnostics){
+    const metadata={...diagnostics,repairsApplied:repairs.slice(),repairedSmartQuoteCount:Number(diagnostics.repairedStructuralQuotes)||0,repairedUnderscoreEscapeCount:Number(diagnostics.repairedUnderscoreEscapes)||0};
     return {
       fenceRemoved:repairs.includes(REPAIRS.MARKDOWN_FENCE),
       smartQuotesDetected:abnormalQuotePattern.test(source),
@@ -249,47 +293,51 @@
       boundaryArtifactsRemoved:repairs.includes(REPAIRS.BOUNDARY_BOM)||repairs.includes(REPAIRS.BOUNDARY_INVISIBLE),
       normalizations:repairs.map(repair=>repair===REPAIRS.STRUCTURAL_SMART_QUOTES?'smart_quotes':repair),
       repairs:repairs.slice(),
-      diagnostics:{...diagnostics}
+      diagnostics:metadata
     };
   }
 
-  function failed(source,reason,repairs,diagnostics){
-    const first=diagnostics.firstSuspiciousQuote;
-    const quoteFailure=diagnostics.smartQuoteRecoveryAttempted;
-    const escapeFailure=diagnostics.underscoreEscapeRecoveryAttempted,firstEscape=diagnostics.firstIllegalEscape;
-    const baseMessage=escapeFailure?USER_MESSAGES[REASONS.INVALID_ESCAPE]:(quoteFailure?USER_MESSAGES[REASONS.AMBIGUOUS_SMART_QUOTES]:(USER_MESSAGES[reason]||USER_MESSAGES[REASONS.MALFORMED]));
-    const userMessage=escapeFailure&&firstEscape?`${baseMessage} 首个异常转义：${firstEscape.sequence}`:(quoteFailure&&first?`${baseMessage} 首个异常字符：${first.character}`:baseMessage);
-    const input=legacyInput(source,repairs,{...diagnostics,finalParseFailureClass:reason});
+  function succeeded(source,normalizedText,repairs,diagnostics){
+    const input=legacyInput(source,repairs,{...diagnostics,finalCandidateText:normalizedText,repairedCandidateText:repairs.length?normalizedText:null,finalParseSucceeded:true,finalParseError:null,finalParseErrorDetail:null,finalFailureIndex:null,finalFailureCharacter:null,finalFailureCodePoint:null,finalFailureContext:null});
+    return {ok:true,normalizedText,repairs:repairs.slice(),reason:null,userMessage:'',diagnostics:input.diagnostics,input};
+  }
+
+  function failed(source,reason,repairs,diagnostics,finalCandidateText=null){
+    const candidate=finalCandidateText===null?source:finalCandidateText,detail=diagnostics.finalParseErrorDetail||null;
+    const input=legacyInput(source,repairs,{...diagnostics,finalCandidateText:candidate,repairedCandidateText:repairs.length?candidate:null,finalParseSucceeded:false,finalParseFailureClass:reason,finalFailureIndex:detail&&detail.index!==undefined?detail.index:null,finalFailureCharacter:detail&&detail.character!==undefined?detail.character:null,finalFailureCodePoint:detail&&detail.codePoint!==undefined?detail.codePoint:null,finalFailureContext:detail&&detail.context!==undefined?detail.context:null});
+    const userMessage=USER_MESSAGES[reason]||USER_MESSAGES[REASONS.MALFORMED];
     return {ok:false,normalizedText:null,repairs:repairs.slice(),reason,userMessage,diagnostics:input.diagnostics,input};
   }
 
   function preprocessStrictAiJson(raw){
-    const source=typeof raw==='string'?raw:String(raw??''),diagnostics={originalParseFailed:false,originalParseError:null,normalizedParseError:null,finalParseError:null,smartQuoteRecoveryAttempted:false,underscoreEscapeRecoveryAttempted:false,repairClassification:null,firstSuspiciousQuote:suspiciousQuote(typeof raw==='string'?raw:String(raw??'')),firstIllegalEscape:null,quoteTypesEncountered:quoteTypes(typeof raw==='string'?raw:String(raw??'')),fenceRemoved:false,repairAttemptCount:0,repairedStructuralQuotes:0,structuralQuoteRepairCounts:{},repairedUnderscoreEscapes:0,underscoreEscapeRepairPositions:[],finalParseFailureClass:null};
+    const source=typeof raw==='string'?raw:String(raw??''),firstRawSuspiciousCharacter=suspiciousQuote(source),otherIllegalEscapes=illegalEscapes(source),diagnostics={rawInputLength:source.length,rawCharacterCounts:rawCharacterCounts(source),originalParseFailed:false,originalParseError:null,originalParseErrorDetail:null,normalizedParseError:null,finalParseError:null,finalParseErrorDetail:null,smartQuoteRecoveryAttempted:false,underscoreEscapeRecoveryAttempted:false,repairClassification:null,firstRawSuspiciousCharacter,firstSuspiciousQuote:firstRawSuspiciousCharacter,firstIllegalEscape:null,otherIllegalEscapeCount:otherIllegalEscapes.length,otherIllegalEscapes,quoteTypesEncountered:quoteTypes(source),boundaryCleanupAttempted:false,boundaryCleanupChanged:false,fenceDetectionAttempted:false,fenceDetected:false,fenceRemoved:false,repairAttemptCount:0,repairedStructuralQuotes:0,structuralQuoteRepairCounts:{},structuralQuoteRepairPositions:[],repairedUnderscoreEscapes:0,underscoreEscapeRepairPositions:[],finalParseFailureClass:null};
     if(!source)return failed(source,REASONS.EMPTY,[],diagnostics);
     try{
       JSON.parse(source);
-      return {ok:true,normalizedText:source,repairs:[],reason:null,userMessage:'',diagnostics,input:legacyInput(source,[],diagnostics)};
-    }catch(error){diagnostics.originalParseFailed=true;diagnostics.originalParseError=parseErrorMessage(error)}
+      return succeeded(source,source,[],diagnostics);
+    }catch(error){diagnostics.originalParseFailed=true;diagnostics.originalParseError=parseErrorMessage(error);diagnostics.originalParseErrorDetail=parseErrorDetail(error,source)}
 
     const boundary=boundaryCleanup(source),repairs=boundary.repairs.slice();
+    diagnostics.boundaryCleanupAttempted=true;diagnostics.boundaryCleanupChanged=boundary.text!==source;
     let candidate=boundary.text;
-    if(!candidate)return failed(source,REASONS.EMPTY,repairs,diagnostics);
+    if(!candidate)return failed(source,REASONS.EMPTY,repairs,diagnostics,candidate);
     if(boundary.repairs.length){
       try{
         JSON.parse(candidate);
-        return {ok:true,normalizedText:candidate,repairs,reason:null,userMessage:'',diagnostics,input:legacyInput(source,repairs,diagnostics)};
-      }catch(error){diagnostics.presentationParseError=parseErrorMessage(error)}
+        return succeeded(source,candidate,repairs,diagnostics);
+      }catch(error){diagnostics.presentationParseError=parseErrorMessage(error);diagnostics.presentationParseErrorDetail=parseErrorDetail(error,candidate)}
     }
 
+    diagnostics.fenceDetectionAttempted=true;
     const fence=wrappingFence(candidate);
-    if(fence.matched){candidate=fence.text;repairs.push(REPAIRS.MARKDOWN_FENCE);diagnostics.fenceRemoved=true}
-    else if(candidate.includes('```'))return failed(source,REASONS.UNSUPPORTED_WRAPPER,repairs,diagnostics);
+    if(fence.matched){candidate=fence.text;repairs.push(REPAIRS.MARKDOWN_FENCE);diagnostics.fenceDetected=true;diagnostics.fenceRemoved=true}
+    else if(candidate.includes('```'))return failed(source,REASONS.UNSUPPORTED_WRAPPER,repairs,diagnostics,candidate);
     try{
       JSON.parse(candidate);
-      return {ok:true,normalizedText:candidate,repairs,reason:null,userMessage:'',diagnostics,input:legacyInput(source,repairs,diagnostics)};
-    }catch(error){diagnostics.presentationParseError=parseErrorMessage(error)}
+      return succeeded(source,candidate,repairs,diagnostics);
+    }catch(error){diagnostics.presentationParseError=parseErrorMessage(error);diagnostics.presentationParseErrorDetail=parseErrorDetail(error,candidate)}
 
-    if(failureClass(candidate)===REASONS.UNSUPPORTED_WRAPPER)return failed(source,REASONS.UNSUPPORTED_WRAPPER,repairs,diagnostics);
+    if(failureClass(candidate)===REASONS.UNSUPPORTED_WRAPPER){diagnostics.finalParseError=diagnostics.presentationParseError;diagnostics.finalParseErrorDetail=diagnostics.presentationParseErrorDetail;return failed(source,REASONS.UNSUPPORTED_WRAPPER,repairs,diagnostics,candidate)}
     let structuralRecovery=null;
     if(abnormalQuotePattern.test(candidate)){
       diagnostics.smartQuoteRecoveryAttempted=true;
@@ -298,14 +346,15 @@
       structuralRecovery=recovered;
       diagnostics.repairedStructuralQuotes=recovered.replacements;
       diagnostics.structuralQuoteRepairCounts={...recovered.replacementCounts};
-      if(!recovered.ok){diagnostics.repairClassification='ambiguous_structural_quotes';return failed(source,REASONS.AMBIGUOUS_SMART_QUOTES,repairs,diagnostics)}
+      diagnostics.structuralQuoteRepairPositions=recovered.replacementPositions.slice();
+      if(!recovered.ok){diagnostics.repairClassification='ambiguous_structural_quotes';diagnostics.finalParseError=diagnostics.presentationParseError;diagnostics.finalParseErrorDetail=diagnostics.presentationParseErrorDetail;return failed(source,REASONS.AMBIGUOUS_SMART_QUOTES,repairs,diagnostics,recovered.text)}
       if(recovered.replacements>0){
         try{
           JSON.parse(recovered.text);
           repairs.push(REPAIRS.STRUCTURAL_SMART_QUOTES);
           diagnostics.repairClassification='structural_quotes_repaired';
-          return {ok:true,normalizedText:recovered.text,repairs,reason:null,userMessage:'',diagnostics,input:legacyInput(source,repairs,diagnostics)};
-        }catch(error){diagnostics.structuralQuoteParseError=parseErrorMessage(error);candidate=recovered.text}
+          return succeeded(source,recovered.text,repairs,diagnostics);
+        }catch(error){diagnostics.structuralQuoteParseError=parseErrorMessage(error);diagnostics.structuralQuoteParseErrorDetail=parseErrorDetail(error,recovered.text);candidate=recovered.text}
       }
     }
 
@@ -321,22 +370,25 @@
         if(structuralRecovery&&structuralRecovery.replacements>0)repairs.push(REPAIRS.STRUCTURAL_SMART_QUOTES);
         repairs.push(REPAIRS.MARKDOWN_UNDERSCORE_ESCAPE);
         diagnostics.repairClassification=structuralRecovery&&structuralRecovery.replacements>0?'structural_quotes_and_underscore_escape_repaired':'underscore_escape_repaired';
-        return {ok:true,normalizedText:underscoreRecovery.text,repairs,reason:null,userMessage:'',diagnostics,input:legacyInput(source,repairs,diagnostics)};
+        return succeeded(source,underscoreRecovery.text,repairs,diagnostics);
       }catch(error){
         diagnostics.finalParseError=parseErrorMessage(error);
+        diagnostics.finalParseErrorDetail=parseErrorDetail(error,underscoreRecovery.text);
         diagnostics.normalizedParseError=diagnostics.finalParseError;
         diagnostics.repairClassification=structuralRecovery&&structuralRecovery.replacements>0?'combined_repair_parse_failed':'underscore_escape_repair_parse_failed';
-        return failed(source,failureClass(underscoreRecovery.text),repairs,diagnostics);
+        return failed(source,failureClass(underscoreRecovery.text),repairs,diagnostics,underscoreRecovery.text);
       }
     }
     if(structuralRecovery&&structuralRecovery.replacements>0){
       diagnostics.finalParseError=diagnostics.structuralQuoteParseError;
+      diagnostics.finalParseErrorDetail=diagnostics.structuralQuoteParseErrorDetail;
       diagnostics.normalizedParseError=diagnostics.finalParseError;
       diagnostics.repairClassification='structural_quote_repair_parse_failed';
-      return failed(source,failureClass(candidate),repairs,diagnostics);
+      return failed(source,failureClass(candidate),repairs,diagnostics,candidate);
     }
     diagnostics.finalParseError=diagnostics.presentationParseError||diagnostics.originalParseError;
-    return failed(source,failureClass(candidate),repairs,diagnostics);
+    diagnostics.finalParseErrorDetail=diagnostics.presentationParseErrorDetail||diagnostics.originalParseErrorDetail;
+    return failed(source,failureClass(candidate),repairs,diagnostics,candidate);
   }
 
   function parseStrictAiJson(raw){

@@ -138,7 +138,7 @@
       '计划可以只使用明确的结构或技术条件而不填触发价；没有明确依据时 triggerPrice、quantity 或配置字段必须为 null，不得补造。',
       'create / update 时 plan 必须使用完整结构；其余 operation 的 plan 必须为 null。所有条件初始都只是待确认，JSON 草案本身不会执行交易。',
       '如必要信息仍未解决，将项目写入 unresolvedItems；程序会允许预览但禁止保存不完整计划。',
-      '只输出一个 JSON 对象，不要 Markdown、代码围栏、解释或额外包装。',
+      '只输出唯一一个完整的 ```json 代码块；代码块外不得有任何文字。代码块内必须是一个完整严格 JSON 对象，不得附加解释或额外包装。',
       '',
       promptPlanSection(facts.plans),
       '',
@@ -189,7 +189,7 @@
     const cap=protectedCap(stock);if(cap&&plan.allocationConstraint.maxPositionPct!==null&&plan.allocationConstraint.maxPositionPct>cap)errors.push('计划配置上限超过程序当前保护上限');
   }
   function process(raw,options={}){
-    const parsed=StrictAiJson.parseStrictAiJson(raw);if(!parsed.ok)return {ok:false,previewReady:false,confirmReady:false,writes:0,code:'parse_error',message:parsed.userMessage||'AI JSON 无法安全解析。',errors:[parsed.userMessage||'AI JSON 无法安全解析。']};
+    const parsed=StrictAiJson.parseStrictAiJson(raw);if(!parsed.ok)return {ok:false,previewReady:false,confirmReady:false,writes:0,code:'parse_error',message:parsed.userMessage||'AI JSON 无法安全解析。',errors:[parsed.userMessage||'AI JSON 无法安全解析。'],input:parsed.input,diagnostics:parsed.diagnostics};
     const draft=object(parsed.value),errors=[],stock=options.stock,prepared=options.prepared;
     if(!prepared||!prepared.session)errors.push('当前没有可验证的计划上下文，请重新整理计划。');
     let liveFacts=null;try{liveFacts=protectedFacts(stock)}catch(error){errors.push(error&&error.message?error.message:'当前计划基础信息不足，请先补齐相关数据。')}
