@@ -16,6 +16,7 @@ const draftPlan=(overrides={})=>({action:'reduce',triggerPrice:null,triggerDirec
 function envelope(prepared,overrides={}){return {schemaVersion:Workflow.SCHEMA_VERSION,operation:'create',symbol:prepared.symbol,...prepared.binding,targetPlan:null,plan:draftPlan(),reason:'当前对话明确形成减仓计划。',risks:['完整条件仍需用户确认。'],unresolvedItems:[],...overrides}}
 function target(plan){return {id:plan.id,planVersion:plan.planVersion,snapshotHash:Workflow.planSnapshotHash(plan)}}
 function smartStructure(value){let inString=false,escaped=false;return JSON.stringify(value).split('').map(char=>{if(escaped){escaped=false;return char}if(char==='\\'){if(inString)escaped=true;return char}if(char==='"'){inString=!inString;return inString?'“':'”'}return char}).join('')}
+function reducePlan(id,triggerPrice,quantity,note){return PlanV2.createPlan({id,action:'reduce',triggerPrice,triggerDirection:'above',quantity,conditions:{technical:[`${triggerPrice} 附近压力确认。`],invalidation:['突破并站稳。']},note},{now,source:'manual'})}
 
 test('整理计划 works without Discussion or Current State and adds optional current context only when available',()=>{
   const standalone=Workflow.prepare(stock({discussionState:undefined}),{sessionId:'standalone',now});
@@ -29,6 +30,13 @@ test('整理计划 works without Discussion or Current State and adds optional c
 test('prompt includes exact existing Plan snapshots without unrelated historical analysis',()=>{
   const plan=PlanV2.createPlan({id:'reduce-1',action:'reduce',triggerPrice:60,triggerDirection:'above',quantity:100,conditions:{technical:['压力位确认。'],invalidation:['突破并站稳。']},note:'压力位减仓。'},{now,source:'manual'}),prepared=Workflow.prepare(stock({plans:[plan]}));
   assert.equal(prepared.context.plans.length,1);assert.equal(prepared.context.plans[0].id,'reduce-1');assert.equal(prepared.context.plans[0].planVersion,1);assert.match(prepared.context.plans[0].snapshotHash,/^plansnap_/);assert.match(prepared.request,/reduce-1/);
+});
+
+test('Prompt enumerates readable Plan slots and requires exact single-target semantics',()=>{
+  const first=reducePlan('reduce-first',60,100,'第一档减仓。'),second=reducePlan('reduce-second',70,100,'第二档减仓。'),prepared=Workflow.prepare(stock({plans:[first,second],discussionState:undefined}),{sessionId:'two-plan-prompt',now});
+  assert.deepEqual(prepared.plans.map(plan=>plan.displayLabel),['减仓计划 1','减仓计划 2']);
+  for(const wording of ['### 当前正式计划','计划 A — 减仓计划 1','计划 B — 减仓计划 2','只输出本轮 AI 对话中明确讨论并形成结论的一个计划','没有被本轮讨论涉及的既有计划不得输出','内容相同使用 no_change','实质变化使用 update','create 仅用于本轮明确建立的全新独立计划','不得按列表第一项','不得省略、修改或猜测'])assert.match(prepared.request,new RegExp(wording.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  for(const plan of prepared.plans){assert.match(prepared.request,new RegExp(plan.id));assert.match(prepared.request,new RegExp(String(plan.planVersion)));assert.match(prepared.request,new RegExp(plan.snapshotHash))}
 });
 
 test('create, update, no_change, invalidate, and complete strict envelopes parse preview-only',()=>{
@@ -71,6 +79,11 @@ test('holding or relevant Plan changes stale the session while Current State cha
   const stateOnly=Workflow.process(raw,{stock:{...current,discussionState:{schemaVersion:Workbench.STORE_SCHEMA_VERSION,current:stateValue({stateId:'new-state',sourceDiscussionVersion:'discussion_v2_new'}),history:[]}},prepared});assert.equal(stateOnly.ok,true,stateOnly.message);
 });
 
+test('an unrelated active Plan change currently stales the whole safety-first session',()=>{
+  const first=reducePlan('reduce-first',60,100,'第一档减仓。'),second=reducePlan('reduce-second',70,100,'第二档减仓。'),current=stock({plans:[first,second],discussionState:undefined}),prepared=Workflow.prepare(current),raw=JSON.stringify(envelope(prepared,{operation:'no_change',targetPlan:target(first),plan:null,reason:'第一档保持不变。'})),changedSecond=PlanV2.applyAuthoritativeEdit(second,{note:'第二档已经改变。'},{now:'2026-09-01T13:00:00Z'}),result=Workflow.process(raw,{stock:{...current,plans:[first,changedSecond]},prepared});
+  assert.equal(result.ok,false);assert.match(result.message,/当前计划或持仓状态已发生变化/);
+});
+
 test('optional Current State provenance may be omitted or supplied with new and legacy names',()=>{
   const current=stock(),prepared=Workflow.prepare(current),base=envelope(prepared);
   const omitted={...base};delete omitted.sourceDiscussionVersion;delete omitted.currentStateId;delete omitted.currentStateHash;assert.equal(Workflow.process(JSON.stringify(omitted),{stock:current,prepared}).ok,true);
@@ -93,15 +106,43 @@ test('missing semantic facts and unresolved items preview safely but cannot conf
   const unresolved=Workflow.process(JSON.stringify(envelope(prepared,{unresolvedItems:['减仓数量尚未确认。']})),{stock:current,prepared});assert.equal(unresolved.ok,true);assert.equal(unresolved.previewReady,true);assert.equal(unresolved.confirmReady,false);assert.equal(unresolved.code,'incomplete');assert.match(Workflow.renderPreview(unresolved),/计划信息尚不完整/);
 });
 
-test('quantity, allocation, held/zero-position, matching direction, and ambiguity rules are enforced',()=>{
+test('quantity, allocation, held/zero-position, independent create, and ambiguity rules are enforced',()=>{
   const held=stock(),prepared=Workflow.prepare(held);
   assert.match(Workflow.process(JSON.stringify(envelope(prepared,{plan:draftPlan({quantity:600})})),{stock:held,prepared}).message,/超过当前持仓/);
   assert.match(Workflow.process(JSON.stringify(envelope(prepared,{plan:draftPlan({quantity:150})})),{stock:held,prepared}).message,/最小交易单位 100/);
   assert.match(Workflow.process(JSON.stringify(envelope(prepared,{plan:draftPlan({allocationConstraint:{maxPositionPct:30,targetWeightRange:null}})})),{stock:held,prepared}).message,/超过程序当前保护上限/);
   const zero=stock({shares:0}),zeroPrepared=Workflow.prepare(zero),wrong=Workflow.process(JSON.stringify(envelope(zeroPrepared)),{stock:zero,prepared:zeroPrepared});assert.equal(wrong.ok,false);assert.match(wrong.message,/零持仓/);
   const entry=Workflow.process(JSON.stringify(envelope(zeroPrepared,{plan:draftPlan({action:'buy',quantity:null,allocationConstraint:{maxPositionPct:10,targetWeightRange:null},note:'建仓条件确认后进入计划。'}),reason:'讨论明确形成建仓计划。'})),{stock:zero,prepared:zeroPrepared});assert.equal(entry.ok,true,entry.message);
-  const add=PlanV2.createPlan({id:'add-1',action:'add',triggerPrice:50,triggerDirection:'below',allocationConstraint:{maxPositionPct:20,targetWeightRange:null},conditions:{technical:['回踩确认。'],invalidation:['结构破坏。']},note:'加仓计划。'},{now,source:'manual'}),withAdd=stock({plans:[add]}),withAddPrepared=Workflow.prepare(withAdd),duplicate=Workflow.process(JSON.stringify(envelope(withAddPrepared,{plan:draftPlan({action:'add',allocationConstraint:{maxPositionPct:20,targetWeightRange:null}})})),{stock:withAdd,prepared:withAddPrepared});assert.match(duplicate.message,/已存在同方向当前计划/);
+  const add=PlanV2.createPlan({id:'add-1',action:'add',triggerPrice:50,triggerDirection:'below',allocationConstraint:{maxPositionPct:20,targetWeightRange:null},conditions:{technical:['回踩确认。'],invalidation:['结构破坏。']},note:'加仓计划。'},{now,source:'manual'}),withAdd=stock({plans:[add]}),withAddPrepared=Workflow.prepare(withAdd),additional=Workflow.process(JSON.stringify(envelope(withAddPrepared,{plan:draftPlan({action:'add',allocationConstraint:{maxPositionPct:20,targetWeightRange:null},note:'本轮形成新的独立加仓档位。'}),reason:'当前对话明确形成新的独立加仓档位。'})),{stock:withAdd,prepared:withAddPrepared});assert.equal(additional.ok,true,additional.message);assert.equal(withAdd.plans.length,1);
   const reduce=PlanV2.createPlan({id:'reduce-2',action:'reduce',triggerPrice:60,triggerDirection:'above',conditions:{technical:['压力确认。'],invalidation:['突破。']},note:'减仓计划。'},{now,source:'manual'}),multiple=stock({plans:[add,reduce]}),multiplePrepared=Workflow.prepare(multiple),ambiguous=Workflow.process(JSON.stringify(envelope(multiplePrepared,{operation:'no_change',targetPlan:null,plan:null,reason:'当前计划保持不变。'})),{stock:multiple,prepared:multiplePrepared});assert.match(ambiguous.message,/必须明确绑定/);
+});
+
+test('two current Plans reject ambiguous no_change and accept only exact session target',async()=>{
+  const first=reducePlan('reduce-first',60,100,'第一档减仓。'),second=reducePlan('reduce-second',70,100,'第二档减仓。'),current=stock({plans:[first,second],discussionState:undefined}),prepared=Workflow.prepare(current,{sessionId:'two-plan-target',now}),before=structuredClone(current.plans);
+  const one=stock({plans:[first],discussionState:undefined}),onePrepared=Workflow.prepare(one),noDiscussedPlan=Workflow.process(JSON.stringify(envelope(onePrepared,{operation:'no_change',targetPlan:null,plan:null,reason:'当前对话未形成正式计划。'})),{stock:one,prepared:onePrepared});assert.equal(noDiscussedPlan.ok,true,noDiscussedPlan.message);
+  for(const reason of ['当前计划保持不变。','最接近价格的计划无需修改。','未形成变化。']){const ambiguous=Workflow.process(JSON.stringify(envelope(prepared,{operation:'no_change',targetPlan:null,plan:null,reason})),{stock:current,prepared});assert.equal(ambiguous.ok,false);assert.match(ambiguous.message,/多个当前计划下的 no_change 必须明确绑定 targetPlan/)}
+  const exact=Workflow.process(JSON.stringify(envelope(prepared,{operation:'no_change',targetPlan:target(first),plan:null,reason:'本轮仅讨论第一档，正式内容保持不变。'})),{stock:current,prepared});
+  assert.equal(exact.ok,true,exact.message);assert.equal(exact.confirmReady,false);assert.equal(exact.targetLabel,'减仓计划 1');assert.equal(exact.unaffectedPlanCount,1);assert.match(Workflow.renderPreview(exact),/目标计划[\s\S]*减仓计划 1[\s\S]*该计划与当前正式版本一致，无需修改[\s\S]*其他 1 个当前计划不受影响/);
+  const committed=await Workflow.commit(exact,{stocks:[current]},{saveCandidate:async()=>{throw new Error('no_change must not save')}});assert.equal(committed.status,'no_change');assert.equal(committed.writes,0);assert.deepEqual(current.plans,before);
+  const badTargets=[{...target(first),id:'unknown-plan'},{...target(first),planVersion:2},{...target(first),snapshotHash:'plansnap_wrong'}];
+  for(const badTarget of badTargets){const result=Workflow.process(JSON.stringify(envelope(prepared,{operation:'no_change',targetPlan:badTarget,plan:null,reason:'保持不变。'})),{stock:current,prepared});assert.equal(result.ok,false);assert.match(result.message,/targetPlan 不属于本次 Plan Draft Session|当前计划已发生变化/)}
+  const preparedWithoutSecond={...prepared,plans:prepared.plans.filter(plan=>plan.id!==second.id)},notInSession=Workflow.process(JSON.stringify(envelope(prepared,{operation:'no_change',targetPlan:target(second),plan:null,reason:'保持不变。'})),{stock:current,prepared:preparedWithoutSecond});assert.equal(notInSession.ok,false);assert.match(notInSession.message,/targetPlan 不属于本次 Plan Draft Session/);
+});
+
+test('targeted update replaces only its slot after confirmation and preserves the other Plan',async()=>{
+  const first=reducePlan('reduce-first',60,100,'第一档减仓。'),second=reducePlan('reduce-second',70,100,'第二档减仓。'),current=stock({plans:[first,second],discussionState:undefined}),root={stocks:[current]},prepared=Workflow.prepare(current,{sessionId:'two-plan-update',now}),updatedPlan=draftPlan({triggerPrice:62,triggerDirection:'above',note:'第一档触发条件调整为 62。'}),preview=Workflow.process(JSON.stringify(envelope(prepared,{operation:'update',targetPlan:target(first),plan:updatedPlan,reason:'本轮只调整第一档减仓。'})),{stock:current,prepared}),before=structuredClone(current.plans);
+  assert.equal(preview.ok,true,preview.message);assert.equal(preview.targetLabel,'减仓计划 1');assert.equal(preview.unaffectedPlanCount,1);assert.deepEqual(current.plans,before);const html=Workflow.renderPreview(preview);for(const wording of ['目标计划','减仓计划 1','当前正式内容','本次结果','原：','新：','旧计划保留为“已替换”的历史记录','其他 1 个当前计划不受影响'])assert.match(html,new RegExp(wording));
+  const result=await Workflow.commit(preview,root,{saveCandidate:async candidate=>candidate},{now:'2026-09-01T16:00:00Z'});assert.equal(result.status,'completed');assert.equal(result.writes,1);
+  const plans=result.state.stocks[0].plans,retired=plans.find(plan=>plan.id===first.id),untouched=plans.find(plan=>plan.id===second.id),successor=plans.find(plan=>plan.id!==first.id&&plan.id!==second.id);assert.equal(retired.status,'replaced');assert.equal(retired.planVersion,2);assert.deepEqual(untouched,PlanV2.normalizePlan(second));assert(successor);assert.equal(successor.status,'active');assert.equal(successor.triggerPrice,62);assert.equal(successor.legacy.discussionPlanSource.replacesPlanId,first.id);
+  const labels=new Map(Workflow.planDisplayEntries(plans).map(entry=>[entry.plan.id,entry.label]));assert.equal(labels.get(successor.id),'减仓计划 1');assert.equal(labels.get(second.id),'减仓计划 2');
+});
+
+test('new independent slot, invalidate, and complete affect only the explicitly selected Plan',async()=>{
+  const first=reducePlan('reduce-first',60,100,'第一档减仓。'),second=reducePlan('reduce-second',70,100,'第二档减仓。'),base=stock({plans:[first,second],discussionState:undefined});
+  async function apply(current,draft,time){const root={stocks:[current]},prepared=Workflow.prepare(current),preview=Workflow.process(JSON.stringify(envelope(prepared,draft)),{stock:current,prepared});assert.equal(preview.ok,true,preview.message);assert.equal(preview.writes,0);return Workflow.commit(preview,root,{saveCandidate:async candidate=>candidate},{now:time})}
+  const created=await apply(structuredClone(base),{operation:'create',targetPlan:null,plan:draftPlan({triggerPrice:80,triggerDirection:'above',note:'第三个独立减仓档位。'}),reason:'本轮明确新增第三个独立减仓档位。'},'2026-09-01T17:00:00Z');assert.equal(created.status,'completed');const createdPlans=created.state.stocks[0].plans;assert.equal(createdPlans.length,3);assert.deepEqual(createdPlans.find(plan=>plan.id===first.id),PlanV2.normalizePlan(first));assert.deepEqual(createdPlans.find(plan=>plan.id===second.id),PlanV2.normalizePlan(second));assert.deepEqual(Workflow.planDisplayEntries(createdPlans).map(entry=>entry.label),['减仓计划 1','减仓计划 2','减仓计划 3']);
+  const invalidated=await apply(structuredClone(base),{operation:'invalidate',targetPlan:target(first),plan:null,reason:'本轮明确取消第一档。'},'2026-09-01T18:00:00Z');assert.equal(invalidated.state.stocks[0].plans.find(plan=>plan.id===first.id).status,'cancelled');assert.deepEqual(invalidated.state.stocks[0].plans.find(plan=>plan.id===second.id),PlanV2.normalizePlan(second));
+  const completed=await apply(structuredClone(base),{operation:'complete',targetPlan:target(first),plan:null,reason:'第一档已经完成。'},'2026-09-01T19:00:00Z');assert.equal(completed.state.stocks[0].plans.find(plan=>plan.id===first.id).status,'completed');assert.deepEqual(completed.state.stocks[0].plans.find(plan=>plan.id===second.id),PlanV2.normalizePlan(second));
 });
 
 test('unrelated active Plan does not become update target and stale target never rebases',()=>{
@@ -144,6 +185,7 @@ test('UI exposes the immediate modal, single import path, preview/confirm hierar
   for(const wording of ['整理计划','计划整理已准备','请继续在当前 AI 对话中使用此 Prompt','已复制，可以在当前 AI 对话中继续','导入计划','预览','确认保存计划'])assert.match(ui,new RegExp(wording));
   const prepare=ui.slice(ui.indexOf('function prepareDiscussionPlan'),ui.indexOf('function ensureDiscussionArchiveContext'));assert.match(prepare,/DiscussionPlanWorkflow\.prepare/);assert.match(prepare,/openDiscussionPromptDialog\(stock,'plan'\)/);assert.doesNotMatch(prepare,/renderStockDetail|scrollIntoView|saveState/);
   const importer=ui.slice(ui.indexOf('function ensureDiscussionPlanImportDialog'),ui.indexOf('function aiDiscussionWorkspacePanel'));assert.match(importer,/DiscussionPlanWorkflow\.process/);assert.match(importer,/DiscussionPlanWorkflow\.renderPreview/);assert.match(importer,/DiscussionPlanWorkflow\.commit/);assert.match(importer,/confirmButton\.disabled=!result\.confirmReady/);
+  assert.match(ui,/function v13PlanBusinessLabelMap/);assert.match(ui,/planDisplayEntries/);assert.match(ui,/当前正式计划：/);assert.match(ui,/未讨论计划保持不变/);
   assert.match(html,/src\/discussion-plan-workflow\.js/);assert.match(html,/discussion-plan-import-modal[^}]*max-height:min\(92dvh,820px\)[^}]*overflow:auto/);assert.match(html,/@media\(max-width:768px\)[\s\S]*discussion-plan-import-modal\{max-height:calc\(100dvh - 24px\)/);assert.match(html,/discussion-plan-summary>div\{grid-template-columns:1fr/);
   assert.match(fixture,/width:min\(390px,100%\)/);assert.match(fixture,/min-height:844px/);assert.match(fixture,/discussionPrepare/);assert.match(fixture,/discussionImport/);assert.match(fixture,/DiscussionPlanWorkflow\.prepare/);assert.match(fixture,/DiscussionPlanWorkflow\.process/);assert.match(fixture,/DiscussionPlanWorkflow\.commit/);assert.match(fixture,/正式计划写入次数/);assert.doesNotMatch(fixture,/discussionState|sourceDiscussionVersion|localStorage|indexedDB|fetch\(/);
 });

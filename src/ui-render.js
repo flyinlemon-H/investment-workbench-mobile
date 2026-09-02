@@ -619,6 +619,10 @@ function v13PlanDisplayName(plan){
   const name=String(plan.name||plan.title||'').trim();
   return name&&!/^[a-z0-9_-]+$/i.test(name)?name:'';
 }
+function v13PlanBusinessLabelMap(stock){
+  if(!window.DiscussionPlanWorkflow||typeof window.DiscussionPlanWorkflow.planDisplayEntries!=='function')return new Map();
+  return new Map(window.DiscussionPlanWorkflow.planDisplayEntries(stock&&stock.plans).map(entry=>[entry.plan.id,entry.label]));
+}
 function v13RecommendationPlanDisplayName(stock,rec){
   const plan=v13DecisionReviewPlanContext(stock,rec);
   return v13PlanDisplayName(plan);
@@ -4918,6 +4922,7 @@ function closeStockDetail(){
 function v13CurrentActivePlanSummaryPanel(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
   if(!plans.length)return '';
+  const businessLabels=v13PlanBusinessLabelMap(stock);
   const label={buy:'加仓',observe:'观察/防守',sell:'减仓',risk:'风险复核'};
   const order=['buy','observe','sell','risk'];
   const grouped=order.map(key=>({key,items:plans.filter(plan=>v13PlanDisplayCategory(plan)===key)})).filter(group=>group.items.length);
@@ -4927,7 +4932,7 @@ function v13CurrentActivePlanSummaryPanel(stock){
     const trigger=v13PlanTriggerText(plan);
     const qty=v13PlanQuantityText(plan);
     const summary=String(plan.summary||plan.actionHint||plan.note||'—').trim();
-    return `<div class="trig-row"><div class="trig-name">${esc(type)} · ${esc(trigger)} · ${esc(validity.label)}</div><div class="trig-dist">${esc(qty)}</div><div class="trig-desc">${esc(formatChineseText(summary.length>90?summary.slice(0,90)+'…':summary))}</div></div>`;
+    return `<div class="trig-row"><div class="trig-name">${esc(businessLabels.get(plan.id)||type)} · ${esc(trigger)} · ${esc(validity.label)}</div><div class="trig-dist">${esc(qty)}</div><div class="trig-desc">${esc(formatChineseText(summary.length>90?summary.slice(0,90)+'…':summary))}</div></div>`;
   };
   const block=group=>`<div class="card" style="background:rgba(255,255,255,.56)"><div class="card-title">${esc(label[group.key])}</div><div class="trig-list">${group.items.map(row).join('')}</div></div>`;
   return `<div class="card" style="margin-bottom:14px" data-v13-detail-anchor="active-plans"><div class="card-title">当前计划</div><div class="card-note">有效计划与需复核计划会明确标注；已结束计划只在历史中保留。</div><div class="dash" style="margin-top:10px">${grouped.map(block).join('')}</div></div>`;
@@ -4956,29 +4961,27 @@ function v13PlanCenterRefreshInfo(stock,plans){
 }
 function v13PlanCenterSummary(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
+  const businessLabels=v13PlanBusinessLabelMap(stock);
   const labels={buy:'加仓',observe:'观察/防守',sell:'减仓',risk:'风险'};
   const order=['buy','observe','sell','risk'];
   const groups=order.map(key=>({key,items:plans.filter(plan=>v13PlanDisplayCategory(plan)===key)})).filter(group=>group.items.length);
   if(!plans.length)return '<div class="empty">暂无当前有效计划</div>';
-  const groupHtml=group=>`<section class="card" style="background:rgba(255,255,255,.58)"><div class="card-title">${esc(labels[group.key])}</div>${group.items.map((raw,index)=>{const plan=PlanV2.normalizePlan(raw),view=v13DerivedPlanValidity(stock,plan),date=plan.lastReviewedAt?`最后复核 ${plan.lastReviewedAt.slice(0,10)}`:(plan.source==='migrated_legacy'?'历史计划，日期未知':'尚未复核'),next=plan.nextReviewDate?` · 下次复核 ${plan.nextReviewDate}`:'';return `<div class="trig-row ${group.key==='sell'?'sell':'buy'}"><div class="trig-name">${index+1}. ${v13PlanTriggerText(plan)} <span class="chip ${view.label==='有效'?'role':'warn'}">${esc(view.label)}</span></div><div class="trig-dist">${v13PlanQuantityText(plan)}</div><div class="trig-desc">${esc(v13PlanCenterShortText(plan))}<div class="card-note">${esc(date+next)}</div>${view.reviewRequired?`<button class="btn small" type="button" data-plan-reconfirm-id="${esc(plan.id)}">确认继续有效</button>`:''}</div></div>`}).join('')}</section>`;
+  const groupHtml=group=>`<section class="card" style="background:rgba(255,255,255,.58)"><div class="card-title">${esc(labels[group.key])}</div>${group.items.map(raw=>{const plan=PlanV2.normalizePlan(raw),view=v13DerivedPlanValidity(stock,plan),date=plan.lastReviewedAt?`最后复核 ${plan.lastReviewedAt.slice(0,10)}`:(plan.source==='migrated_legacy'?'历史计划，日期未知':'尚未复核'),next=plan.nextReviewDate?` · 下次复核 ${plan.nextReviewDate}`:'';return `<div class="trig-row ${group.key==='sell'?'sell':'buy'}"><div class="trig-name">${esc(businessLabels.get(plan.id)||`${labels[group.key]}计划`)} · ${v13PlanTriggerText(plan)} <span class="chip ${view.label==='有效'?'role':'warn'}">${esc(view.label)}</span></div><div class="trig-dist">${v13PlanQuantityText(plan)}</div><div class="trig-desc">${esc(v13PlanCenterShortText(plan))}<div class="card-note">${esc(date+next)}</div>${view.reviewRequired?`<button class="btn small" type="button" data-plan-reconfirm-id="${esc(plan.id)}">确认继续有效</button>`:''}</div></div>`}).join('')}</section>`;
   return `<div class="dash" style="margin-top:10px">${groups.map(groupHtml).join('')}</div>`;
 }
 function v13PlanCompactSummary(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
   if(!plans.length)return '<div class="card-note">暂无当前有效计划。</div>';
-  const labels={buy:'加仓',observe:'观察',sell:'减仓',risk:'风险'};
-  const order=['buy','observe','sell','risk'];
-  const groups=order.map(key=>({key,items:plans.filter(plan=>v13PlanDisplayCategory(plan)===key)})).filter(group=>group.items.length);
-  const priceText=plan=>v13PlanTriggerText(plan).replace(/^触发\s*/,'').replace(/^—$/,'待定');
-  return `<div class="chips">${groups.map(group=>`<span class="chip ${group.key==='sell'?'sell':(group.key==='risk'?'warn':'role')}">${esc(labels[group.key])}：${esc(group.items.map(priceText).join(' / '))}</span>`).join('')}</div>`;
+  const businessLabels=v13PlanBusinessLabelMap(stock),priceText=plan=>v13PlanTriggerText(plan).replace(/^触发\s*/,'').replace(/^—$/,'待定');
+  return `<div class="chips">${plans.map(plan=>{const category=v13PlanDisplayCategory(plan);return `<span class="chip ${category==='sell'?'sell':(category==='risk'?'warn':'role')}">${esc(businessLabels.get(plan.id)||'计划')}：${esc(priceText(plan))}</span>`}).join('')}</div>`;
 }
 function v13PlanCenterDetailSections(stock){
   const plans=v13DisplayActivePlans(stock&&stock.plans);
   if(!plans.length)return '<div class="empty">暂无详细计划</div>';
-  const labels={buy:'加仓',observe:'观察/防守',sell:'减仓',risk:'风险'};
+  const labels={buy:'加仓',observe:'观察/防守',sell:'减仓',risk:'风险'},businessLabels=v13PlanBusinessLabelMap(stock);
   return plans.map(raw=>{
     const plan=PlanV2.normalizePlan(raw),category=v13PlanDisplayCategory(plan),view=v13DerivedPlanValidity(stock,plan),conditionText=PlanV2.CONDITION_CATEGORIES.flatMap(key=>plan.conditions[key].map(item=>item.text)).filter(Boolean).join('；')||'未记录',reviewDate=plan.lastReviewedAt?plan.lastReviewedAt.slice(0,10):(plan.source==='migrated_legacy'?'历史计划，日期未知':'尚未复核');
-    return `<details class="card" style="margin-bottom:10px"><summary class="card-title" style="cursor:pointer">${esc(labels[category]||'计划')} · ${v13PlanTriggerText(plan)} <span class="muted" style="font-weight:400">· ${esc(view.label)}</span></summary><div class="text" style="max-width:none;margin-top:10px"><b>摘要：</b>${esc(formatChineseText(plan.note||'—'))}<br><b>条件：</b>${esc(conditionText)}<br><b>最后复核：</b>${esc(reviewDate)}<br><b>下次复核：</b>${esc(plan.nextReviewDate||'未设置')}<br><b>明确有效至：</b>${esc(plan.validUntil||'未设置')}<br><b>完整条件：</b>${plan.fullConditionStatus==='confirmed'?'已由用户确认':'尚未证明'}</div></details>`;
+    return `<details class="card" style="margin-bottom:10px"><summary class="card-title" style="cursor:pointer">${esc(businessLabels.get(plan.id)||`${labels[category]||'计划'}计划`)} · ${v13PlanTriggerText(plan)} <span class="muted" style="font-weight:400">· ${esc(view.label)}</span></summary><div class="text" style="max-width:none;margin-top:10px"><b>摘要：</b>${esc(formatChineseText(plan.note||'—'))}<br><b>条件：</b>${esc(conditionText)}<br><b>最后复核：</b>${esc(reviewDate)}<br><b>下次复核：</b>${esc(plan.nextReviewDate||'未设置')}<br><b>明确有效至：</b>${esc(plan.validUntil||'未设置')}<br><b>完整条件：</b>${plan.fullConditionStatus==='confirmed'?'已由用户确认':'尚未证明'}</div></details>`;
   }).join('');
 }
 function v13PlanCenterHistory(stock){
@@ -5211,7 +5214,7 @@ function ensureDiscussionArchiveContext(stock){
   prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
 function discussionPromptSummary(prepared,kind){
-  if(kind==='plan')return {title:'计划整理已准备',intro:'请继续在当前 AI 对话中使用此 Prompt。AI 将只整理对话中已经形成的计划结论。',lines:[prepared&&prepared.hasCurrentState?'已带入当前结论、持仓和现有计划':'已带入当前持仓和现有计划','只整理当前对话中已经明确形成的计划','导入和确认前不会修改正式计划']};
+  if(kind==='plan'){const planLabels=arrSafe(prepared&&prepared.plans).map(plan=>plan.displayLabel).filter(Boolean);return {title:'计划整理已准备',intro:'请继续在当前 AI 对话中使用此 Prompt。AI 将只整理对话中已经形成的计划结论。',lines:[prepared&&prepared.hasCurrentState?'已带入当前结论、持仓和现有计划':'已带入当前持仓和现有计划',planLabels.length?`当前正式计划：${planLabels.join('、')}`:'当前没有正式计划','只整理本轮明确讨论的一个计划；未讨论计划保持不变','导入和确认前不会修改正式计划']}};
   if(kind==='archive')return {title:'整理结论已准备',intro:'用于把刚才的讨论整理成可导入结论，不会修改计划或持仓。',lines:['用于整理本轮讨论的最终结论','保存前仍需回到程序导入并确认']};
   const context=prepared.context||{},facts=context.currentFacts||{},technical=facts.technical||{},bars=Array.isArray(technical.bars)?technical.bars:[],included=[];
   if(context.currentState)included.push('当前结论');

@@ -49,11 +49,27 @@
     return {sourceDiscussionVersion:text(current.sourceDiscussionVersion),sourceStateId:text(current.stateId),sourceStateHash};
   }
   function planSnapshotHash(plan){return PlanReview.planSnapshotHash(PlanV2.normalizePlan(plan))}
-  function activePlans(stock){return array(stock&&stock.plans).map(plan=>PlanV2.normalizePlan(plan)).filter(plan=>plan.status==='active'&&['active','needs_review'].includes(plan.validityStatus))}
-  function compactPlan(plan){
+  function planLabelBase(plan){
+    const action=PlanV2.normalizePlan(plan).action;return action==='buy'?'建仓计划':(action==='add'?'加仓计划':(['reduce','sell'].includes(action)?'减仓计划':'计划'));
+  }
+  function replacementRootId(plan,byId){
+    let current=plan,rootId=current.id;const seen=new Set([rootId]);
+    while(current){const source=object(object(current.legacy).discussionPlanSource),previousId=text(source.replacesPlanId);if(!previousId||seen.has(previousId))break;rootId=previousId;seen.add(previousId);current=byId.get(previousId)||null}
+    return rootId;
+  }
+  function planDisplayEntries(plans){
+    const normalized=array(plans).map(plan=>PlanV2.normalizePlan(plan)),byId=new Map(normalized.map(plan=>[plan.id,plan])),indexById=new Map(normalized.map((plan,index)=>[plan.id,index]));
+    const rows=normalized.filter(plan=>plan.status==='active'&&['active','needs_review'].includes(plan.validityStatus)).map((plan,index)=>({plan,index,base:planLabelBase(plan),slotKey:replacementRootId(plan,byId)}));
+    const slotsByBase=new Map();
+    rows.forEach(row=>{if(!slotsByBase.has(row.base))slotsByBase.set(row.base,[]);const slots=slotsByBase.get(row.base);if(!slots.includes(row.slotKey))slots.push(row.slotKey)});
+    slotsByBase.forEach(slots=>slots.sort((a,b)=>(indexById.get(a)??Number.MAX_SAFE_INTEGER)-(indexById.get(b)??Number.MAX_SAFE_INTEGER)));
+    return rows.map(row=>{const slots=slotsByBase.get(row.base),position=slots.indexOf(row.slotKey)+1,label=slots.length>1?`${row.base} ${position}`:row.base;return {plan:row.plan,label,slotKey:row.slotKey}});
+  }
+  function activePlans(stock){return planDisplayEntries(stock&&stock.plans).map(entry=>entry.plan)}
+  function compactPlan(plan,displayLabel=''){
     const normalized=PlanV2.normalizePlan(plan),conditions={};
     CONDITION_FIELDS.forEach(category=>{conditions[category]=array(normalized.conditions&&normalized.conditions[category]).map(item=>item.text).filter(Boolean)});
-    return {id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),action:normalized.action,triggerPrice:normalized.triggerPrice,triggerDirection:normalized.triggerDirection,quantity:normalized.quantity,conditions,invalidationConditions:array(normalized.conditions&&normalized.conditions.invalidation).map(item=>item.text).filter(Boolean),allocationConstraint:clone(normalized.allocationConstraint),validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus};
+    return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),action:normalized.action,triggerPrice:normalized.triggerPrice,triggerDirection:normalized.triggerDirection,quantity:normalized.quantity,conditions,invalidationConditions:array(normalized.conditions&&normalized.conditions.invalidation).map(item=>item.text).filter(Boolean),allocationConstraint:clone(normalized.allocationConstraint),validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus};
   }
   function compactCurrentState(current){
     return {actionAssessment:clone(current.actionAssessment),attentionLevel:current.attentionLevel,trendAssessment:clone(current.trendAssessment),structureAssessment:clone(current.structureAssessment),focusPoints:clone(current.focusPoints),planRelation:clone(current.planRelation)};
@@ -73,7 +89,7 @@
   function protectedFacts(stock){
     const symbol=canonical(stock&&(stock.code||stock.symbol)),shares=Number(stock&&stock.shares);
     if(!symbol||!Number.isFinite(shares)||shares<0)throw new Error('当前持仓或计划基础信息不足，暂时无法整理正式计划。');
-    const avgCost=Number(stock&&(stock.avgCost??stock.cost)),plans=activePlans(stock).map(compactPlan),holding={status:shares>0?'held':'zero_position',shares,avgCost:Number.isFinite(avgCost)&&avgCost>=0?avgCost:null,role:text(stock&&stock.role),type:text(stock&&stock.type),minTradeUnit:minTradeUnit(stock),maxPositionPct:protectedCap(stock)};
+    const avgCost=Number(stock&&(stock.avgCost??stock.cost)),plans=planDisplayEntries(stock&&stock.plans).map(entry=>compactPlan(entry.plan,entry.label)),holding={status:shares>0?'held':'zero_position',shares,avgCost:Number.isFinite(avgCost)&&avgCost>=0?avgCost:null,role:text(stock&&stock.role),type:text(stock&&stock.type),minTradeUnit:minTradeUnit(stock),maxPositionPct:protectedCap(stock)};
     const snapshot={symbol,stockId:text(stock&&stock.id),holding,plans:plans.map(plan=>({id:plan.id,planVersion:plan.planVersion,snapshotHash:plan.snapshotHash}))};
     return {symbol,holding,plans,snapshot,hash:`plandraftfacts_${DiscussionWorkbench.hash(snapshot)}`};
   }
@@ -84,6 +100,14 @@
     return {id,version,hash,protectedFactsHash:facts.hash,createdAt};
   }
   function sessionBinding(session){return {draftSessionId:session.id,draftSessionVersion:session.version,draftSessionHash:session.hash}}
+  function promptPlanSummary(plan){
+    const conditions=CONDITION_FIELDS.flatMap(key=>array(plan.conditions&&plan.conditions[key])).filter(Boolean),trigger=plan.triggerPrice===null?'无明确价格，仅按条件':`${plan.triggerDirection==='above'?'达到或高于':'达到或低于'} ${plan.triggerPrice}`,conditionText=conditions.length?conditions.slice(0,3).join('；'):'无额外条件';
+    return `${trigger}；${conditionText}${plan.quantity!==null?`；数量 ${plan.quantity}`:''}`;
+  }
+  function promptPlanSection(plans){
+    if(!plans.length)return '### 当前正式计划\n\n无。';
+    return ['### 当前正式计划','',...plans.flatMap((plan,index)=>[`#### 计划 ${String.fromCharCode(65+index)} — ${plan.displayLabel}`,`- direction: ${plan.action}`,`- 摘要: ${promptPlanSummary(plan)}`,`- targetPlan: ${JSON.stringify({id:plan.id,planVersion:plan.planVersion,snapshotHash:plan.snapshotHash})}`,''])].join('\n').trimEnd();
+  }
   function prepare(stock,options={}){
     const facts=protectedFacts(stock),optional=currentStateContext(stock),session=createDraftSession(facts,options),binding={...sessionBinding(session),...object(optional.provenance)},context={symbol:facts.symbol,name:text(stock&&stock.name),holding:clone(facts.holding),plans:clone(facts.plans),planDraftSession:{id:session.id,version:session.version,hash:session.hash}};
     if(optional.context)context.currentState=clone(optional.context);
@@ -95,12 +119,18 @@
       '请继续在当前 AI 对话中使用。请根据当前这个 AI 对话中已经形成的讨论结论，整理计划草案。不要重新做完整分析。',
       '程序提供的持仓和现有正式计划仅用于事实绑定。不要重新分析，也不要创造本对话中没有明确形成的价格、数量、仓位、条件或日期。',
       optional.context?'程序中已有当前结论，可作为辅助参考。':'程序中没有已保存的当前结论，这不是错误，也不影响整理计划。',
-      '如果既有计划保持合适，operation 使用 no_change；如果当前对话没有形成足够明确的正式计划，也使用 no_change，并在 reason 说明“当前对话未形成正式计划”。',
-      'create 仅用于没有同方向当前计划且当前对话明确形成新计划；update / invalidate / complete 必须精确引用下方某个 targetPlan 的 id、planVersion、snapshotHash。',
+      '只输出本轮 AI 对话中明确讨论并形成结论的一个计划。没有被本轮讨论涉及的既有计划不得输出，程序会自动保持其原状态。',
+      '本 V1 信封一次只表示一个计划操作；如果本轮明确讨论了多个计划，请分别整理，不要合并成批量结果。',
+      '对已有计划：内容相同使用 no_change，实质变化使用 update，明确取消使用 invalidate，已经完成使用 complete；这四种 operation 都必须精确复制对应计划的 targetPlan id、planVersion、snapshotHash，不得省略、修改或猜测。',
+      '同一业务计划发生变化必须使用 update，不能用 create 逃避绑定。create 仅用于本轮明确建立的全新独立计划，例如新增一个不同档位；它的 targetPlan 必须为 null，且不会替换其他计划。',
+      '不得按列表第一项、最近价格、触发价高低、方向或最新 AI 输出猜测 targetPlan。只有用户最终确认后，草案才会成为正式计划。',
+      '如果当前对话完全没有形成任何计划结论，可使用 no_change、targetPlan 为 null，并在 reason 说明“当前对话未形成正式计划”；不得用它表示某个未指明的既有计划保持不变。',
       '计划可以只使用明确的结构或技术条件而不填触发价；没有明确依据时 triggerPrice、quantity 或配置字段必须为 null，不得补造。',
       'create / update 时 plan 必须使用完整结构；其余 operation 的 plan 必须为 null。所有条件初始都只是待确认，JSON 草案本身不会执行交易。',
       '如必要信息仍未解决，将项目写入 unresolvedItems；程序会允许预览但禁止保存不完整计划。',
       '只输出一个 JSON 对象，不要 Markdown、代码围栏、解释或额外包装。',
+      '',
+      promptPlanSection(facts.plans),
       '',
       '程序权威上下文：',JSON.stringify(context,null,2),
       '',
@@ -108,7 +138,7 @@
       '',
       'create / update 时 plan 结构：',JSON.stringify(planShape,null,2),
       '',
-      'update / invalidate / complete 时 targetPlan 结构：',JSON.stringify(targetShape,null,2)
+      'no_change / update / invalidate / complete 针对已有计划时 targetPlan 结构：',JSON.stringify(targetShape,null,2)
     ].join('\n');
     return {request,context,binding,session:clone(session),protectedFacts:clone(facts.snapshot),protectedFactsHash:facts.hash,symbol:facts.symbol,sourceState:clone(optional.current),provenance:clone(optional.provenance),plans:clone(facts.plans),hasCurrentState:Boolean(optional.context),metrics:DiscussionWorkbench.requestMetrics(request)};
   }
@@ -167,11 +197,13 @@
     if(text(draft.currentStateHash)&&text(draft.sourceStateHash)&&text(draft.currentStateHash)!==text(draft.sourceStateHash))errors.push('可选当前结论来源哈希不一致');
     if((providedDiscussionVersion||providedStateId||providedStateHash)&&(!provenance.currentStateId||providedDiscussionVersion&&providedDiscussionVersion!==provenance.sourceDiscussionVersion||providedStateId&&providedStateId!==provenance.currentStateId||providedStateHash&&providedStateHash!==provenance.currentStateHash))errors.push('可选当前结论来源与准备时上下文不一致');
     if(!reason||reason.length>300)errors.push('reason 必须是 1 至 300 字文字');
-    let target=null,currentPlan=null;
+    let target=null,currentPlan=null,targetLabel='';
     if(draft.targetPlan!==null){
       if(exactFields(draft.targetPlan,TARGET_FIELDS,'targetPlan',errors)){
         target={id:text(draft.targetPlan.id),planVersion:Number(draft.targetPlan.planVersion),snapshotHash:text(draft.targetPlan.snapshotHash)};
         if(!target.id||!Number.isInteger(target.planVersion)||target.planVersion<1||!target.snapshotHash)errors.push('targetPlan 绑定无效');
+        const sessionPlan=array(prepared&&prepared.plans).find(plan=>plan.id===target.id&&plan.planVersion===target.planVersion&&plan.snapshotHash===target.snapshotHash);
+        if(!sessionPlan)errors.push('targetPlan 不属于本次 Plan Draft Session，请重新整理计划');else targetLabel=text(sessionPlan.displayLabel);
         currentPlan=findCurrentPlan(stock,target);
         if(!currentPlan||currentPlan.planVersion!==target.planVersion||planSnapshotHash(currentPlan)!==target.snapshotHash)errors.push('当前计划已发生变化，请重新整理计划');
       }
@@ -186,18 +218,17 @@
       const shares=Math.max(0,Number(stock&&stock.shares)||0),group=directionGroup(plan.action);
       if(shares>0&&plan.action==='buy')errors.push('当前已有持仓，不能创建建仓计划');
       if(shares<=0&&plan.action!=='buy')errors.push('当前为零持仓，只能整理建仓计划');
-      if(operation==='create'&&activePlans(stock).some(existing=>directionGroup(existing.action)===group))errors.push('已存在同方向当前计划，请使用 update 或 no_change');
       if(operation==='update'&&currentPlan&&directionGroup(currentPlan.action)!==group)errors.push('更新草案不能改变既有计划方向');
       if(operation==='update'&&currentPlan&&PlanV2.stable(PlanV2.authoritativeContent?PlanV2.authoritativeContent(currentPlan):planPatchFromCanonical(currentPlan))===PlanV2.stable(planPatch(plan)))errors.push('计划没有实际变化，请使用 no_change');
     }
-    if(draft.targetPlan===null&&operation==='no_change'&&activePlans(stock).length>1&&/既有|当前计划|保持/.test(reason))errors.push('多个当前计划下的 no_change 必须明确绑定 targetPlan');
+    if(draft.targetPlan===null&&operation==='no_change'&&activePlans(stock).length>1)errors.push('多个当前计划下的 no_change 必须明确绑定 targetPlan');
     const normalized={schemaVersion:SCHEMA_VERSION,operation,symbol,draftSessionId:text(draft.draftSessionId),draftSessionVersion:Number(draft.draftSessionVersion),draftSessionHash:text(draft.draftSessionHash),targetPlan:target,plan,reason,risks,unresolvedItems};
     if(providedDiscussionVersion)normalized.sourceDiscussionVersion=providedDiscussionVersion;
     if(providedStateId)normalized.currentStateId=providedStateId;
     if(providedStateHash)normalized.currentStateHash=providedStateHash;
     if(errors.length)return {ok:false,previewReady:false,confirmReady:false,writes:0,code:'validation_error',message:errors.join('；'),errors,draft:normalized,prepared};
-    const noWrite=operation==='no_change',confirmReady=!noWrite&&!unresolvedItems.length;
-    return {ok:true,previewReady:true,confirmReady,writes:0,code:noWrite?'no_change':(confirmReady?'ready':'incomplete'),message:noWrite?'当前对话未形成需要保存的计划变更':(confirmReady?'计划草案已通过校验，请预览后确认。':'计划信息尚不完整'),errors:[],draft:normalized,prepared,currentPlan:currentPlan?PlanV2.normalizePlan(currentPlan):null};
+    const noWrite=operation==='no_change',confirmReady=!noWrite&&!unresolvedItems.length,unaffectedPlanCount=Math.max(0,activePlans(stock).length-(target?1:0));
+    return {ok:true,previewReady:true,confirmReady,writes:0,code:noWrite?'no_change':(confirmReady?'ready':'incomplete'),message:noWrite?(target?'该计划与当前正式版本一致，无需修改。':'当前对话未形成需要保存的计划变更'):(confirmReady?'计划草案已通过校验，请预览后确认。':'计划信息尚不完整'),errors:[],draft:normalized,prepared,currentPlan:currentPlan?PlanV2.normalizePlan(currentPlan):null,targetLabel,unaffectedPlanCount};
   }
   function planPatchFromCanonical(plan){const p=PlanV2.normalizePlan(plan),conditions={};CONDITION_FIELDS.forEach(key=>{conditions[key]=array(p.conditions[key]).map(item=>item.text)});return planPatch({action:p.action,triggerPrice:p.triggerPrice,triggerDirection:p.triggerDirection,quantity:p.quantity,conditions,invalidationConditions:array(p.conditions.invalidation).map(item=>item.text),allocationConstraint:p.allocationConstraint,validUntil:p.validUntil,nextReviewDate:p.nextReviewDate,note:p.note})}
   function diff(current,plan){
@@ -210,15 +241,21 @@
     const action={buy:'建仓',add:'加仓',reduce:'减仓',sell:'减仓'}[plan.action]||plan.action,conditions=CONDITION_FIELDS.flatMap(key=>array(plan.conditions&&plan.conditions[key])).filter(Boolean),trigger=plan.triggerPrice===null?'仅按明确条件':`${plan.triggerDirection==='above'?'价格达到或高于':'价格达到或低于'} ${plan.triggerPrice}`,allocation=object(plan.allocationConstraint),hasAllocation=allocation.maxPositionPct!==null&&allocation.maxPositionPct!==undefined||Boolean(text(allocation.targetWeightRange));
     return `<div class="discussion-plan-summary"><div><b>方向</b><span>${escapeHtml(action)}</span></div><div><b>触发 / 条件</b><span>${escapeHtml(trigger)}${conditions.length?`；${escapeHtml(conditions.join('；'))}`:''}</span></div><div><b>失效条件</b><span>${escapeHtml(array(plan.invalidationConditions).join('；')||'未提供')}</span></div>${plan.quantity!==null?`<div><b>数量</b><span>${escapeHtml(plan.quantity)}</span></div>`:''}${hasAllocation?`<div><b>配置</b><span>${escapeHtml(allocation.maxPositionPct!==null&&allocation.maxPositionPct!==undefined?`上限 ${allocation.maxPositionPct}%`:allocation.targetWeightRange)}</span></div>`:''}<div><b>说明</b><span>${escapeHtml(plan.note)}</span></div></div>`;
   }
+  function previewValue(value){
+    if(value===null||value===undefined||value==='')return '未设置';
+    if(Array.isArray(value))return value.map(item=>text(item&&item.text||item)).filter(Boolean).join('；')||'未设置';
+    if(typeof value==='object'){const source=object(value);if(Object.prototype.hasOwnProperty.call(source,'maxPositionPct')||Object.prototype.hasOwnProperty.call(source,'targetWeightRange'))return [source.maxPositionPct!==null&&source.maxPositionPct!==undefined?`上限 ${source.maxPositionPct}%`:'',text(source.targetWeightRange)].filter(Boolean).join('；')||'未设置';return Object.values(source).map(previewValue).filter(item=>item&&item!=='未设置').join('；')||'未设置'}
+    return String(value);
+  }
   function renderPreview(result){
     if(!result||!result.ok)return `<div class="alert"><b>计划草案未通过</b><div>${escapeHtml(result&&result.message||'未知错误')}</div><div>未写入任何数据。</div></div>`;
-    const draft=result.draft,label=OPERATION_LABELS[draft.operation]||draft.operation;
-    if(draft.operation==='no_change')return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3><div class="hint">当前对话未形成需要保存的计划变更</div><p>${escapeHtml(draft.reason)}</p><div class="card-note">不会创建计划版本，也不会修改任何数据。</div></section>`;
-    const current=result.currentPlan?`<section><h4>当前计划</h4>${renderPlanSummary(planPatchFromCanonical(result.currentPlan))}</section>`:'',next=draft.plan?`<section><h4>${draft.operation==='create'?'新计划草案':'新计划草案'}</h4>${renderPlanSummary(draft.plan)}</section>`:'',changes=draft.operation==='update'?diff(result.currentPlan,draft.plan):[];
-    const changeHtml=changes.length?`<div class="discussion-plan-diff"><b>主要变化</b><ul>${changes.map(item=>`<li>${escapeHtml(item.label)}</li>`).join('')}</ul></div>`:'';
+    const draft=result.draft,label=OPERATION_LABELS[draft.operation]||draft.operation,targetLabel=result.targetLabel||draft.targetPlan&&draft.targetPlan.id||'',target=targetLabel?`<section><h4>目标计划</h4><div class="discussion-plan-target"><strong>${escapeHtml(targetLabel)}</strong></div></section>`:'',unaffected=result.unaffectedPlanCount>0?`<div class="card-note">其他 ${result.unaffectedPlanCount} 个当前计划不受影响；本次未重新确认它们。</div>`:'';
+    if(draft.operation==='no_change')return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3>${target}<div class="hint">${escapeHtml(draft.targetPlan?'该计划与当前正式版本一致，无需修改。':'当前对话未形成需要保存的计划变更')}</div><p>${escapeHtml(draft.reason)}</p>${unaffected}<div class="card-note">不会创建计划版本，也不会修改任何数据。</div></section>`;
+    const current=result.currentPlan?`<section><h4>当前正式内容</h4>${renderPlanSummary(planPatchFromCanonical(result.currentPlan))}</section>`:'',next=draft.plan?`<section><h4>本次结果 · ${draft.operation==='create'?'新增独立计划':'修改后的计划'}</h4>${renderPlanSummary(draft.plan)}</section>`:'',changes=draft.operation==='update'?diff(result.currentPlan,draft.plan):[];
+    const changeHtml=changes.length?`<div class="discussion-plan-diff"><b>主要变化</b><ul>${changes.map(item=>`<li><b>${escapeHtml(item.label)}</b><div>原：${escapeHtml(previewValue(item.before))}</div><div>新：${escapeHtml(previewValue(item.after))}</div></li>`).join('')}</ul></div>`:'';
     const unresolved=draft.unresolvedItems.length?`<div class="alert"><b>计划信息尚不完整</b><ul>${draft.unresolvedItems.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`:'';
-    const lifecycle=!draft.plan?`<div class="discussion-plan-summary"><div><b>目标计划</b><span>${escapeHtml(result.currentPlan&&result.currentPlan.note||draft.targetPlan&&draft.targetPlan.id||'—')}</span></div><div><b>原因</b><span>${escapeHtml(draft.reason)}</span></div></div>`:'';
-    return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3>${current}${next}${lifecycle}${changeHtml}${draft.risks.length?`<div class="alert">风险 / 提醒：${escapeHtml(draft.risks.join('；'))}</div>`:''}${unresolved}<div class="card-note">当前仅为预览；确认前不会写入计划，也不会执行交易或改变持仓。</div></section>`;
+    const lifecycle=!draft.plan?`<section><h4>本次结果</h4><div class="discussion-plan-summary"><div><b>状态</b><span>${escapeHtml(label)}</span></div><div><b>原因</b><span>${escapeHtml(draft.reason)}</span></div></div></section>`:'',replacement=draft.operation==='update'?`<div class="card-note">确认后，新计划将替代 ${escapeHtml(targetLabel||'目标计划')}；旧计划保留为“已替换”的历史记录。</div>`:'';
+    return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3>${target}${current}${next}${lifecycle}${changeHtml}${replacement}${unaffected}${draft.risks.length?`<div class="alert">风险 / 提醒：${escapeHtml(draft.risks.join('；'))}</div>`:''}${unresolved}<div class="card-note">当前仅为预览；确认前不会写入计划，也不会执行交易或改变持仓。</div></section>`;
   }
   function findStock(state,symbol){return array(state&&state.stocks).find(stock=>canonical(stock&&(stock.code||stock.symbol))===canonical(symbol))||null}
   async function commit(result,state,deps={},options={}){
@@ -247,5 +284,5 @@
     },{save:deps.saveCandidate,adopt:deps.adoptCandidate,rollback:deps.rollback});
   }
 
-  return Object.freeze({SCHEMA_VERSION,OPERATIONS,PLAN_ACTIONS,OPERATION_LABELS,TOP_FIELDS,REQUIRED_TOP_FIELDS,TARGET_FIELDS,PLAN_FIELDS,CONDITION_FIELDS,prepare,process,diff,renderPreview,commit,discussionBinding,currentStateContext,protectedFacts,createDraftSession,sessionBinding,planSnapshotHash,activePlans,compactPlan,planPatch,planPatchFromCanonical,minTradeUnit,clone});
+  return Object.freeze({SCHEMA_VERSION,OPERATIONS,PLAN_ACTIONS,OPERATION_LABELS,TOP_FIELDS,REQUIRED_TOP_FIELDS,TARGET_FIELDS,PLAN_FIELDS,CONDITION_FIELDS,prepare,process,diff,renderPreview,commit,discussionBinding,currentStateContext,protectedFacts,createDraftSession,sessionBinding,planSnapshotHash,activePlans,compactPlan,planDisplayEntries,planLabelBase,planPatch,planPatchFromCanonical,minTradeUnit,clone});
 });
