@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "401d43176b8093a494c2dc6052478768acf9954f",
-  "assetVersion": "plan-draft-no-change-alignment-20260902",
-  "dataMode": "standalone Plan Draft Session bound to canonical Plan and holding facts; targeted no_change requires exact Plan identity, unscoped null-target no_change is a zero-authority no-plan-result, scoped Sessions reject null-target no_change and create, and no Plan is inferred from prose; Current State Archive Prompt carries actual technicalDataStatus and confidence rules while freshness, source-version, protected-context, semantic, schema, shared strict AI JSON reliability fix 3, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards are preserved",
+  "sourceCommit": "141314393ffc28add4e657629d13f77161f295cd",
+  "assetVersion": "ai-json-fenced-transport-20260902",
+  "dataMode": "Current State and standalone Plan Draft use exactly one full json code block as the primary AI transport path; the shared strict whole-response parser retains only proven structural quote and safe string-context underscore fallbacks, records raw and final parse diagnostics against a real production fixture, and keeps freshness, source-version, protected-context, semantic, schema, Plan targeting, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards unchanged",
   "files": [
     {
       "path": ".nojekyll",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 55770,
-      "sha256": "5be54984ba3fd7aaf97c4b6d43bdca5999f02e7be3b0abe7110062a5305dc625"
+      "bytes": 55500,
+      "sha256": "5ed7745740e213a2be5cc749f8fdf50da8184b65b36843bde334c8d4ec7b1769"
     },
     {
       "path": "social_posts.json",
@@ -126,9 +126,9 @@
     },
     {
       "path": "src/discussion-plan-workflow.js",
-      "role": "Standalone single-target Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
-      "bytes": 39237,
-      "sha256": "7d2ccfd899575dbf3626ed26434a4b6407f4896ae955ee64d3dc92b694456eeb"
+      "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
+      "bytes": 39377,
+      "sha256": "0c92ee052172205aeae1168a3283641a1821b55a575bf96739c444bc38072427"
     },
     {
       "path": "src/discussion-state-contract.js",
@@ -138,9 +138,9 @@
     },
     {
       "path": "src/discussion-workbench.js",
-      "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and prompt runtime",
-      "bytes": 44143,
-      "sha256": "82ea12493fe19d61f4c734450647566a64a51794eee03a99500a4d599e232cf8"
+      "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt runtime",
+      "bytes": 44186,
+      "sha256": "88e693fe67042efe3021ee9ad1d7a6e74eb6aae81fcb5ce0dadee76e0e5ae4bb"
     },
     {
       "path": "src/import-export.js",
@@ -306,9 +306,9 @@
     },
     {
       "path": "src/strict-ai-json.js",
-      "role": "shared strict AI JSON presentation preprocessor and parser runtime",
-      "bytes": 18504,
-      "sha256": "6b6457f5457a2163510ee7dd3d14e33d39193e6d52aafde3174b47968582d4b7"
+      "role": "shared strict AI JSON fenced transport preprocessor, parser, and post-repair diagnostics runtime",
+      "bytes": 23058,
+      "sha256": "e2221590dc7032389aa4660e6acfc4e838071c96c96b03be8722892f698d6dc6"
     },
     {
       "path": "src/symbol-identity.js",
@@ -324,9 +324,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "mobile-first Current State decision hierarchy, import preview, legacy fallback, and existing Workbench UI runtime",
-      "bytes": 657554,
-      "sha256": "54634b67884d88ee34bbbeaf0ed86df7ce8193941471b5978e1e36b4add0a4cd"
+      "role": "mobile-first Current State decision hierarchy, fenced JSON import guidance, import preview, legacy fallback, and existing Workbench UI runtime",
+      "bytes": 657863,
+      "sha256": "b7651d061ab4c80f610195b1751986a514d2485c3b8201588a8e76cd364f46bd"
     },
     {
       "path": "src/universe-handoff.js",
