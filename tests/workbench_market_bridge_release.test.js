@@ -98,11 +98,18 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Current State input boundary release cache-busts the bridge and Workbench modules',()=>{
+test('PC AI Bridge release cache-busts the transport and Workbench modules',()=>{
   const html=read('index.html');
-  const version='current-state-input-boundary-20260902';
+  const version='pc-ai-bridge-long-term-logic-20260902';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'data/backend_config.js',
+    'src/api/api-errors.js',
+    'src/api/api-client.js',
+    'src/api/health-api.js',
+    'src/api/ai-api.js',
+    'src/long-term-logic-contract.js',
+    'src/long-term-logic-workflow.js',
     'src/symbol-identity.js',
     'src/universe-handoff.js',
     'src/technical-view-ux.js',

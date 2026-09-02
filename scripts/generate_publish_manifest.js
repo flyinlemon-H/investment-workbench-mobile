@@ -9,6 +9,11 @@ const root=path.resolve(__dirname,'..');
 const manifestPath=path.join(root,'publish-manifest.json');
 const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
+roleByPath.set('src/api/ai-api.js','PC AI Bridge raw request/response transport envelope');
+roleByPath.set('src/api/api-client.js','loopback-only GET/POST transport with timeouts and Local Network Access handling');
+roleByPath.set('src/api/health-api.js','user-initiated Bridge health and AI capability checks');
+roleByPath.set('src/long-term-logic-contract.js','exact Long-Term Logic binding, validation, bounded audit and atomic candidate commit');
+roleByPath.set('src/long-term-logic-workflow.js','shared Manual/API Long-Term Logic Prompt and strict response processor');
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
 roleByPath.set('src/strict-ai-json.js','shared strict AI JSON fenced transport preprocessor, parser, and post-repair diagnostics runtime');
@@ -18,8 +23,8 @@ roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','mobile-first Current State decision hierarchy, fenced JSON import guidance, import preview, legacy fallback, and existing Workbench UI runtime');
-roleByPath.set('src/app.js','browser bootstrap, storage recovery, and Tools-only storage maintenance runtime');
+roleByPath.set('src/ui-render.js','Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces');
+roleByPath.set('src/app.js','browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
 roleByPath.set('src/decision-compression-context.js','Decision Compression compact context with program-owned blocker facts and audit references');
@@ -35,13 +40,16 @@ roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fa
 roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
-roleByPath.set('src/storage/storage-validation.js','Plan V2 and separate PlanReview candidate storage validation runtime');
+roleByPath.set('src/storage/storage-validation.js','candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards');
 roleByPath.set('src/v13-core-model.js','Plan V2 canonical normalization compatibility runtime');
 roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestration runtime');
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
 
 const paths=[...new Set([
   ...existing.files.map(entry=>entry.path),
+  'src/api/ai-api.js',
+  'src/long-term-logic-contract.js',
+  'src/long-term-logic-workflow.js',
   'src/strict-ai-json.js',
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
@@ -77,8 +85,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'current-state-input-boundary-20260902',
-  dataMode:'Current State Archive Prompt separates program-owned input context from the exact AI judgment output allowlist: technicalDataStatus remains input-only for confidence, symbol and sourceDiscussionVersion remain required bindings, and unknown fields still fail closed; fenced JSON transport, freshness, source-version, protected-context, semantic, schema, Plan targeting, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards remain unchanged',
+  assetVersion:'pc-ai-bridge-long-term-logic-20260902',
+  dataMode:'PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
