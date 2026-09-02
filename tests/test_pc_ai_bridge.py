@@ -141,8 +141,11 @@ class PcAiBridgeTests(unittest.TestCase):
             status, _, raw = running.request(
                 "POST",
                 "/ai/request",
-                raw=b"x" * (bridge.DEFAULT_BODY_LIMIT_BYTES + 1),
-                headers={"Origin": ALLOWED_ORIGIN, "Content-Type": "application/json"},
+                # Reject the declared size before reading any body. Streaming a full
+                # oversized body races the intentional early close on Windows TCP.
+                raw=b"",
+                headers={"Origin": ALLOWED_ORIGIN, "Content-Type": "application/json",
+                         "Content-Length": str(bridge.DEFAULT_BODY_LIMIT_BYTES + 1)},
             )
             self.assertEqual(status, 413)
             self.assertEqual(json.loads(raw)["error"], "body_too_large")
