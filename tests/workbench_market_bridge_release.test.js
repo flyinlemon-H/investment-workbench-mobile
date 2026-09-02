@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('AI JSON fenced transport release cache-busts the bridge and Workbench modules',()=>{
+test('Current State input boundary release cache-busts the bridge and Workbench modules',()=>{
   const html=read('index.html');
-  const version='ai-json-fenced-transport-20260902';
+  const version='current-state-input-boundary-20260902';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/symbol-identity.js',

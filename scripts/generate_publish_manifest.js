@@ -30,7 +30,7 @@ roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/p
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
-roleByPath.set('src/discussion-workbench.js','Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt runtime');
+roleByPath.set('src/discussion-workbench.js','Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt input/output boundary runtime');
 roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime');
 roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
@@ -77,8 +77,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'ai-json-fenced-transport-20260902',
-  dataMode:'Current State and standalone Plan Draft use exactly one full json code block as the primary AI transport path; the shared strict whole-response parser retains only proven structural quote and safe string-context underscore fallbacks, records raw and final parse diagnostics against a real production fixture, and keeps freshness, source-version, protected-context, semantic, schema, Plan targeting, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards unchanged',
+  assetVersion:'current-state-input-boundary-20260902',
+  dataMode:'Current State Archive Prompt separates program-owned input context from the exact AI judgment output allowlist: technicalDataStatus remains input-only for confidence, symbol and sourceDiscussionVersion remain required bindings, and unknown fields still fail closed; fenced JSON transport, freshness, source-version, protected-context, semantic, schema, Plan targeting, preview-before-write, PlanReview, holdings, allocation, long-term logic, clipboard, market bridge, and storage safeguards remain unchanged',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
