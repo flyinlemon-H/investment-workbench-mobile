@@ -324,7 +324,7 @@
   }
   function buildArchiveRequest(prepared){
     if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
-    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,example={currentState:{symbol,sourceDiscussionVersion,actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认并进入相关价格窗口。'],downgradeConditions:['当前结构判断被后续价格行为破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['关键结构是否确认；确认后再提高复核优先级。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前判断与既有计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
+    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,rawTechnicalDataStatus=text(prepared.context.currentFacts&&prepared.context.currentFacts.technical&&prepared.context.currentFacts.technical.dataStatus),technicalDataStatus=['fresh','stale','unavailable','anomaly'].includes(rawTechnicalDataStatus)?rawTechnicalDataStatus:'unavailable',confidenceRule=technicalDataStatus==='fresh'?'当前技术资料为 fresh；confidence 可根据证据使用 high、medium 或 low，但不得仅因为 fresh 自动使用 high。':`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）；confidence 不得输出 high，只能根据证据使用 medium 或 low。`,example={currentState:{symbol,sourceDiscussionVersion,actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认并进入相关价格窗口。'],downgradeConditions:['当前结构判断被后续价格行为破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['关键结构是否确认；确认后再提高复核优先级。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前判断与既有计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
     const request=[
       '根据本轮讨论形成一个可持续更新的当前状态，优先明确当前关注级别、操作复核方向、趋势、结构及其生命周期、最重要观察事项和升级/降级条件。',
       '只输出一个严格 JSON 对象，顶层只能有 currentState。',
@@ -334,6 +334,8 @@
       'JSON 只能使用标准定义的转义；下划线 _ 不需要也不得转义。不得把 Markdown 转义带进 JSON。正确：discussion_v2_9a35cb46、reduce_review、ai_chart_judgment；错误：discussion\\_v2\\_9a35cb46、reduce\\_review、ai\\_chart\\_judgment。',
       '字符串正文可以正常使用中文标点和中文引号。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
+      `程序当前 technicalDataStatus: ${technicalDataStatus}。这是程序提供的技术资料新鲜度事实。`,
+      confidenceRule,
       '严格按此顺序判断并输出：actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       '固定值：category 只能为 risk_control/reduce_review/hold_watch/wait_confirmation/add_review/entry_review/no_action；priority 为 high/medium/low；attentionLevel 为 normal/focused/window；趋势 status 为 uptrend/downtrend/sideways/recovery/rebound/unclear；结构 type 为 top/bottom/breakout/pullback/recovery/consolidation/none/unclear，status 为 forming/confirmed/valid/broken/unclear，source 为 program/external_software/ai_chart_judgment/user_provided；planRelation.status 为 aligned/conflict/no_matching_plan/neutral；confidence 为 high/medium/low。',
       'trendAssessment.timeframes 的每项必须且只能包含 timeframe、status、explanation；explanation 只属于趋势周期项。',
@@ -347,7 +349,7 @@
       '不要输出日期、技术锚点、哈希、引用、stateId 或任何由程序补齐的字段。',
       JSON.stringify(example,null,2)
     ].join('\n');
-    return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion};
+    return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};
   }
 
   return Object.freeze({STORE_SCHEMA_VERSION,LEGACY_STATE_SCHEMA_VERSION,STATE_SCHEMA_VERSION,CONTEXT_SCHEMA_VERSION,HISTORY_LIMIT,INCREMENTAL_LIMIT,BOOTSTRAP_FRESH_LIMIT,BOOTSTRAP_STALE_LIMIT,CONFIDENCE_LEVELS,ACTION_CATEGORIES,ACTION_PRIORITIES,ATTENTION_LEVELS,TREND_STATUSES,STRUCTURE_TYPES,STRUCTURE_STATUSES,STRUCTURE_SOURCES,PLAN_RELATION_STATUSES,canonical,validDate,localCalendarDate,requestMetrics,defaultStore,normalizeAnchor,normalizeTechnicalSnapshot,normalizeReferences,normalizeActionAssessment,normalizeTrendAssessment,normalizeStructureAssessment,normalizePlanRelation,normalizeState,validateState,normalizeStore,validateStore,normalizedBars,barsAfter,technicalSnapshot,references,stateFreshness,buildContext,buildDiscussionRequest,buildArchiveRequest,clone,hash,stable});

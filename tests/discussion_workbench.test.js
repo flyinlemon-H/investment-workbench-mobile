@@ -138,6 +138,7 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
   assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出一个严格 JSON 对象/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
+  assert.equal(archive.technicalDataStatus,'fresh');assert.match(archive.request,/程序当前 technicalDataStatus: fresh/);assert.match(archive.request,/confidence 可根据证据使用 high、medium 或 low/);assert.match(archive.request,/不得仅因为 fresh 自动使用 high/);
   assert.match(archive.request,/下划线 _ 不需要也不得转义/);assert.ok(archive.request.includes('discussion\\_v2\\_9a35cb46'));assert.match(archive.request,/只能使用标准定义的转义/);
   assert.match(archive.request,/trendAssessment\.timeframes 的每项必须且只能包含 timeframe、status、explanation/);assert.match(archive.request,/structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason/);assert.match(archive.request,/不得在 structureAssessment 中使用 explanation/);
   for(const field of ['"timeframe":"60分钟"','"type":"top"','"status":"forming"','"source":"ai_chart_judgment"','"sourceAsOf":""','"shortReason":'])assert.ok(archive.request.includes(field),field);
@@ -145,18 +146,28 @@ test('Archive Prompt is short, strict, versioned, and does not resend history',(
   assert.doesNotMatch(archive.request,/priceHistory|完整日线|technicalSnapshot/);
 });
 
+test('Archive Prompt carries the actual four-state technical freshness fact and forbids high confidence unless fresh',()=>{
+  for(const technicalDataStatus of ['stale','unavailable','anomaly']){
+    const prepared=Workbench.buildDiscussionRequest(stock({technicalData:{technicalDataStatus}})),archive=Workbench.buildArchiveRequest(prepared);
+    assert.equal(archive.technicalDataStatus,technicalDataStatus);assert.match(archive.request,new RegExp(`程序当前 technicalDataStatus: ${technicalDataStatus}`));assert.match(archive.request,new RegExp(`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）`));assert.match(archive.request,/confidence 不得输出 high，只能根据证据使用 medium 或 low/);assert.ok(archive.request.length<5000);
+  }
+  const missing=Workbench.buildArchiveRequest(Workbench.buildDiscussionRequest(stock({technicalData:{}})));assert.equal(missing.technicalDataStatus,'unavailable');assert.match(missing.request,/程序当前 technicalDataStatus: unavailable/);
+});
+
 test('archive validation rejects wrong symbol/version, unknown fields, malformed and truncated JSON with zero writes',()=>{
   const prepared=Workbench.buildDiscussionRequest(stock()),options={expectedSymbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion};
   assert.equal(Contract.process(JSON.stringify(judgment(prepared,{symbol:'000001.SZ'})),options).writes,0);
-  assert.equal(Contract.process(JSON.stringify(judgment(prepared,{sourceDiscussionVersion:'discussion_v1_stale'})),options).ok,false);
+  const oldSource=Contract.process(JSON.stringify(judgment(prepared,{sourceDiscussionVersion:'discussion_v1_stale'})),options);assert.equal(oldSource.ok,false);assert.equal(oldSource.code,'validation_error');assert.match(oldSource.message,/结论来源版本已过期或不一致/);assert.doesNotMatch(oldSource.message,/JSON 格式/);
   assert.equal(Contract.process(JSON.stringify({currentState:{...judgment(prepared).currentState,extra:'x'}}),options).ok,false);
-  assert.equal(Contract.process('{"currentState":',options).writes,0);assert.equal(Contract.process('```json\n{}\n```',options).writes,0);
-  assert.equal(Contract.process(JSON.stringify({...judgment(prepared),extra:{}}),options).writes,0);
+  const malformed=Contract.process('{"currentState":',options);assert.equal(malformed.writes,0);assert.equal(malformed.code,'parse_error');assert.match(malformed.message,/JSON/);
+  const envelopeError=Contract.process(JSON.stringify({...judgment(prepared),extra:{}}),options);assert.equal(envelopeError.writes,0);assert.equal(envelopeError.code,'schema_error');assert.match(envelopeError.message,/JSON 已解析/);
+  const structural=judgment(prepared);delete structural.currentState.trendAssessment.timeframes[0].explanation;const structuralError=Contract.process(JSON.stringify(structural),options);assert.equal(structuralError.ok,false);assert.equal(structuralError.code,'validation_error');assert.match(structuralError.message,/timeframes\[0\] 缺少字段：explanation/);assert.doesNotMatch(structuralError.message,/JSON 格式/);
+  assert.equal(Contract.process('```json\n{}\n```',options).writes,0);
 });
 
 test('preview is mandatory and stale protected source facts reject with zero writes',async()=>{
   const base=stock(),prepared=Workbench.buildDiscussionRequest(base),result=preview(prepared),mutated={...base,shares:101};
-  assert.throws(()=>Contract.buildCandidate({stocks:[mutated]},result,{prepared}),/受保护/);
+  assert.throws(()=>Contract.buildCandidate({stocks:[mutated]},result,{prepared}),/受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论/);
   assert.deepEqual(await Contract.commit(null,{stocks:[base]},{saveCandidate:()=>{throw new Error('must not write')}}),{status:'preview_required',writes:0});
 });
 

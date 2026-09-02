@@ -147,6 +147,7 @@ test('390x844 prompt modal fits the viewport, locks the page, and keeps full Pro
 
 test('isolated mobile fixture includes deterministic scenarios A-F and no inline Prompt hunting',()=>{
   assert.match(fixture,/params\.has\('first'\)/);assert.match(fixture,/params\.has\('zero'\)/);assert.match(fixture,/params\.has\('copyfail'\)/);assert.match(fixture,/establishPrior\(!params\.has\('zero'\)\)/);
+  assert.match(fixture,/params\.has\('stale'\)/);assert.match(fixture,/params\.has\('high'\)/);assert.match(fixture,/params\.has\('protected'\)/);assert.match(fixture,/technicalDataStatus:stock\.technicalData\.technicalDataStatus/);assert.match(fixture,/受保护|outcome\.error\.message/);
   assert.match(fixture,/showPrompt\(prepared,'discussion'\)/);assert.match(fixture,/showPrompt\(context\.archive,'archive'\)/);assert.match(fixture,/复制失败，请长按复制/);assert.match(fixture,/已复制，可以前往 AI 继续讨论/);
   assert.doesNotMatch(fixture,/id="prepared"|id="request" class="prompt"/);
 });

@@ -96,8 +96,16 @@
   function createDraftSession(facts,options={}){
     const version=1,createdAt=text(options.now)||new Date().toISOString();sessionSequence+=1;
     const id=text(options.sessionId)||(typeof crypto!=='undefined'&&typeof crypto.randomUUID==='function'?`plandraft_${crypto.randomUUID()}`:`plandraft_${DiscussionWorkbench.hash({facts:facts.hash,createdAt,sessionSequence,nonce:Math.random()})}`);
-    const hash=`plandraftsession_${DiscussionWorkbench.hash({id,version,protectedFactsHash:facts.hash})}`;
-    return {id,version,hash,protectedFactsHash:facts.hash,createdAt};
+    const requestedTarget=options.scopedTargetPlanId;
+    let targetPlan=null,targetLabel='';
+    if(requestedTarget!==undefined&&requestedTarget!==null){
+      const targetId=text(requestedTarget);if(!targetId)throw new Error('本次整理的目标计划无效，请重新整理计划。');
+      const matched=array(facts.plans).find(plan=>plan.id===targetId);if(!matched)throw new Error('本次整理的目标计划不属于当前正式计划，请重新整理计划。');
+      targetPlan={id:matched.id,planVersion:matched.planVersion,snapshotHash:matched.snapshotHash};targetLabel=text(matched.displayLabel);
+    }
+    const hashInput={id,version,protectedFactsHash:facts.hash};if(targetPlan)hashInput.targetPlan=targetPlan;
+    const hash=`plandraftsession_${DiscussionWorkbench.hash(hashInput)}`;
+    return {id,version,hash,protectedFactsHash:facts.hash,createdAt,targetPlan,targetLabel};
   }
   function sessionBinding(session){return {draftSessionId:session.id,draftSessionVersion:session.version,draftSessionHash:session.hash}}
   function promptPlanSummary(plan){
@@ -109,9 +117,9 @@
     return ['### 当前正式计划','',...plans.flatMap((plan,index)=>[`#### 计划 ${String.fromCharCode(65+index)} — ${plan.displayLabel}`,`- direction: ${plan.action}`,`- 摘要: ${promptPlanSummary(plan)}`,`- targetPlan: ${JSON.stringify({id:plan.id,planVersion:plan.planVersion,snapshotHash:plan.snapshotHash})}`,''])].join('\n').trimEnd();
   }
   function prepare(stock,options={}){
-    const facts=protectedFacts(stock),optional=currentStateContext(stock),session=createDraftSession(facts,options),binding={...sessionBinding(session),...object(optional.provenance)},context={symbol:facts.symbol,name:text(stock&&stock.name),holding:clone(facts.holding),plans:clone(facts.plans),planDraftSession:{id:session.id,version:session.version,hash:session.hash}};
+    const facts=protectedFacts(stock),optional=currentStateContext(stock),session=createDraftSession(facts,options),binding={...sessionBinding(session),...object(optional.provenance)},context={symbol:facts.symbol,name:text(stock&&stock.name),holding:clone(facts.holding),plans:clone(facts.plans),planDraftSession:{id:session.id,version:session.version,hash:session.hash,targetPlan:clone(session.targetPlan)}};
     if(optional.context)context.currentState=clone(optional.context);
-    const schema={schemaVersion:SCHEMA_VERSION,operation:'create | update | no_change | invalidate | complete',symbol:facts.symbol,...sessionBinding(session),targetPlan:null,plan:null,reason:'',risks:[],unresolvedItems:[]};
+    const schema={schemaVersion:SCHEMA_VERSION,operation:'create | update | no_change | invalidate | complete',symbol:facts.symbol,...sessionBinding(session),targetPlan:clone(session.targetPlan),plan:null,reason:'',risks:[],unresolvedItems:[]};
     if(optional.provenance)Object.assign(schema,optional.provenance);
     const planShape={action:'buy | add | reduce | sell',triggerPrice:null,triggerDirection:null,quantity:null,conditions:{technical:[],fundamental:[],catalyst:[],allocation:[],market:[],other:[]},invalidationConditions:[],allocationConstraint:{maxPositionPct:null,targetWeightRange:null},validUntil:null,nextReviewDate:null,note:''};
     const targetShape={id:'精确复制计划 ID',planVersion:1,snapshotHash:'精确复制 snapshotHash'};
@@ -122,9 +130,11 @@
       '只输出本轮 AI 对话中明确讨论并形成结论的一个计划。没有被本轮讨论涉及的既有计划不得输出，程序会自动保持其原状态。',
       '本 V1 信封一次只表示一个计划操作；如果本轮明确讨论了多个计划，请分别整理，不要合并成批量结果。',
       '对已有计划：内容相同使用 no_change，实质变化使用 update，明确取消使用 invalidate，已经完成使用 complete；这四种 operation 都必须精确复制对应计划的 targetPlan id、planVersion、snapshotHash，不得省略、修改或猜测。',
+      '如果本轮对话已经针对某个具体既有计划作出判断，即使结论是“不修改”，也不能返回 targetPlan:null；必须返回 no_change 并精确复制该计划的 targetPlan。',
       '同一业务计划发生变化必须使用 update，不能用 create 逃避绑定。create 仅用于本轮明确建立的全新独立计划，例如新增一个不同档位；它的 targetPlan 必须为 null，且不会替换其他计划。',
       '不得按列表第一项、最近价格、触发价高低、方向或最新 AI 输出猜测 targetPlan。只有用户最终确认后，草案才会成为正式计划。',
-      '如果当前对话完全没有形成任何计划结论，可使用 no_change、targetPlan 为 null，并在 reason 说明“当前对话未形成正式计划”；不得用它表示某个未指明的既有计划保持不变。',
+      session.targetPlan?`本次 Plan Draft Session 已由程序明确限定为“${session.targetLabel}”，只允许对这个既有计划使用 no_change、update、invalidate 或 complete，targetPlan 必须精确等于 ${JSON.stringify(session.targetPlan)}；即使结论是不修改，也不得返回 targetPlan:null，也不得使用 create。`:'本次 Plan Draft Session 未由程序预选具体计划。只有当前对话完全没有形成任何需要保存的具体计划结论时，才可使用 no_change、targetPlan 为 null，并在 reason 说明“当前对话未形成需要保存的具体计划结论”。',
+      'no_change、targetPlan 为 null 只表示“本轮未形成需要保存的具体计划结论”；它不表示任何既有计划已被复核、继续有效、保持不变或得到重新确认。',
       '计划可以只使用明确的结构或技术条件而不填触发价；没有明确依据时 triggerPrice、quantity 或配置字段必须为 null，不得补造。',
       'create / update 时 plan 必须使用完整结构；其余 operation 的 plan 必须为 null。所有条件初始都只是待确认，JSON 草案本身不会执行交易。',
       '如必要信息仍未解决，将项目写入 unresolvedItems；程序会允许预览但禁止保存不完整计划。',
@@ -208,8 +218,12 @@
         if(!currentPlan||currentPlan.planVersion!==target.planVersion||planSnapshotHash(currentPlan)!==target.snapshotHash)errors.push('当前计划已发生变化，请重新整理计划');
       }
     }
+    const scopedTarget=object(prepared&&prepared.session&&prepared.session.targetPlan),scopedOperation=['no_change','update','invalidate','complete'].includes(operation);
+    if(operation==='no_change'&&scopedTarget.id&&!target)errors.push('本次 Plan Draft Session 已明确针对一个计划，no_change 必须精确绑定 targetPlan');
+    if(scopedOperation&&scopedTarget.id&&target&&(target.id!==scopedTarget.id||target.planVersion!==scopedTarget.planVersion||target.snapshotHash!==scopedTarget.snapshotHash))errors.push('targetPlan 与本次 Plan Draft Session 明确绑定的目标计划不一致');
     if(['update','invalidate','complete'].includes(operation)&&!target)errors.push(`${operation} 必须精确绑定当前计划`);
     if(operation==='create'&&draft.targetPlan!==null)errors.push('create 的 targetPlan 必须为 null');
+    if(operation==='create'&&scopedTarget.id)errors.push('本次 Plan Draft Session 已明确针对既有计划，不能使用 create');
     let plan=null;if(draft.plan!==null)plan=normalizeDraftPlan(draft.plan,errors);
     if(['create','update'].includes(operation)&&!plan)errors.push(`${operation} 必须提供完整 plan`);
     if(!['create','update'].includes(operation)&&draft.plan!==null)errors.push(`${operation} 的 plan 必须为 null`);
@@ -221,14 +235,13 @@
       if(operation==='update'&&currentPlan&&directionGroup(currentPlan.action)!==group)errors.push('更新草案不能改变既有计划方向');
       if(operation==='update'&&currentPlan&&PlanV2.stable(PlanV2.authoritativeContent?PlanV2.authoritativeContent(currentPlan):planPatchFromCanonical(currentPlan))===PlanV2.stable(planPatch(plan)))errors.push('计划没有实际变化，请使用 no_change');
     }
-    if(draft.targetPlan===null&&operation==='no_change'&&activePlans(stock).length>1)errors.push('多个当前计划下的 no_change 必须明确绑定 targetPlan');
     const normalized={schemaVersion:SCHEMA_VERSION,operation,symbol,draftSessionId:text(draft.draftSessionId),draftSessionVersion:Number(draft.draftSessionVersion),draftSessionHash:text(draft.draftSessionHash),targetPlan:target,plan,reason,risks,unresolvedItems};
     if(providedDiscussionVersion)normalized.sourceDiscussionVersion=providedDiscussionVersion;
     if(providedStateId)normalized.currentStateId=providedStateId;
     if(providedStateHash)normalized.currentStateHash=providedStateHash;
     if(errors.length)return {ok:false,previewReady:false,confirmReady:false,writes:0,code:'validation_error',message:errors.join('；'),errors,draft:normalized,prepared};
-    const noWrite=operation==='no_change',confirmReady=!noWrite&&!unresolvedItems.length,unaffectedPlanCount=Math.max(0,activePlans(stock).length-(target?1:0));
-    return {ok:true,previewReady:true,confirmReady,writes:0,code:noWrite?'no_change':(confirmReady?'ready':'incomplete'),message:noWrite?(target?'该计划与当前正式版本一致，无需修改。':'当前对话未形成需要保存的计划变更'):(confirmReady?'计划草案已通过校验，请预览后确认。':'计划信息尚不完整'),errors:[],draft:normalized,prepared,currentPlan:currentPlan?PlanV2.normalizePlan(currentPlan):null,targetLabel,unaffectedPlanCount};
+    const noWrite=operation==='no_change',noPlanResult=noWrite&&!target,confirmReady=!noWrite&&!unresolvedItems.length,unaffectedPlanCount=noPlanResult?0:Math.max(0,activePlans(stock).length-(target?1:0));
+    return {ok:true,previewReady:true,confirmReady,writes:0,code:noWrite?'no_change':(confirmReady?'ready':'incomplete'),message:noWrite?(target?'该计划与当前正式版本一致，无需修改。':'本轮未形成需要保存的具体计划结论。'):(confirmReady?'计划草案已通过校验，请预览后确认。':'计划信息尚不完整'),errors:[],draft:normalized,prepared,currentPlan:currentPlan?PlanV2.normalizePlan(currentPlan):null,targetLabel,unaffectedPlanCount,noPlanResult};
   }
   function planPatchFromCanonical(plan){const p=PlanV2.normalizePlan(plan),conditions={};CONDITION_FIELDS.forEach(key=>{conditions[key]=array(p.conditions[key]).map(item=>item.text)});return planPatch({action:p.action,triggerPrice:p.triggerPrice,triggerDirection:p.triggerDirection,quantity:p.quantity,conditions,invalidationConditions:array(p.conditions.invalidation).map(item=>item.text),allocationConstraint:p.allocationConstraint,validUntil:p.validUntil,nextReviewDate:p.nextReviewDate,note:p.note})}
   function diff(current,plan){
@@ -249,8 +262,8 @@
   }
   function renderPreview(result){
     if(!result||!result.ok)return `<div class="alert"><b>计划草案未通过</b><div>${escapeHtml(result&&result.message||'未知错误')}</div><div>未写入任何数据。</div></div>`;
-    const draft=result.draft,label=OPERATION_LABELS[draft.operation]||draft.operation,targetLabel=result.targetLabel||draft.targetPlan&&draft.targetPlan.id||'',target=targetLabel?`<section><h4>目标计划</h4><div class="discussion-plan-target"><strong>${escapeHtml(targetLabel)}</strong></div></section>`:'',unaffected=result.unaffectedPlanCount>0?`<div class="card-note">其他 ${result.unaffectedPlanCount} 个当前计划不受影响；本次未重新确认它们。</div>`:'';
-    if(draft.operation==='no_change')return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3>${target}<div class="hint">${escapeHtml(draft.targetPlan?'该计划与当前正式版本一致，无需修改。':'当前对话未形成需要保存的计划变更')}</div><p>${escapeHtml(draft.reason)}</p>${unaffected}<div class="card-note">不会创建计划版本，也不会修改任何数据。</div></section>`;
+    const draft=result.draft,noPlanResult=draft.operation==='no_change'&&!draft.targetPlan,label=noPlanResult?'未形成具体计划结论':(OPERATION_LABELS[draft.operation]||draft.operation),targetLabel=result.targetLabel||draft.targetPlan&&draft.targetPlan.id||'',target=targetLabel?`<section><h4>目标计划</h4><div class="discussion-plan-target"><strong>${escapeHtml(targetLabel)}</strong></div></section>`:'',unaffected=result.unaffectedPlanCount>0?`<div class="card-note">其他 ${result.unaffectedPlanCount} 个当前计划不受影响；本次未重新确认它们。</div>`:'';
+    if(draft.operation==='no_change')return `<section class="discussion-plan-preview"><h3>${escapeHtml(label)}</h3>${target}<div class="hint">${escapeHtml(draft.targetPlan?'该计划与当前正式版本一致，无需修改。':'本轮未形成需要保存的具体计划结论。')}</div>${draft.targetPlan?`<p>${escapeHtml(draft.reason)}</p>`:''}${unaffected}<div class="card-note">${escapeHtml(draft.targetPlan?'不会创建计划版本，也不会修改任何数据。':'不会修改、重新确认或更新任何计划及其元数据。')}</div></section>`;
     const current=result.currentPlan?`<section><h4>当前正式内容</h4>${renderPlanSummary(planPatchFromCanonical(result.currentPlan))}</section>`:'',next=draft.plan?`<section><h4>本次结果 · ${draft.operation==='create'?'新增独立计划':'修改后的计划'}</h4>${renderPlanSummary(draft.plan)}</section>`:'',changes=draft.operation==='update'?diff(result.currentPlan,draft.plan):[];
     const changeHtml=changes.length?`<div class="discussion-plan-diff"><b>主要变化</b><ul>${changes.map(item=>`<li><b>${escapeHtml(item.label)}</b><div>原：${escapeHtml(previewValue(item.before))}</div><div>新：${escapeHtml(previewValue(item.after))}</div></li>`).join('')}</ul></div>`:'';
     const unresolved=draft.unresolvedItems.length?`<div class="alert"><b>计划信息尚不完整</b><ul>${draft.unresolvedItems.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`:'';

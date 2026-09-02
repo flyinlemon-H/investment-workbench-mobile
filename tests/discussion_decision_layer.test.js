@@ -69,8 +69,17 @@ test('scenario G confirmed bottom uses add review for held and entry review for 
   const contradiction=process(zeroStock,{actionAssessment:{category:'hold_watch'}});assert.equal(contradiction.result.ok,false);assert.equal(contradiction.result.writes,0);
 });
 
-test('scenario H stale evidence forces conditional confidence below high',()=>{
-  const source=stock({technicalData:{technicalDataStatus:'stale'}}),high=process(source,{confidence:'high'}),medium=process(source,{confidence:'medium',summary:'资料时效不足，当前只作条件性观察。'});assert.equal(high.result.ok,false);assert.equal(high.result.writes,0);assert.equal(medium.result.ok,true,medium.result.message);
+test('technical freshness and confidence remain authoritative across fresh, stale, unavailable and anomaly states',()=>{
+  const freshHigh=process(stock(),{confidence:'high'});assert.equal(freshHigh.result.ok,true,freshHigh.result.message);
+  const staleSource=stock({technicalData:{technicalDataStatus:'stale'}}),staleHigh=process(staleSource,{confidence:'high'}),staleMedium=process(staleSource,{confidence:'medium',summary:'资料时效不足，当前只作条件性观察。'});assert.equal(staleHigh.result.ok,false);assert.equal(staleHigh.result.writes,0);assert.match(staleHigh.result.message,/技术资料未标记为较新时 confidence 不能为 high/);assert.doesNotMatch(staleHigh.result.message,/JSON 格式/);assert.equal(staleMedium.result.ok,true,staleMedium.result.message);
+  for(const technicalDataStatus of ['unavailable','anomaly']){const high=process(stock({technicalData:{technicalDataStatus}}),{confidence:'high'});assert.equal(high.result.ok,false);assert.equal(high.result.writes,0);assert.match(high.result.message,/技术资料未标记为较新时 confidence 不能为 high/)}
+});
+
+test('production Current State fixture separates parser success from freshness and source-version diagnostics',()=>{
+  const raw=fs.readFileSync(path.join(root,'tests','fixtures','production-current-state-risk-window.json.txt'),'utf8'),base={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_fa77d62f',holdingShares:2000,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false},fresh=Contract.process(raw,base);
+  assert.equal(fresh.ok,true,fresh.message);assert.equal(fresh.code,'valid');assert.equal(fresh.currentState.sourceDiscussionVersion,'discussion_v2_fa77d62f');assert.equal(fresh.currentState.actionAssessment.category,'risk_control');
+  const stale=Contract.process(raw,{...base,technicalDataStatus:'stale'});assert.equal(stale.ok,false);assert.equal(stale.code,'validation_error');assert.match(stale.message,/技术资料未标记为较新时 confidence 不能为 high/);assert.doesNotMatch(stale.message,/JSON 格式/);
+  const oldSource=Contract.process(raw,{...base,sourceDiscussionVersion:'discussion_v2_newer'});assert.equal(oldSource.ok,false);assert.equal(oldSource.code,'validation_error');assert.match(oldSource.message,/结论来源版本已过期或不一致/);assert.doesNotMatch(oldSource.message,/JSON 格式/);
 });
 
 test('scenarios I and J classify Plan conflict and absence without creating or mutating Plan',()=>{
