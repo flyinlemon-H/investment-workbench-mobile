@@ -1,6 +1,7 @@
 (function(root){
   const namespace=root.InvestmentApi=root.InvestmentApi||{};
   const DEFAULT_TIMEOUT_MS=5000;
+  const AI_TIMEOUT_MS=75000;
 
   function apiError(type,message,options){
     if(!namespace.errors||typeof namespace.errors.create!=='function'){
@@ -28,12 +29,31 @@
     return configuredBaseUrl()+path;
   }
 
-  async function getJson(path,options={}){
+  async function localNetworkPermissionState(options={}){
+    const navigatorImpl=options.navigatorImpl||root.navigator;
+    if(!navigatorImpl||!navigatorImpl.permissions||typeof navigatorImpl.permissions.query!=='function')return 'unsupported';
+    for(const name of ['loopback-network','local-network-access']){
+      try{
+        const result=await navigatorImpl.permissions.query({name});
+        if(result&&['granted','denied','prompt'].includes(result.state))return result.state;
+      }catch(_){}
+    }
+    return 'unsupported';
+  }
+
+  async function requestJson(path,options={}){
     const url=requestUrl(path);
     const timeoutMs=Number.isFinite(options.timeoutMs)&&options.timeoutMs>0?Number(options.timeoutMs):DEFAULT_TIMEOUT_MS;
     const fetchImpl=typeof options.fetchImpl==='function'?options.fetchImpl:root.fetch;
+    const method=String(options.method||'GET').toUpperCase();
+    if(!['GET','POST'].includes(method))throw apiError('configuration_error','API method is invalid.');
     if(typeof fetchImpl!=='function'||typeof root.AbortController!=='function'){
       throw apiError('configuration_error','Browser HTTP support is unavailable.');
+    }
+    let requestBody;
+    if(method==='POST'){
+      try{requestBody=JSON.stringify(options.body)}catch(_){throw apiError('configuration_error','API request body is invalid.');}
+      if(requestBody===undefined)throw apiError('configuration_error','API request body is invalid.');
     }
     const controller=new root.AbortController();
     let timedOut=false;
@@ -41,9 +61,15 @@
     try{
       let response;
       try{
-        response=await fetchImpl(url,{method:'GET',headers:{Accept:'application/json'},credentials:'omit',cache:'no-store',signal:controller.signal});
+        const headers={Accept:'application/json'};
+        if(method==='POST')headers['Content-Type']='application/json';
+        const init={method,headers,credentials:'omit',cache:'no-store',signal:controller.signal,targetAddressSpace:'loopback'};
+        if(method==='POST')init.body=requestBody;
+        response=await fetchImpl(url,init);
       }catch(_){
         if(timedOut)throw apiError('timeout_error','Backend request timed out.');
+        const permission=await localNetworkPermissionState(options);
+        if(permission==='denied')throw apiError('permission_error','Local network access permission was denied.');
         throw apiError('network_error','Backend is unreachable.');
       }
       if(!response||typeof response.ok!=='boolean'||!Number.isInteger(response.status)){
@@ -63,5 +89,8 @@
     }
   }
 
-  namespace.client=Object.freeze({getJson,requestUrl,configuredBaseUrl,defaultTimeoutMs:DEFAULT_TIMEOUT_MS});
+  function getJson(path,options={}){return requestJson(path,{...options,method:'GET'})}
+  function postJson(path,body,options={}){return requestJson(path,{...options,method:'POST',body})}
+
+  namespace.client=Object.freeze({requestJson,getJson,postJson,requestUrl,configuredBaseUrl,localNetworkPermissionState,defaultTimeoutMs:DEFAULT_TIMEOUT_MS,aiTimeoutMs:AI_TIMEOUT_MS});
 })(window);

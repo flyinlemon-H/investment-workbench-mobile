@@ -37,8 +37,8 @@ function ensureToolsTab(){
   tabs.appendChild(btn);
 }
 
-const backendHealthState={status:'unknown',checkedAt:'',environment:'',errorType:''};
-async function checkBackendHealth(){
+const backendHealthState={status:'unknown',checkedAt:'',environment:'',service:'',version:'',permission:'unknown',capabilities:{aiRequest:false},errorType:''};
+async function checkBackendHealth(options={}){
   backendHealthState.status='checking';
   if(typeof renderSyncHint==='function')renderSyncHint();
   try{
@@ -46,14 +46,24 @@ async function checkBackendHealth(){
       const errors=window.InvestmentApi&&window.InvestmentApi.errors;
       throw errors&&typeof errors.create==='function'?errors.create('configuration_error','Health API is unavailable.'):{type:'configuration_error'};
     }
-    const result=await window.InvestmentApi.health.check();
+    const result=await window.InvestmentApi.health.check(options);
     backendHealthState.status='available';
     backendHealthState.environment=result.environment;
+    backendHealthState.service=result.service;
+    backendHealthState.version=result.version;
+    backendHealthState.permission=result.permission;
+    backendHealthState.capabilities.aiRequest=result.capabilities.aiRequest===true;
     backendHealthState.errorType='';
   }catch(error){
     const normalized=window.InvestmentApi&&window.InvestmentApi.errors?window.InvestmentApi.errors.normalize(error):{type:'unknown_error'};
-    backendHealthState.status=normalized.type==='configuration_error'?'unconfigured':'unavailable';
+    let permission='unsupported';
+    if(window.InvestmentApi&&window.InvestmentApi.health&&typeof window.InvestmentApi.health.permissionState==='function')permission=await window.InvestmentApi.health.permissionState(options);
+    backendHealthState.permission=permission;
+    backendHealthState.status=normalized.type==='configuration_error'?'unconfigured':(normalized.type==='permission_error'?(permission==='denied'?'permission_denied':'permission_required'):'unavailable');
     backendHealthState.environment='';
+    backendHealthState.service='';
+    backendHealthState.version='';
+    backendHealthState.capabilities.aiRequest=false;
     backendHealthState.errorType=normalized.type;
   }finally{
     backendHealthState.checkedAt=new Date().toISOString();
@@ -469,7 +479,6 @@ async function activateLoadedApplication(){
   if(window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.refreshBridge==='function'){
     void window.AiDecisionReviewReader.refreshBridge().then(refreshed=>{if(refreshed)render()});
   }
-  void checkBackendHealth();
   if(typeof updateSocialDataStatus==='function')updateSocialDataStatus();
   if(typeof loadSocialPosts==='function')loadSocialPosts().then(()=>{render();updateSocialDataStatus()});
   return Object.freeze({status:'ready'});

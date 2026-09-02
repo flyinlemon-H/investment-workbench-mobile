@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>长期逻辑真实浏览器验收夹具</title>
+  <style>
+    body{max-width:760px;margin:28px auto;padding:16px;font:16px/1.6 system-ui;background:#f6f3eb;color:#242721}button{min-height:44px;margin:4px;padding:8px 14px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:16px;border:1px solid #ccc}textarea{box-sizing:border-box;width:100%;height:210px;font:14px monospace}a{display:inline-block;margin:8px}
+  </style>
+</head>
+<body>
+  <h1>长期逻辑 · 真实应用验收夹具</h1>
+  <p>仅允许本机 HTTP Origin。只初始化空存储，绝不覆盖已有数据。样例无真实持仓或交易；应用仍使用原有 StorageManager、多标签保护和长期逻辑保存链路。</p>
+  <button id="seed">初始化空的验收存储</button>
+  <button id="checkpoint">记录检查点</button>
+  <button id="inspect">比较存储</button>
+  <a href="../../" target="_blank" rel="noopener">打开真实应用</a>
+  <pre id="status" role="status"></pre>
+  <h2>只读健康探测</h2>
+  <button id="probeLocal">探测 targetAddressSpace=local</button>
+  <button id="probeLoopback">探测 targetAddressSpace=loopback</button>
+  <pre id="network" role="status">尚未探测</pre>
+  <h2>从当前应用 Prompt 生成非付费手工响应</h2>
+  <p>把“复制给AI”的内容粘贴到下面。这里只生成测试响应，不调用模型；响应仍必须由真实应用的严格导入入口验收。</p>
+  <button id="sharedPrompt">显示共享 Prompt（不验证剪贴板）</button>
+  <textarea id="prompt" aria-label="复制的 Prompt"></textarea>
+  <button id="response">生成手工测试响应</button>
+  <textarea id="raw" aria-label="手工测试响应" readonly></textarea>
+  <script src="../../src/symbol-identity.js"></script>
+  <script src="../../src/strict-ai-json.js"></script>
+  <script src="../../src/state.js"></script>
+  <script src="../../src/long-term-logic-contract.js"></script>
+  <script src="../../src/long-term-logic-workflow.js"></script>
+  <script src="../../src/ui-render.js"></script>
+  <script>
+    'use strict';
+    const key='portfolio_manual_v502_network_price_20260610',marker='long-term-logic-browser-acceptance-v1';
+    const allowed=location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname);
+    let baseline=null,writes=0;
+    const status=document.getElementById('status');
+    function read(){if(!allowed)throw new Error('禁止在非本机 Origin 使用验收夹具。');const raw=localStorage.getItem(key);if(raw===null)return null;const value=JSON.parse(raw);if(value.acceptanceFixture!==marker)throw new Error('已有非本夹具数据，拒绝读取或覆盖。');return value}
+    function report(){try{const value=read(),stock=value&&value.stocks.find(item=>item.id==='long-term-browser-fixture');status.textContent=JSON.stringify({origin:location.origin,fixturePresent:!!value,mainStorageWritesSinceCheckpoint:writes,unchangedSinceCheckpoint:baseline===null?null:localStorage.getItem(key)===baseline,updatedAt:value&&value.updatedAt,shares:stock&&stock.shares,plans:stock&&stock.plans,logic:stock&&stock.longTermLogic,audit:stock&&stock.longTermLogicAudit},null,2)}catch(error){status.textContent=error.message}}
+    document.getElementById('seed').onclick=()=>{try{if(!allowed)throw new Error('禁止在非本机 Origin 初始化。');if(localStorage.getItem(key)!==null)throw new Error('存储非空：拒绝覆盖。');localStorage.setItem(key,JSON.stringify({acceptanceFixture:marker,updatedAt:Date.now(),stocks:[{id:'long-term-browser-fixture',name:'长期逻辑验收样例',code:'601138.SS',symbol:'601138.SS',type:'watching',role:'观察仓',theme:'验收样例',shares:0,avgCost:0,plans:[],longTermLogic:{updatedAt:'2026-06-01',validUntil:'2026-12-01',investmentThesis:'原有行业长期需求与公司竞争力共同支持组合观察角色。',coreDrivers:['原有长期需求'],industryDrivers:['原有行业需求'],companyDrivers:['原有公司竞争力'],portfolioDrivers:['原有组合观察角色'],fundamentalSupport:'原有资料仅作辅助验证。',longTermRisks:['原有行业长期风险'],logicStatus:'valid',confidence:'medium',nextReviewDate:'2026-09-01',sourceSummary:'隔离的非生产验收样例。'}}]}));baseline=localStorage.getItem(key);writes=0;report()}catch(error){status.textContent=error.message}};
+    document.getElementById('checkpoint').onclick=()=>{try{if(!read())throw new Error('先初始化验收存储。');baseline=localStorage.getItem(key);writes=0;report()}catch(error){status.textContent=error.message}};
+    document.getElementById('inspect').onclick=report;
+    document.getElementById('sharedPrompt').onclick=()=>{try{const value=read(),stock=value&&value.stocks.find(item=>item.id==='long-term-browser-fixture');if(!stock)throw new Error('样例不存在。');document.getElementById('prompt').value=prepareLongTermLogic(stock).prompt}catch(error){status.textContent=error.message}};
+    async function probe(targetAddressSpace){if(!allowed)return;const output=document.getElementById('network'),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);try{const response=await fetch('http://127.0.0.1:18765/health',{credentials:'omit',cache:'no-store',signal:controller.signal,targetAddressSpace});output.textContent=JSON.stringify({targetAddressSpace,status:response.status,health:await response.json()},null,2)}catch(error){output.textContent=JSON.stringify({targetAddressSpace,name:error.name,message:error.message},null,2)}finally{clearTimeout(timer)}}
+    document.getElementById('probeLocal').onclick=()=>probe('local');document.getElementById('probeLoopback').onclick=()=>probe('loopback');
+    window.addEventListener('storage',event=>{if(event.key===key){writes++;report()}});
+    document.getElementById('response').onclick=()=>{try{const text=document.getElementById('prompt').value,binding=JSON.parse(text.split('【受保护绑定】')[1].split('\n\n')[0].trim()),value=JSON.parse(text.split('【严格输出结构示例】')[1].trim());if(value.binding.symbol!==binding.symbol||value.binding.contextHash!==binding.contextHash)throw new Error('绑定不一致。');value.longTermLogic.investmentThesis='行业长期需求、公司专属交付能力和组合观察角色共同支持继续跟踪。';value.longTermLogic.sourceSummary='手工通道非付费验收样例；来源为当前应用生成的受保护 Prompt。';document.getElementById('raw').value=JSON.stringify(value,null,2)}catch(error){document.getElementById('raw').value='生成失败：'+error.message}};
+    report();
+  </script>
+</body>
+</html>

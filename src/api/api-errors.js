@@ -2,6 +2,7 @@
   const namespace=root.InvestmentApi=root.InvestmentApi||{};
   const TYPES=new Set([
     'configuration_error',
+    'permission_error',
     'network_error',
     'timeout_error',
     'http_error',
@@ -10,6 +11,7 @@
   ]);
   const MESSAGES=Object.freeze({
     configuration_error:'Backend configuration is invalid.',
+    permission_error:'Local network access permission is required.',
     network_error:'Backend is unreachable.',
     timeout_error:'Backend request timed out.',
     http_error:'Backend request failed.',

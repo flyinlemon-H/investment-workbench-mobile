@@ -188,25 +188,28 @@ test('Discussion Archive parser and contract failures are distinct and always pr
 });
 
 function legacyImportRuntime(){
-  const context={console,window:{},globalThis:null,setTimeout:()=>0,clearTimeout:()=>{},structuredClone,alert:()=>{}};
-  context.globalThis=context;
+  const context={console,window:null,globalThis:null,setTimeout:()=>0,clearTimeout:()=>{},structuredClone,alert:()=>{}};
+  context.globalThis=context;context.window=context;
   vm.createContext(context);
+  vm.runInContext(read('src/symbol-identity.js'),context,{filename:'symbol-identity.js'});
   vm.runInContext(read('src/strict-ai-json.js'),context,{filename:'strict-ai-json.js'});
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
+  vm.runInContext(read('src/long-term-logic-contract.js'),context,{filename:'long-term-logic-contract.js'});
+  vm.runInContext(read('src/long-term-logic-workflow.js'),context,{filename:'long-term-logic-workflow.js'});
   vm.runInContext(read('src/ui-render.js'),context,{filename:'ui-render.js'});
   vm.runInContext(`
     state={stocks:[{id:'fixture',code:'601138.SS',symbol:'601138.SS',name:'工业富联',type:'holding',longTermLogic:{investmentThesis:'原长期逻辑',sourceSummary:'原摘要'},recentCatalyst:{todayCatalyst:'原催化'},shortTermSentiment:{marketMood:'原情绪'},informationCompleteness:{overall:'medium'},dataFreshness:{}}]};
     detailStockId='fixture';this.alerts=[];this.saveCalls=[];alert=message=>alerts.push(String(message));
-    this.statusClasses=new Set();this.testElements={longTermLogicImportStatus:{textContent:'',classList:{add:value=>statusClasses.add(value),remove:value=>statusClasses.delete(value)}},longTermLogicImportSaveBtn:{disabled:false},sentimentImportStatus:{textContent:'',classList:{add:value=>statusClasses.add(value),remove:value=>statusClasses.delete(value)}},sentimentImportSaveBtn:{disabled:false}};document={getElementById:id=>testElements[id]||null};
+    this.statusClasses=new Set();this.testElements={longTermLogicImportText:{value:''},longTermLogicImportStatus:{textContent:'',classList:{add:value=>statusClasses.add(value),remove:value=>statusClasses.delete(value)}},longTermLogicImportSaveBtn:{disabled:false},sentimentImportStatus:{textContent:'',classList:{add:value=>statusClasses.add(value),remove:value=>statusClasses.delete(value)}},sentimentImportSaveBtn:{disabled:false}};document={getElementById:id=>testElements[id]||null};
     saveState=async(value,options)=>{saveCalls.push({value:structuredClone(value),options:structuredClone(options||{})});return {ok:true,state:value}};
     markV13DecisionReviewDirty=()=>{};closeLongTermLogicImportModal=()=>{};closeSentimentImportModal=()=>{};refreshLongLogicModalIfOpen=()=>{};render=()=>{};
-    this.audit={longTerm:text=>importSentimentPayloadFromText(text,{onlyLongTerm:true,closeLongTerm:true}),general:text=>importSentimentPayloadFromText(text),stock:()=>structuredClone(state.stocks[0]),calls:()=>structuredClone(saveCalls),alerts:()=>structuredClone(alerts),longPrompt:()=>longTermLogicPromptText(state.stocks[0]),ui:kind=>{const prefix=kind==='longTerm'?'longTermLogic':'sentiment';return {message:testElements[prefix+'ImportStatus'].textContent,disabled:testElements[prefix+'ImportSaveBtn'].disabled,alertClass:statusClasses.has('alert')}}};
+    this.audit={longTerm:text=>{testElements.longTermLogicImportText.value=text;return importLongTermLogicJson()},longValue:()=>{const prepared=prepareLongTermLogic(state.stocks[0]),date=prepared.context.promptDate;return {binding:{symbol:prepared.context.symbol,contextHash:prepared.context.contextHash},longTermLogic:{updatedAt:date,validUntil:'2027-03-01',investmentThesis:'行业长期需求、公司交付护城河和组合成长角色共同支持继续跟踪。',coreDrivers:['行业长期需求','公司交付能力','组合成长角色'],industryDrivers:['行业未来多年仍有结构性需求'],companyDrivers:['公司交付与供应链能力形成护城河'],portfolioDrivers:['在组合中承担长期成长观察角色'],fundamentalSupport:'现有基本面资料对长期逻辑提供辅助验证。',longTermRisks:['行业需求不及预期','公司竞争优势减弱'],logicStatus:'valid',confidence:'medium',nextReviewDate:'2026-12-01',sourceSummary:'基于本次受保护上下文中的长期逻辑、基本面和估值资料。'}}},general:text=>importSentimentPayloadFromText(text),stock:()=>structuredClone(state.stocks[0]),calls:()=>structuredClone(saveCalls),alerts:()=>structuredClone(alerts),longPrompt:()=>longTermLogicPromptText(state.stocks[0]),ui:kind=>{const prefix=kind==='longTerm'?'longTermLogic':'sentiment';return {message:testElements[prefix+'ImportStatus'].textContent,disabled:testElements[prefix+'ImportSaveBtn'].disabled,alertClass:statusClasses.has('alert')}}};
   `,context);
   return context.audit;
 }
 
 test('Long-Term accepts strict, fenced, and structural-plus-content quote inputs without content corruption',async()=>{
-  const payload={longTermLogic:{investmentThesis:'按“行业—公司—组合”三层整理',industryDrivers:['行业处于“长期修复”阶段'],companyDrivers:[],portfolioDrivers:[],longTermRisks:[],logicStatus:'valid',confidence:'medium',sourceSummary:'引用“财报原文”'}};
+  const seed=legacyImportRuntime(),payload=seed.longValue();payload.longTermLogic.investmentThesis='按“行业—公司—组合”三层整理长期判断。';payload.longTermLogic.industryDrivers=['行业处于“长期修复”阶段'];payload.longTermLogic.sourceSummary='引用“财报原文”并结合受保护上下文。';
   for(const raw of [JSON.stringify(payload),`\`\`\`json\n${JSON.stringify(payload)}\n\`\`\``,smartStructure(payload)]){
     const app=legacyImportRuntime();await app.longTerm(raw);assert.equal(app.calls().length,1);assert.equal(app.stock().longTermLogic.investmentThesis,payload.longTermLogic.investmentThesis);assert.equal(app.stock().longTermLogic.sourceSummary,payload.longTermLogic.sourceSummary);
   }
@@ -220,8 +223,8 @@ test('Long-Term rejects commentary, earlier-object tails, ambiguity, and truncat
 });
 
 test('Long-Term distinguishes parsed-but-unrecognized business content from formatting failures',async()=>{
-  const app=legacyImportRuntime(),before=app.stock();await app.longTerm('{"unrelated":"value"}');assert.equal(app.calls().length,0);assert.deepEqual(app.stock(),before);const ui=app.ui('longTerm');assert.match(ui.message,/JSON 已解析，但字段不符合导入要求：未识别 longTermLogic/);assert.equal(ui.disabled,true);assert.equal(ui.alertClass,true);
-  const wrongType=legacyImportRuntime();await wrongType.longTerm('{"longTermLogic":"not an object"}');assert.equal(wrongType.calls().length,0);assert.match(wrongType.ui('longTerm').message,/JSON 已解析，但字段不符合导入要求：longTermLogic 必须是对象/);
+  const app=legacyImportRuntime(),before=app.stock();await app.longTerm('{"unrelated":"value"}');assert.equal(app.calls().length,0);assert.deepEqual(app.stock(),before);const ui=app.ui('longTerm');assert.match(ui.message,/缺少字段/);assert.equal(ui.disabled,true);assert.equal(ui.alertClass,true);
+  const wrongType=legacyImportRuntime();await wrongType.longTerm('{"binding":{},"longTermLogic":"not an object"}');assert.equal(wrongType.calls().length,0);assert.match(wrongType.ui('longTerm').message,/必须是对象|缺少字段/);
 });
 
 test('News/Sentiment shared path keeps one coherent save and rejects parser failures with zero writes',async()=>{

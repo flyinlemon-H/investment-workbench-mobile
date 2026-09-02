@@ -23,6 +23,7 @@ let detailWorkspace='plan';
 const discussionPreparedContexts=new Map();
 const discussionPlanPreparedContexts=new Map();
 const discussionHistoryVisibility=new Set();
+const longTermAiStates=new Map();
 let discussionImportPreview=null;
 let discussionPlanImportPreview=null;
 let discussionPromptReturnFocus=null;
@@ -78,6 +79,8 @@ function backendHealthText(){
   if(health.status==='checking')return 'Backend：检测中';
   if(health.status==='available')return `Backend：可用${health.environment?'（'+health.environment+'）':''}`;
   if(health.status==='unconfigured')return 'Backend：未配置';
+  if(health.status==='permission_required')return 'Backend：等待本地网络授权';
+  if(health.status==='permission_denied')return 'Backend：本地网络权限已拒绝';
   return 'Backend：不可用';
 }
 function renderSyncHint(){
@@ -3576,9 +3579,9 @@ function copyAllocationDecisionPrompt(){
   if(!stock)return;
   copyText(allocationDecisionPromptText(stock),'配置决策 Prompt 已复制。');
 }
-function moduleTitleActions(title,copyAction,importAction,extraAction='',extraLabel=''){
+function moduleTitleActions(title,copyAction,importAction,extraAction='',extraLabel='',copyLabel='复制'){
   const extra=extraAction?`<button class="btn ghost small" style="min-height:44px;padding:8px 12px" data-detail-action="${esc(extraAction)}" type="button">${esc(extraLabel||'执行')}</button>`:'';
-  return `<div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>${esc(title)}</span><span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn ghost small" style="min-height:44px;padding:8px 12px" data-detail-action="${esc(copyAction)}" type="button">复制</button><button class="btn ghost small" style="min-height:44px;padding:8px 12px" data-detail-action="${esc(importAction)}" type="button">导入</button>${extra}</span></div>`;
+  return `<div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>${esc(title)}</span><span style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn ghost small" style="min-height:44px;padding:8px 12px" data-detail-action="${esc(copyAction)}" type="button">${esc(copyLabel)}</button><button class="btn ghost small" style="min-height:44px;padding:8px 12px" data-detail-action="${esc(importAction)}" type="button">导入</button>${extra}</span></div>`;
 }
 function allocationDecisionPanel(stock){
   const ad=normalizeAllocationDecision(stock.allocationDecision,stock);
@@ -5049,25 +5052,53 @@ function copyV13AiDiscussionPrompt(reviewId){
   if(!prompt)return alert('当前 AI 复核尚未生成讨论 Prompt。');
   copyText(prompt,'与AI讨论 Prompt 已复制。');
 }
-function v13LongTermApiCommand(stock){
-  const symbol=String(stock&& (stock.code||stock.symbol||stock.id) || '').trim();
-  return `python scripts/run_ai_task.py long_term_logic_review --symbol ${symbol||'<symbol>'} --live`;
-}
-function openV13LongTermApiReviewDialog(stock){
+function longTermAiKey(stock){return String(stock&&stock.id||stock&&stock.code||stock&&stock.symbol||'')}
+function setLongTermAiState(stock,status,message){
   if(!stock)return;
-  let el=document.getElementById('v13LongTermApiReviewModal');
-  if(!el){
-    el=document.createElement('div');
-    el.className='modal-bg import-layer';
-    el.id='v13LongTermApiReviewModal';
-    el.innerHTML=`<div class="modal"><h2>长期逻辑 API 更新</h2><div class="modal-sub">浏览器不能直接执行本地 Python。请在项目目录运行以下命令，由本地 worker 调用 DeepSeek 并生成 AI 复核草案。不会直接修改正式 longTermLogic。</div><div class="form-row"><label>本地执行命令</label><textarea id="v13LongTermApiCommandText" readonly style="min-height:92px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"></textarea></div><div class="alert">运行命令后，系统会自动刷新 AI 决策复核数据；完成后重新加载主程序查看结果。</div><div class="modal-actions"><button class="btn ghost" id="v13LongTermApiCloseBtn" type="button">关闭</button><button class="btn" id="v13LongTermApiCopyBtn" type="button">复制命令</button></div></div>`;
-    document.body.appendChild(el);
-    el.addEventListener('click',e=>{if(e.target.id==='v13LongTermApiReviewModal')el.classList.remove('show')});
-    document.getElementById('v13LongTermApiCloseBtn').addEventListener('click',()=>el.classList.remove('show'));
-    document.getElementById('v13LongTermApiCopyBtn').addEventListener('click',()=>copyText(document.getElementById('v13LongTermApiCommandText').value,'长期逻辑 API 更新命令已复制。'));
-  }
-  document.getElementById('v13LongTermApiCommandText').value=v13LongTermApiCommand(stock);
-  el.classList.add('show');
+  longTermAiStates.set(longTermAiKey(stock),{status,message:String(message||'')});
+  render();
+}
+function longTermAiStatusPanel(stock){
+  const item=longTermAiStates.get(longTermAiKey(stock));
+  if(!item)return '<div class="card-note" style="margin-top:8px">首次调用时会说明并请求本地网络权限；本机 Bridge 不可用时仍可复制给 AI。</div>';
+  const error=['validation_failed','api_unavailable'].includes(item.status),label={preparing:'准备中',processing:'AI处理中',validating:'校验中',updated:'已更新',validation_failed:'校验失败',api_unavailable:'API不可用'}[item.status]||item.status;
+  return `<div class="${error?'alert':'hint'}" style="margin-top:8px" role="status" aria-live="polite"><b>${esc(label)}</b>${item.message?` · ${esc(item.message)}`:''}</div>`;
+}
+function longTermApiFailureMessage(error){
+  const type=error&&error.type;
+  if(type==='permission_error')return '浏览器未获得本地网络权限；请允许访问后重试，或继续使用“复制给AI”。';
+  if(type==='timeout_error')return '本机 AI 请求超时；未写入任何数据，可改用“复制给AI”。';
+  if(type==='http_error')return '本机 Bridge 或 AI provider 返回失败；未写入任何数据。';
+  if(type==='invalid_response')return 'Bridge 返回格式无效；未写入任何数据。';
+  if(type==='configuration_error')return '本机 AI Bridge 尚未正确配置。';
+  return '无法连接本机 AI Bridge；未写入任何数据，可继续使用“复制给AI”。';
+}
+async function commitProcessedLongTermLogic(stock,result,prepared,transport){
+  const contract=window.LongTermLogicContract,original=state;
+  if(!contract||typeof contract.commit!=='function')return {status:'failed',writes:0,error:new Error('长期逻辑安全保存模块不可用。')};
+  const committed=await contract.commit(result,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:previous=>{state=previous},render:()=>render()},{context:prepared.context,transport});
+  if(committed.status!=='completed')state=original;
+  else refreshLongLogicModalIfOpen();
+  return committed;
+}
+async function callLongTermLogicAi(stock){
+  if(!stock)return;
+  setLongTermAiState(stock,'preparing','正在连接本机 AI Bridge；浏览器可能请求本地网络访问权限。');
+  try{
+    const healthStatus=window.BackendHealth&&typeof window.BackendHealth.check==='function'?await window.BackendHealth.check({userInitiated:true}):'unavailable';
+    const health=window.BackendHealth&&window.BackendHealth.state;
+    if(healthStatus!=='available'||!health||health.capabilities.aiRequest!==true)throw Object.assign(new Error('AI capability unavailable'),{type:health&&health.errorType||'network_error'});
+    if(!window.InvestmentApi||!window.InvestmentApi.ai)throw Object.assign(new Error('AI API unavailable'),{type:'configuration_error'});
+    const prepared=prepareLongTermLogic(stock);
+    setLongTermAiState(stock,'processing','请求已发送；不会自动重试。');
+    const transport=await window.InvestmentApi.ai.request({taskType:'long_term_logic',prompt:prepared.prompt,responseFormat:'text'});
+    setLongTermAiState(stock,'validating','正在使用与人工导入相同的严格合同。');
+    const result=window.LongTermLogicWorkflow.processPrepared(transport.response.content,prepared);
+    if(!result.ok){setLongTermAiState(stock,'validation_failed',result.message||'AI 结果未通过严格校验；0 writes。');return}
+    const committed=await commitProcessedLongTermLogic(stock,result,prepared,{kind:'api',requestId:transport.response.requestId,provider:transport.response.provider,model:transport.response.model});
+    if(committed.status!=='completed'){setLongTermAiState(stock,'validation_failed','保存失败；此前长期逻辑保持不变。');return}
+    setLongTermAiState(stock,'updated',`长期逻辑已更新 · ${transport.response.provider} / ${transport.response.model}`);
+  }catch(error){setLongTermAiState(stock,'api_unavailable',longTermApiFailureMessage(error))}
 }
 function workspaceDetails(title,body){
   return `<details class="card" style="margin-bottom:12px;background:rgba(255,255,255,.42)"><summary class="card-title" style="cursor:pointer">${esc(title)}</summary><div style="margin-top:10px">${body}</div></details>`;
@@ -5104,9 +5135,9 @@ function planWorkspacePanel(stock){
   const planUpdate=planReview?(planReview.resolutionType==='plan_applied'?`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="card-title">计划更新已应用</div><div class="card-note">应用时间 ${esc(planReview.applicationAppliedAt||planReview.resolvedAt||'—')} · 新增 ${esc(planReview.createdPlanCount||0)} 条 · 归档 ${esc(planReview.archivedPlanCount||0)} 条 · 审计编号 ${esc(planReview.applicationAuditId||planReview.sourceApplicationId||'—')}</div></div>`:v13PlanUpdateDraftPanel(stock,planReview)):'';
   return `${discussionPlanPanel}${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
 }
-function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--teal)',copyAction='',importAction='',extraAction='',extraLabel=''){
+function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--teal)',copyAction='',importAction='',extraAction='',extraLabel='',copyLabel='复制'){
   const rows=(Array.isArray(items)?items:[]).filter(Boolean).slice(0,4);
-  const header=copyAction&&importAction?moduleTitleActions(title,copyAction,importAction,extraAction,extraLabel):`<div class="card-title">${esc(title)}</div>`;
+  const header=copyAction&&importAction?moduleTitleActions(title,copyAction,importAction,extraAction,extraLabel,copyLabel):`<div class="card-title">${esc(title)}</div>`;
   return `<div class="card" style="margin-bottom:12px;border-left:4px solid ${color}">${header}${rows.length?`<div class="chips">${rows.map(x=>`<span class="chip role">${esc(formatChineseText(x))}</span>`).join('')}</div>`:'<div class="card-note">暂无摘要。</div>'}</div>${workspaceDetails(detailTitle,detailBody)}`;
 }
 function technicalWorkspacePanel(stock){
@@ -5166,7 +5197,7 @@ function longTermWorkspacePanel(stock){
   const reviewRows=window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.recordsForStock==='function'?window.AiDecisionReviewReader.recordsForStock(stock).filter(record=>record.taskType==='long_term_logic_review'):[];
   const review=reviewRows.find(record=>record.isCurrent)||reviewRows[0];
   const body=`${v13LongTermReviewSummary(stock)}${longTermLogicPanel(stock)}${longTermMemoPanel(stock)}`;
-  return workspaceSummaryCard('长期逻辑摘要',[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`有效期 ${l.validUntil||'—'}`,`长期风险 ${l.longTermRisks.length} 项`],'查看长期逻辑详情 / Prompt / JSON 导入',body,'var(--purple)','copy-long-term-logic-prompt','import-long-term-logic-json','api-long-term-logic-review','API更新');
+  return `${longTermAiStatusPanel(stock)}${workspaceSummaryCard('长期逻辑摘要',[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`有效期 ${l.validUntil||'—'}`,`长期风险 ${l.longTermRisks.length} 项`],'查看长期逻辑详情 / Prompt / JSON 导入',body,'var(--purple)','copy-long-term-logic-prompt','import-long-term-logic-json','call-long-term-logic-ai','调用AI','复制给AI')}`;
 }
 function operationChangeLabel(value){return {increased:'持仓数量增加',decreased:'持仓数量减少',cleared:'持仓数量归零',unchanged:'持仓数量未变化',unknown:'变化待校验'}[value]||'变化待校验'}
 function operationWorkspacePanel(stock){
@@ -6976,61 +7007,21 @@ function sentimentSearchPromptText(stock){
   ].join('\n');
 }
 function longTermLogicPromptText(stock){
-  normalizeStockAnalysis(stock);
-  const ctx={
-    stock:{name:stock.name||'',symbol:stock.code||stock.symbol||'',type:stock.type||'',role:stock.role||'',theme:stock.theme||''},
-    existingLongTermLogic:normalizeLongTermLogic(stock.longTermLogic,stock),
-    financialData:normalizeFinancialData(stock.financialData),
-    valuationData:normalizeValuationData(stock.valuationData),
-    allocationDecision:normalizeAllocationDecision(stock.allocationDecision,stock),
-    dataFreshness:normalizeDataFreshness(stock.dataFreshness)
+  return prepareLongTermLogic(stock).prompt;
+}
+function prepareLongTermLogic(stock){
+  if(!window.LongTermLogicWorkflow||typeof window.LongTermLogicWorkflow.prepare!=='function')throw new Error('长期逻辑工作流不可用。');
+  const promptStock=typeof structuredClone==='function'?structuredClone(stock):JSON.parse(JSON.stringify(stock));
+  normalizeStockAnalysis(promptStock);
+  const input={
+    stock:{name:promptStock.name||'',symbol:promptStock.code||promptStock.symbol||'',type:promptStock.type||'',role:promptStock.role||'',theme:promptStock.theme||''},
+    existingLongTermLogic:normalizeLongTermLogic(promptStock.longTermLogic,promptStock),
+    financialData:normalizeFinancialData(promptStock.financialData),
+    valuationData:normalizeValuationData(promptStock.valuationData),
+    allocationDecision:normalizeAllocationDecision(promptStock.allocationDecision,promptStock),
+    dataFreshness:normalizeDataFreshness(promptStock.dataFreshness)
   };
-  const schema={longTermLogic:{updatedAt:todayDate(),validUntil:'',investmentThesis:'',coreDrivers:[],industryDrivers:[],companyDrivers:[],portfolioDrivers:[],fundamentalSupport:'',longTermRisks:[],logicStatus:'valid | weakening | broken | unclear',confidence:'high | medium | low',nextReviewDate:'',sourceSummary:''}};
-  return [
-    '你是一名谨慎的长期投资逻辑整理助手。',
-    '',
-    `请整理【${stock.name||'标的名称'}】（代码：【${stock.code||stock.symbol||'symbol'}】）的长期逻辑。`,
-    '',
-    '本任务用于月度、季度或财报后低频更新，不关注单日涨跌。',
-    '',
-    '【当前系统已有信息】',
-    JSON.stringify(ctx,null,2),
-    '',
-    '长期逻辑只回答“为什么长期持有”，不要写成财报分析或估值分析。',
-    '',
-    '长期逻辑必须体现三层结构：',
-    '第一层：行业长期逻辑。回答为什么这个行业未来 3-10 年仍具备投资价值，例如 AI算力扩张、黄金避险需求、铜资源长期需求、消费升级、电动车渗透率提升等。',
-    '第二层：公司专属护城河。回答如果行业逻辑成立，为什么优先受益的是这家公司。禁止只写行业逻辑，必须提炼公司专属优势，例如技术壁垒、资源整合能力、全球布局、客户资源、品牌、生态、规模、成本、供应链、产品矩阵、平台效应、网络效应、运营效率。无法找到明确护城河时允许降低 confidence，禁止编造。',
-    '第三层：组合角色价值。回答为什么适合作为当前组合角色。核心仓强调长期核心配置价值，成长仓强调长期成长驱动力，观察仓说明逻辑成立但尚未达到核心配置条件，卫星仓说明主题暴露和收益弹性。',
-    '',
-    'investmentThesis 必须同时包含：行业逻辑、公司护城河、组合价值。不要只写行业趋势。',
-    '错误示例：“AI行业长期增长，公司受益。”',
-    '正确示例：“AI算力需求增长提供行业空间，公司依托服务器交付能力、供应链管理能力和客户资源持续受益，并作为组合中的AI成长仓提供长期成长弹性。”',
-    '',
-    '财务数据、估值数据和配置决策只作为背景材料，用于判断长期逻辑是否仍然有效，不要在 investmentThesis、coreDrivers、industryDrivers、companyDrivers、portfolioDrivers 中展开财报数字、PE、PB、现金流等内容。',
-    '',
-    'fundamentalSupport 字段只允许用 1-2 句话概括“已有财报对长期逻辑有辅助验证”，不得写成财务分析模块，不得列举收入、利润、PE、PB、现金流等大量财务或估值指标。',
-    '',
-    '请重点整理：',
-    '- investmentThesis：长期投资主线',
-    '- industryDrivers：行业驱动，只写行业长期逻辑',
-    '- companyDrivers：公司专属护城河，只写公司为什么优先受益',
-    '- portfolioDrivers：组合角色价值，只写它在当前组合中的作用',
-    '- coreDrivers：兼容字段，可合并 industryDrivers、companyDrivers、portfolioDrivers 的精简要点',
-    '- longTermRisks：长期逻辑失效风险，只保留行业需求下降、商品价格长期下行、技术路线变化、客户集中度、海外运营、资源储量等长期风险。禁止写跌破MA20、跌破MA60、MACD死叉、近期资金流。',
-    '- logicStatus：逻辑状态',
-    '- confidence：置信度',
-    '- validUntil：有效期',
-    '- nextReviewDate：下次复核日期',
-    '- sourceSummary：资料来源摘要',
-    '',
-    '只输出一个严格 JSON 对象。',
-    '不要 Markdown 代码围栏。',
-    '不要额外解释。',
-    'JSON 结构键和值必须使用英文半角双引号 "。',
-    '字符串正文可以正常使用中文标点和中文引号。',
-    JSON.stringify(schema,null,2)
-  ].join('\n');
+  return window.LongTermLogicWorkflow.prepare(stock,{promptDate:todayDate(),input});
 }
 function recentCatalystPromptText(stock){
   normalizeStockAnalysis(stock);
@@ -7214,7 +7205,7 @@ function ensureLongTermLogicImportModal(){
   el=document.createElement('div');
   el.className='modal-bg import-layer';
   el.id='longTermLogicImportModal';
-  el.innerHTML=`<div class="modal"><h2>导入长期逻辑 JSON</h2><div class="modal-sub">仅用于导入 longTermLogic。长期逻辑只回答“为什么长期持有”，不会修改新闻、情绪、基本面、配置决策或当前操作建议。</div><div class="form-row"><label>粘贴长期逻辑 JSON</label><textarea id="longTermLogicImportText" style="min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{\"longTermLogic\":{\"investmentThesis\":\"...\",\"industryDrivers\":[],\"companyDrivers\":[],\"portfolioDrivers\":[],\"longTermRisks\":[],\"logicStatus\":\"valid\",\"confidence\":\"medium\"}}'></textarea></div><div class="modal-actions"><button class="btn ghost" id="longTermLogicImportCancelBtn" type="button">取消</button><button class="btn" id="longTermLogicImportSaveBtn" type="button">导入长期逻辑</button></div></div>`;
+  el.innerHTML=`<div class="modal"><h2>导入长期逻辑 JSON</h2><div class="modal-sub">使用与“调用AI”完全相同的股票绑定、严格字段合同和原子保存。不会修改新闻、基本面、配置、计划或持仓。</div><div class="form-row"><label>粘贴完整长期逻辑 JSON</label><textarea id="longTermLogicImportText" style="min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='{\"binding\":{\"symbol\":\"...\",\"contextHash\":\"ltctx_...\"},\"longTermLogic\":{...}}'></textarea></div><div class="modal-actions"><button class="btn ghost" id="longTermLogicImportCancelBtn" type="button">取消</button><button class="btn" id="longTermLogicImportSaveBtn" type="button">导入长期逻辑</button></div></div>`;
   const status=document.createElement('div');status.id='longTermLogicImportStatus';status.className='card-note import-json-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');el.querySelector('.modal-actions').before(status);
   document.body.appendChild(el);
   el.addEventListener('click',e=>{if(e.target.id==='longTermLogicImportModal')closeLongTermLogicImportModal()});
@@ -7232,6 +7223,7 @@ function openLongTermLogicImportModal(){
   if(status){status.textContent='';status.classList.remove('alert')}
   if(button)button.disabled=false;
   modal.classList.add('show');
+  if(status)status.textContent=`当前绑定：${stock.code||stock.symbol||'—'}。请粘贴由本次“复制给AI”生成的完整 JSON。`;
   setTimeout(()=>document.getElementById('longTermLogicImportText').focus(),50);
 }
 function closeLongTermLogicImportModal(){
@@ -7268,7 +7260,6 @@ function validateRecentCatalystImportPayload(parsed){
   assertObject('sentimentReview',data.sentimentReview);
   assertObject('eventExplanation',data.eventExplanation);
   assertObject('informationCompleteness',data.informationCompleteness);
-  assertObject('longTermLogic',data.longTermLogic);
   const rc=data.recentCatalyst||data;
   if(rc.recentEvents!==undefined){
     if(!Array.isArray(rc.recentEvents))throw new Error('字段校验错误：recentCatalyst.recentEvents 必须是数组。');
@@ -7290,7 +7281,6 @@ async function importSentimentPayloadFromText(text,options={}){
     shortTermSentiment:JSON.parse(JSON.stringify(stock.shortTermSentiment||{})),
     recentCatalyst:JSON.parse(JSON.stringify(stock.recentCatalyst||{})),
     eventExplanation:JSON.parse(JSON.stringify(stock.eventExplanation||{})),
-    longTermLogic:JSON.parse(JSON.stringify(stock.longTermLogic||{})),
     informationCompleteness:JSON.parse(JSON.stringify(stock.informationCompleteness||{})),
     dataFreshness:JSON.parse(JSON.stringify(stock.dataFreshness||{}))
   };
@@ -7298,15 +7288,11 @@ async function importSentimentPayloadFromText(text,options={}){
   try{
     parsed=parseSentimentImportJson(text);validateRecentCatalystImportPayload(parsed);
     if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('JSON 根对象必须是对象。');
-    const longTermPayload=parsed.longTermLogic&&typeof parsed.longTermLogic==='object'&&!Array.isArray(parsed.longTermLogic)?parsed.longTermLogic:parsed;
-    const recognizedLongTerm=['logicStatus','investmentThesis','fundamentalSupport','coreDrivers','industryDrivers','companyDrivers','portfolioDrivers','longTermRisks','sourceSummary','validUntil','nextReviewDate'].some(key=>Object.prototype.hasOwnProperty.call(longTermPayload,key));
-    const recognizedAny=Boolean(recognizedLongTerm||parsed.recentCatalyst||parsed.shortTermSentiment||parsed.sentimentReview||parsed.eventExplanation||parsed.informationCompleteness||parsed.analysisDate||parsed.todayCatalyst||parsed.weeklyCatalysts||parsed.monthlyCatalysts||parsed.recentEvents||parsed.marketMood||parsed.marketSentiment||parsed.sentiment||parsed.fundFlowView||parsed.fundFlow||parsed.fundFlowSummary||parsed.capitalFlow||parsed.moneyFlowView||parsed.sectorHeat||parsed.sectorMomentum||parsed.sectorHotness||parsed.themeHeat||parsed.industryHeat||parsed.institutionalView||parsed.institutionalOpinion||parsed.institutionalViews||parsed.brokerView||parsed.analystView||parsed.conclusion||parsed.newsSummary||parsed.positivePoints||parsed.missingItems||parsed.overall||parsed.catalyst||parsed.fundamentals);
-    if(options.onlyLongTerm&&!recognizedLongTerm)throw new Error('未识别 longTermLogic。请粘贴包含 longTermLogic 的 JSON，或直接粘贴长期逻辑对象。');
+    const recognizedAny=Boolean(parsed.recentCatalyst||parsed.shortTermSentiment||parsed.sentimentReview||parsed.eventExplanation||parsed.informationCompleteness||parsed.analysisDate||parsed.todayCatalyst||parsed.weeklyCatalysts||parsed.monthlyCatalysts||parsed.recentEvents||parsed.marketMood||parsed.marketSentiment||parsed.sentiment||parsed.fundFlowView||parsed.fundFlow||parsed.fundFlowSummary||parsed.capitalFlow||parsed.moneyFlowView||parsed.sectorHeat||parsed.sectorMomentum||parsed.sectorHotness||parsed.themeHeat||parsed.industryHeat||parsed.institutionalView||parsed.institutionalOpinion||parsed.institutionalViews||parsed.brokerView||parsed.analystView||parsed.conclusion||parsed.newsSummary||parsed.positivePoints||parsed.missingItems||parsed.overall||parsed.catalyst||parsed.fundamentals);
     if(!recognizedAny)throw new Error('未识别到可导入字段。');
   }catch(e){showStrictImportFailure(options,strictImportMessage(e));return}
   try{
     let changed=false;
-    const looksLikeLongTerm=Boolean(parsed.longTermLogic||parsed.logicStatus||parsed.investmentThesis||parsed.fundamentalSupport||parsed.coreDrivers||parsed.industryDrivers||parsed.companyDrivers||parsed.portfolioDrivers||parsed.longTermRisks);
     const looksLikeRecentCatalyst=Boolean(parsed.recentCatalyst||parsed.analysisDate||parsed.todayCatalyst||parsed.weeklyCatalysts||parsed.monthlyCatalysts||parsed.recentEvents||parsed.latestSourceDate||parsed.freshnessStatus||parsed.catalystCoverage);
     const looksLikeEventExplanation=Boolean(parsed.eventExplanation||parsed.priceActionDetected!==undefined||parsed.canExplainTodayMove!==undefined||parsed.explanationLevel||parsed.explanationConfidence||parsed.explanation);
     const looksLikeShortTermSentiment=Boolean(parsed.shortTermSentiment||parsed.marketMood||parsed.marketSentiment||parsed.sentiment||parsed.fundFlowView||parsed.fundFlow||parsed.fundFlowSummary||parsed.capitalFlow||parsed.moneyFlowView||parsed.sectorHeat||parsed.sectorMomentum||parsed.sectorHotness||parsed.themeHeat||parsed.industryHeat||parsed.institutionalView||parsed.institutionalOpinion||parsed.institutionalViews||parsed.brokerView||parsed.analystView||(parsed.actionHint&&parsed.confidence&&parsed.riskFlags));
@@ -7314,7 +7300,7 @@ async function importSentimentPayloadFromText(text,options={}){
     const importsCurrentCatalyst=Boolean(parsed.recentCatalyst||looksLikeRecentCatalyst);
     const catalystPayload=parsed.recentCatalyst||parsed;
     const currentSnapshotDate=normalizeDateOnly(catalystPayload.analysisDate)||todayDate();
-    if(parsed.sentimentReview||(!looksLikeShortTermSentiment&&!looksLikeLongTerm&&!looksLikeRecentCatalyst&&!looksLikeInformationCompleteness&&(parsed.conclusion||parsed.marketMood||parsed.newsSummary||parsed.positivePoints))){
+    if(parsed.sentimentReview||(!looksLikeShortTermSentiment&&!looksLikeRecentCatalyst&&!looksLikeInformationCompleteness&&(parsed.conclusion||parsed.marketMood||parsed.newsSummary||parsed.positivePoints))){
       const payload=parsed.sentimentReview||parsed;
       stock.sentimentReview=normalizeSentimentReview({...payload,symbol:payload.symbol||stock.code||stock.symbol||'',updatedAt:payload.updatedAt||todayDate()},stock);
       changed=true;
@@ -7336,19 +7322,13 @@ async function importSentimentPayloadFromText(text,options={}){
       stock.eventExplanation=normalizeEventExplanation(parsed.eventExplanation||(looksLikeEventExplanation?parsed:{}),stock);
       changed=true;
     }
-    if(parsed.longTermLogic||looksLikeLongTerm){
-      const payload=parsed.longTermLogic||parsed;
-      stock.longTermLogic=normalizeLongTermLogic({...payload,updatedAt:payload.updatedAt||todayDate()},stock);
-      changed=true;
-      touchDataFreshness(stock,'personalViewUpdatedAt');
-    }
     if(parsed.informationCompleteness||looksLikeInformationCompleteness||importsCurrentCatalyst){
       stock.informationCompleteness=normalizeInformationCompleteness(parsed.informationCompleteness||(looksLikeInformationCompleteness?parsed:{}),stock);
       changed=true;
     }
     if(!changed)throw new Error('未识别到可导入字段。');
     normalizeStockAnalysis(stock);
-    markV13DecisionReviewDirty(stock.id,options.onlyLongTerm?'longTermLogic':'recentCatalyst');
+    markV13DecisionReviewDirty(stock.id,'recentCatalyst');
     await saveState(state,{critical:true});
     if(options.closeLongTerm)closeLongTermLogicImportModal();
     else closeSentimentImportModal();
@@ -7360,7 +7340,6 @@ async function importSentimentPayloadFromText(text,options={}){
     stock.shortTermSentiment=original.shortTermSentiment;
     stock.recentCatalyst=original.recentCatalyst;
     stock.eventExplanation=original.eventExplanation;
-    stock.longTermLogic=original.longTermLogic;
     stock.informationCompleteness=original.informationCompleteness;
     stock.dataFreshness=original.dataFreshness;
     alert('导入失败：'+(err&&err.message?err.message:String(err)));
@@ -7370,7 +7349,25 @@ async function importSentimentReviewJson(){
   importSentimentPayloadFromText(document.getElementById('sentimentImportText').value);
 }
 async function importLongTermLogicJson(){
-  importSentimentPayloadFromText(document.getElementById('longTermLogicImportText').value,{onlyLongTerm:true,closeLongTerm:true,successMessage:'长期逻辑已导入。'});
+  const stock=state.stocks.find(x=>x.id===detailStockId),status=document.getElementById('longTermLogicImportStatus'),button=document.getElementById('longTermLogicImportSaveBtn');
+  if(!stock)return;
+  if(button)button.disabled=true;
+  let prepared,result;
+  try{
+    prepared=prepareLongTermLogic(stock);
+    result=window.LongTermLogicWorkflow.processPrepared(document.getElementById('longTermLogicImportText').value,prepared);
+  }catch(error){result={ok:false,message:error&&error.message||String(error)}}
+  if(!result.ok){if(status){status.textContent=result.message||'长期逻辑未通过严格校验。';status.classList.add('alert')}return}
+  if(status){status.textContent='校验通过，正在原子保存…';status.classList.remove('alert')}
+  const committed=await commitProcessedLongTermLogic(stock,result,prepared,{kind:'manual'});
+  if(committed.status!=='completed'){
+    if(status){status.textContent='保存失败；此前长期逻辑保持不变。';status.classList.add('alert')}
+    if(button)button.disabled=false;
+    return;
+  }
+  closeLongTermLogicImportModal();
+  setLongTermAiState(stock,'updated','长期逻辑已通过人工导入更新。');
+  alert('长期逻辑已导入。');
 }
 function detailResultsArchivePanel(s,cp){
   const fundamentalDiagnostics=s.type==='etf'?etfIndexAnalysisPanel(s):`${financialSignalPanel(s)}${valuationAnalysisPanel(s)}${valuationSignalPanel(s)}`;
@@ -7410,12 +7407,20 @@ function longLogicDriverSection(title,drivers,emptyText){
   const arr=normalizeStringArray(drivers).map(formatChineseText).filter(Boolean);
   return `<section class="long-logic-section"><div class="card-title">${esc(title)}</div>${arr.length?`<div class="long-logic-driver-grid">${arr.map(x=>`<div class="long-logic-driver">✓ ${esc(x)}</div>`).join('')}</div>`:`<div class="alert">${esc(emptyText||'待补充。')}</div>`}</section>`;
 }
-function longLogicChangeText(l){
+function longLogicChangeText(l,stock){
   if(!l||!(l.investmentThesis||l.coreDrivers.length||l.industryDrivers.length||l.companyDrivers.length||l.portfolioDrivers.length||l.fundamentalSupport||l.longTermRisks.length))return '待补充长期逻辑档案。';
-  if(l.logicStatus==='valid')return '当前逻辑有效；未保存上次状态用于自动对比。';
+  const history=stock&&stock.longTermLogicAudit&&Array.isArray(stock.longTermLogicAudit.history)?stock.longTermLogicAudit.history:[];
+  if(l.logicStatus==='valid')return history.length?`当前逻辑有效；保留 ${history.length} 份被替换记录。`:'当前逻辑有效。';
   if(l.logicStatus==='weakening')return '逻辑减弱，需要提前复核。';
   if(l.logicStatus==='broken')return '逻辑失效，需要重新评估持仓理由。';
   return '首次建立长期逻辑档案。';
+}
+function longTermLogicAuditPanel(stock){
+  const store=stock&&stock.longTermLogicAudit,history=store&&Array.isArray(store.history)?store.history:[],current=store&&store.current;
+  if(!current&&!history.length)return '<div class="card-note">尚无长期逻辑更新审计记录。</div>';
+  const source=current&&String(current.responseHash||'').startsWith('ltresp_')?'已验证 AI 响应':'历史迁移';
+  const rows=history.slice().reverse().map(item=>`<div class="trig-row"><div class="trig-name">${esc(item.updatedAt||'日期未记录')} · ${esc(String(item.responseHash||'').startsWith('legacy_')?'既有记录':'已验证响应')}</div><div class="trig-desc">${esc(longLogicThesisExcerpt(item.logic&&item.logic.investmentThesis||'—'))}<br><span class="muted">审计 ${esc(item.responseHash||'—')}</span></div></div>`).join('');
+  return `<div class="card-note">当前保存：${esc(current&&current.savedAt||'—')} · 来源 ${esc(source||'—')} · 审计 ${esc(current&&current.responseHash||'—')}</div>${history.length?`<details class="long-logic-details"><summary>查看被替换记录（${history.length}）</summary><div class="long-logic-details-body">${rows}</div></details>`:''}`;
 }
 function longLogicDetailsBlock(title,body,open=false){
   return `<details class="long-logic-details"${open?' open':''}><summary>${esc(title)}</summary><div class="long-logic-details-body">${body}</div></details>`;
@@ -7438,6 +7443,7 @@ function longTermLogicPanel(stock){
       ${longLogicDriverSection('组合价值',portfolioDrivers,'组合角色价值待补充。')}
       ${longLogicDetailsBlock(`长期风险（${risks.length}项）`,risks.length?`<ul>${risks.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<div class="text">暂无长期风险记录。</div>')}
       ${longLogicDetailsBlock('完整主线',detailedLogic)}
+      ${longLogicDetailsBlock('更新审计',longTermLogicAuditPanel(stock))}
     </div>`
     :'<div class="alert">待补充长期逻辑。</div>';
   return highFrequencyAnalysisCard({
@@ -7445,7 +7451,7 @@ function longTermLogicPanel(stock){
     conclusion:has?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑',
     meta:`更新 ${l.updatedAt||'—'} · 置信度 ${confidence}`,
     focus:[`${longLogicStatusIcon(l.logicStatus)} ${status}`,`有效期 ${l.validUntil||'—'}`,`下次复核 ${l.nextReviewDate||'—'}`],
-    changes:[longLogicChangeText(l)],
+    changes:[longLogicChangeText(l,stock)],
     risks:risks.length?risks:['暂无长期风险记录'],
     opportunities:[...industryDrivers.slice(0,2),...companyDrivers.slice(0,2),...portfolioDrivers.slice(0,2)],
     actionHint:l.logicStatus==='broken'?'长期逻辑失效，需要重新评估持仓理由。':(l.logicStatus==='weakening'?'长期逻辑减弱，需要提前复核。':'长期逻辑继续作为持有依据，今日处理仍看技术、计划和仓位。'),
@@ -7504,7 +7510,7 @@ function handleDetailAction(action,stock){
   if(action==='copy-short-term-sentiment-prompt')copyShortTermSentimentPrompt();
   if(action==='copy-long-term-logic-prompt')copyLongTermLogicPrompt();
   if(action==='import-long-term-logic-json')openLongTermLogicImportModal();
-  if(action==='api-long-term-logic-review')openV13LongTermApiReviewDialog(s);
+  if(action==='call-long-term-logic-ai')callLongTermLogicAi(s);
   if(action==='import-sentiment-json')openSentimentImportModal();
   if(action==='import-recent-catalyst-json')openSentimentImportModal('recentCatalyst');
   if(action==='import-short-term-sentiment-json')openSentimentImportModal('shortTermSentiment');
