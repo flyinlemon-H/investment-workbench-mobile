@@ -1,6 +1,8 @@
 'use strict';
 
 const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
 const test=require('node:test');
 const Workbench=require('../src/discussion-workbench.js');
 const Contract=require('../src/discussion-state-contract.js');
@@ -139,6 +141,10 @@ test('Archive Prompt is short, strict, versioned, and does not resend history',(
   const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
   assert.ok(archive.request.length<5000);assert.match(archive.request,/只输出唯一一个完整的 ```json 代码块/);assert.match(archive.request,/代码块外不得有任何文字/);assert.match(archive.request,/代码块内必须是一个完整严格 JSON 对象/);assert.doesNotMatch(archive.request,/不要 Markdown 代码围栏/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
   assert.equal(archive.technicalDataStatus,'fresh');assert.match(archive.request,/程序当前 technicalDataStatus: fresh/);assert.match(archive.request,/confidence 可根据证据使用 high、medium 或 low/);assert.match(archive.request,/不得仅因为 fresh 自动使用 high/);
+  assert.match(archive.request,/PROGRAM OWNS FACTS \/ AI OWNS JUDGMENTS/);assert.match(archive.request,/程序上下文中出现的字段不代表它属于输出 schema/);assert.match(archive.request,/其余 input-only context 不得复制到 JSON/);
+  const allowlist=archive.request.match(/currentState 顶层只能包含以下字段，不得新增任何其他字段：([^。]+)。/)?.[1].split('、');assert.deepEqual(allowlist,Contract.RESULT_FIELDS);
+  assert.match(archive.request,/symbol 与 sourceDiscussionVersion 是 allowlist 内的程序绑定字段，必须原样返回/);assert.match(archive.request,/technicalDataStatus 不在 allowlist 中，不得返回/);
+  for(const field of ['technicalDataStatus','technicalAsOf','latestCompleteBar','currentStateId/stateId','contextHash/protectedHash','原始 Plan 对象','内部 references','schema/debug 字段'])assert.ok(archive.request.includes(field),field);
   assert.match(archive.request,/下划线 _ 不需要也不得转义/);assert.ok(archive.request.includes('discussion\\_v2\\_9a35cb46'));assert.match(archive.request,/只能使用标准定义的转义/);
   assert.match(archive.request,/trendAssessment\.timeframes 的每项必须且只能包含 timeframe、status、explanation/);assert.match(archive.request,/structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason/);assert.match(archive.request,/不得在 structureAssessment 中使用 explanation/);
   for(const field of ['"timeframe":"60分钟"','"type":"top"','"status":"forming"','"source":"ai_chart_judgment"','"sourceAsOf":""','"shortReason":'])assert.ok(archive.request.includes(field),field);
@@ -149,9 +155,19 @@ test('Archive Prompt is short, strict, versioned, and does not resend history',(
 test('Archive Prompt carries the actual four-state technical freshness fact and forbids high confidence unless fresh',()=>{
   for(const technicalDataStatus of ['stale','unavailable','anomaly']){
     const prepared=Workbench.buildDiscussionRequest(stock({technicalData:{technicalDataStatus}})),archive=Workbench.buildArchiveRequest(prepared);
-    assert.equal(archive.technicalDataStatus,technicalDataStatus);assert.match(archive.request,new RegExp(`程序当前 technicalDataStatus: ${technicalDataStatus}`));assert.match(archive.request,new RegExp(`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）`));assert.match(archive.request,/confidence 不得输出 high，只能根据证据使用 medium 或 low/);assert.ok(archive.request.length<5000);
+    assert.equal(archive.technicalDataStatus,technicalDataStatus);assert.match(archive.request,new RegExp(`程序当前 technicalDataStatus: ${technicalDataStatus}`));assert.match(archive.request,/technicalDataStatus 是程序拥有的输入上下文，只用于判断 confidence，不得输出到 currentState JSON/);assert.match(archive.request,new RegExp(`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）`));assert.match(archive.request,/confidence 不得输出 high，只能根据证据使用 medium 或 low/);assert.match(archive.request,/正确输出保留 "confidence":"medium" 且不含 technicalDataStatus/);assert.match(archive.request,/错误输出含 "technicalDataStatus":"stale","confidence":"medium"，会被 strict schema 拒绝/);assert.ok(archive.request.length<5000);
   }
   const missing=Workbench.buildArchiveRequest(Workbench.buildDiscussionRequest(stock({technicalData:{}})));assert.equal(missing.technicalDataStatus,'unavailable');assert.match(missing.request,/程序当前 technicalDataStatus: unavailable/);
+});
+
+test('production input-only boundary fixtures preserve strict schema and freshness guards with zero writes',()=>{
+  const fixture=name=>fs.readFileSync(path.join(__dirname,'fixtures',name),'utf8'),options={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_input_only_boundary',holdingShares:2000,hasActivePlan:true,technicalDataStatus:'stale',programProvesFullPlanConditions:false};
+  const invalidRaw=fixture('production-current-state-input-only-boundary-invalid.json.txt'),parsed=Contract.parse(invalidRaw),invalid=Contract.process(invalidRaw,options);
+  assert.equal(parsed.ok,true);assert.equal(invalid.ok,false);assert.equal(invalid.code,'validation_error');assert.equal(invalid.previewReady,false);assert.equal(invalid.writes,0);assert.match(invalid.message,/currentState contains unknown fields: technicalDataStatus/);assert.doesNotMatch(invalid.message,/JSON 格式/);
+  const validRaw=fixture('production-current-state-input-only-boundary-valid.json.txt'),valid=Contract.process(validRaw,options);
+  assert.equal(Contract.parse(validRaw).ok,true);assert.equal(valid.ok,true,valid.message);assert.equal(valid.previewReady,true);assert.equal(valid.writes,0);assert.equal(valid.currentState.confidence,'medium');assert.equal('technicalDataStatus' in valid.currentState,false);
+  const freshHighValue=Contract.parse(validRaw).value;freshHighValue.currentState.confidence='high';const freshHigh=Contract.process(JSON.stringify(freshHighValue),{...options,technicalDataStatus:'fresh'});assert.equal(freshHigh.ok,true,freshHigh.message);assert.equal(freshHigh.previewReady,true);assert.equal(freshHigh.writes,0);
+  const staleHigh=Contract.process(JSON.stringify(freshHighValue),options);assert.equal(staleHigh.ok,false);assert.equal(staleHigh.code,'validation_error');assert.equal(staleHigh.previewReady,false);assert.equal(staleHigh.writes,0);assert.match(staleHigh.message,/技术资料未标记为较新时 confidence 不能为 high/);
 });
 
 test('archive validation rejects wrong symbol/version, unknown fields, malformed and truncated JSON with zero writes',()=>{

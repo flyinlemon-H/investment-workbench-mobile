@@ -332,9 +332,14 @@
       'JSON 结构键和值必须使用英文半角双引号 "。',
       'JSON 只能使用标准定义的转义；下划线 _ 不需要也不得转义。不得把 Markdown 转义带进 JSON。正确：discussion_v2_9a35cb46、reduce_review、ai_chart_judgment；错误：discussion\\_v2\\_9a35cb46、reduce\\_review、ai\\_chart\\_judgment。',
       '字符串正文可以正常使用中文标点和中文引号。',
+      '边界原则：PROGRAM OWNS FACTS / AI OWNS JUDGMENTS。程序提供的上下文事实只供判断；AI 只输出 currentState 合同允许的判断字段。',
+      'currentState 顶层只能包含以下字段，不得新增任何其他字段：symbol、sourceDiscussionVersion、actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
+      '程序上下文中出现的字段不代表它属于输出 schema。只有明确列入上述 currentState allowlist 的程序绑定字段可以输出；其余 input-only context 不得复制到 JSON。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
-      `程序当前 technicalDataStatus: ${technicalDataStatus}。这是程序提供的技术资料新鲜度事实。`,
+      'symbol 与 sourceDiscussionVersion 是 allowlist 内的程序绑定字段，必须原样返回；technicalDataStatus 不在 allowlist 中，不得返回。',
+      `程序当前 technicalDataStatus: ${technicalDataStatus}。technicalDataStatus 是程序拥有的输入上下文，只用于判断 confidence，不得输出到 currentState JSON。`,
       confidenceRule,
+      '输入/输出边界示例：上下文 technicalDataStatus: stale 时，正确输出保留 "confidence":"medium" 且不含 technicalDataStatus；错误输出含 "technicalDataStatus":"stale","confidence":"medium"，会被 strict schema 拒绝。完整输出仍须包含 allowlist 的全部字段。',
       '严格按此顺序判断并输出：actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       '固定值：category 只能为 risk_control/reduce_review/hold_watch/wait_confirmation/add_review/entry_review/no_action；priority 为 high/medium/low；attentionLevel 为 normal/focused/window；趋势 status 为 uptrend/downtrend/sideways/recovery/rebound/unclear；结构 type 为 top/bottom/breakout/pullback/recovery/consolidation/none/unclear，status 为 forming/confirmed/valid/broken/unclear，source 为 program/external_software/ai_chart_judgment/user_provided；planRelation.status 为 aligned/conflict/no_matching_plan/neutral；confidence 为 high/medium/low。',
       'trendAssessment.timeframes 的每项必须且只能包含 timeframe、status、explanation；explanation 只属于趋势周期项。',
@@ -345,7 +350,7 @@
       '结构来源必须保持真实：外部软件明确提供的信号用 external_software，图形推断用 ai_chart_judgment，用户陈述用 user_provided；sourceAsOf 有明确日期/时间就保留，否则为空字符串。不同来源冲突时并列说明，不得把 AI 推断冒充软件事实。资料陈旧或缺失时使用条件性判断并降低 confidence。',
       '不得发明结构的 timeframe 或 source。无法确认具体 timeframe 或没有足够证据形成结构项时，使用空的 structureAssessment 数组；有明确周期但结构不明确时，只能按证据使用允许的 none/unclear 表达，并仍完整输出六个必填字段。不得用 explanation 代替缺失字段。',
       '所有中文正文不得暴露英文枚举、字段名或实现术语。保留不确定性；价格触发不等于完整计划条件满足。不得修改或声称修改计划、计划复核、持仓、配置或长期逻辑；不得创建仓位数值、股数、订单或确定性买卖命令。高优先级只表示优先复核，不等于自动交易。',
-      '不要输出日期、技术锚点、哈希、引用、stateId 或任何由程序补齐的字段。',
+      '常见禁止输出的 input-only context 包括：technicalDataStatus、technicalAsOf、latestCompleteBar、技术 snapshot/anchor、currentStateId/stateId、contextHash/protectedHash、程序内部时间戳、持仓来源事实、原始 Plan 对象及内部 Plan 标识、内部 references、schema/debug 字段。除 allowlist 明确要求的字段外，不得输出日期、技术锚点、哈希、引用或任何由程序补齐的字段。',
       JSON.stringify(example,null,2)
     ].join('\n');
     return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};
