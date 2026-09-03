@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('PC AI Bridge release cache-busts the transport and Workbench modules',()=>{
+test('Plan compatibility release cache-busts the transport and Workbench modules',()=>{
   const html=read('index.html');
-  const version='pc-ai-bridge-empty-storage-hotfix-20260902';
+  const version='plan-mode-compatibility-phase1a-20260903';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',

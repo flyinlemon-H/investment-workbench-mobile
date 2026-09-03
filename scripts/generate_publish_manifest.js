@@ -86,8 +86,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'pc-ai-bridge-empty-storage-hotfix-20260902',
-  dataMode:'PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered',
+  assetVersion:'plan-mode-compatibility-phase1a-20260903',
+  dataMode:'Plan Phase 0/1A: explicit legacy_price/state_watch compatibility, existing nullable Plan preservation, and mode-gated legacy execution/conversion; no state-watch creation workflow, Runtime, Current State contract change, or semantic migration; only manifest-allowlisted browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
