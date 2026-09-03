@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "ea1218de177f0fea5f7650a6843f9a5929dfe6d2",
-  "assetVersion": "plan-mode-compatibility-phase1a-20260903",
-  "dataMode": "Plan Phase 0/1A: explicit legacy_price/state_watch compatibility, existing nullable Plan preservation, and mode-gated legacy execution/conversion; no state-watch creation workflow, Runtime, Current State contract change, or semantic migration; only manifest-allowlisted browser assets are delivered",
+  "sourceCommit": "e9ee1c4d0ad6b278525958cfa8e0b1cb264cf96c",
+  "assetVersion": "state-watch-definition-phase1b-20260903",
+  "dataMode": "Plan V2 Phase 1B: state-watch Definition schema, nullable non-executable observation Plans, strict session-bound manual and AI Draft Preview/Diff/Confirm, same-ID versioned edits and fail-closed roundtrip; legacy behavior and snapshotHash unchanged; no Runtime, Current State output change, automatic migration, execution or Allocation mutation; only manifest-allowlisted browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -49,8 +49,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56738,
-      "sha256": "007c26a73f1f0413d756ebed606f6546cbc8d97902c460755a63376182c1a2cb"
+      "bytes": 56859,
+      "sha256": "eb463f80d26d3dfb4c2efec2aa81e84cbc84a1eace323aa589f02873d3764921"
     },
     {
       "path": "social_posts.json",
@@ -115,8 +115,8 @@
     {
       "path": "src/decision-compression-context.js",
       "role": "Decision Compression compact context with program-owned blocker facts and audit references",
-      "bytes": 20116,
-      "sha256": "56d280648fdafc35e73d3e250c3251ec1d9e254246c18ff980f9e74c7f93c770"
+      "bytes": 20260,
+      "sha256": "67b8f20a0927e4c46c0d4957487da78d60d9d905e3ba1b383f1f1e39d34abec6"
     },
     {
       "path": "src/decision-compression-contract.js",
@@ -127,8 +127,8 @@
     {
       "path": "src/discussion-plan-workflow.js",
       "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
-      "bytes": 40345,
-      "sha256": "56b21f64a8bcd3dc3800bc80d6eb763ab28e7d47df0d8c836afece39e2a87fe0"
+      "bytes": 40763,
+      "sha256": "318ae70f2d3f1e80b16f2b7283c23d92b8ef5021aa7f89e03dc916c81797a43b"
     },
     {
       "path": "src/discussion-state-contract.js",
@@ -139,14 +139,14 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt input/output boundary runtime",
-      "bytes": 45745,
-      "sha256": "c5a7b702a93995d860e7da0a1eb7fb0f65a13c62defc69b5303c2271e5db57eb"
+      "bytes": 45882,
+      "sha256": "60acde437232aeb626badd05fcf016e9f6b25f113f5e3d2a977d05c61b4972d8"
     },
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7284,
-      "sha256": "56e8cd131c276ab1fc45aff8374aa4281ac28b2ab5b2b9de0ad40e239eb0f0e1"
+      "bytes": 7602,
+      "sha256": "ad598c3f63809531c716de2c0bed6a3559b443475047875525d7204473e33d36"
     },
     {
       "path": "src/long-term-logic-contract.js",
@@ -193,14 +193,14 @@
     {
       "path": "src/plan-review-ui.js",
       "role": "Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow",
-      "bytes": 25153,
-      "sha256": "4a79af921d8fb5885e2cc526ba1dde31dfb3b4f6ea3df44940e9a76a087be282"
+      "bytes": 25544,
+      "sha256": "abeafa1251307ca33142f27819695d1da5f2f0af497f3dcb181cf1f0ce420eb4"
     },
     {
       "path": "src/plan-review.js",
       "role": "Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime",
-      "bytes": 29928,
-      "sha256": "462101f9a89bb3e0135720302201a01a0036254af7c093e25a87de1f911b33ad"
+      "bytes": 30485,
+      "sha256": "f3f1fc684f6d2c80345ed639653d61aee080e6cba025f99d41d0471b829b509c"
     },
     {
       "path": "src/plan-update-draft.js",
@@ -211,8 +211,8 @@
     {
       "path": "src/plan-v2.js",
       "role": "Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime",
-      "bytes": 23852,
-      "sha256": "a29b541df870c54d6bd42a7db2bea9e1b3f52dd36eb73f27296c597d8dc83940"
+      "bytes": 34336,
+      "sha256": "91dc121e912cced585a3a1535cde56cc90ed9bc87f3ead1715bae36e87daa7c0"
     },
     {
       "path": "src/portfolio-review-context.js",
@@ -255,6 +255,18 @@
       "role": "browser runtime dependency",
       "bytes": 17657,
       "sha256": "12f13cc1a1296dc4424b1d42391f6ed0837629fad27b0a349ebf5be2d217afa8"
+    },
+    {
+      "path": "src/state-watch-ui.js",
+      "role": "Dedicated mobile state-watch Definition editor, manual and AI Draft preview/confirm and non-executable cards",
+      "bytes": 13950,
+      "sha256": "83eb109d39ae4c0fc3464cf3e5971efae3b295c1b5233662b18a0d72f17e37f8"
+    },
+    {
+      "path": "src/state-watch-workflow.js",
+      "role": "State-watch Definition strict session and target binding, readable preview/diff and confirmed same-ID candidate commit",
+      "bytes": 14980,
+      "sha256": "90a93bca8a88af72d744b876bcbd1f4f3736001b2be61382f27fda052c581f86"
     },
     {
       "path": "src/state.js",
@@ -313,8 +325,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards",
-      "bytes": 6770,
-      "sha256": "20506cf189dbddcfe2eeca227ed89bb93a854c93d4c6a1c4586ba2a232d275f5"
+      "bytes": 6803,
+      "sha256": "c43f2b1527d10099bfdae9fb42e8ff2c0b01a6ac2a2f49a837bc131accbbb10b"
     },
     {
       "path": "src/strict-ai-json.js",
@@ -337,8 +349,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
-      "bytes": 661520,
-      "sha256": "766d28a225b1de1d99acaae152ec7df22e573282ef5c24f81beb05dd396aac9a"
+      "bytes": 662759,
+      "sha256": "ca9cd80c7eacb00828c8d9ea463c842237a8bf1e8c7bcd2ebb38470627e7ebad"
     },
     {
       "path": "src/universe-handoff.js",
