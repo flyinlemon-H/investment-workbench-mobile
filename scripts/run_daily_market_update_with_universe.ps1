@@ -79,6 +79,8 @@ try {
     $LatestTradeDate = Read-OutputValue -Text $Output -Name 'latestTradeDate'
     $DeliveredGeneratedAt = Read-OutputValue -Text $Output -Name 'deliveredGeneratedAt'
     $DeliveredStockCount = [int]((Read-OutputValue -Text $Output -Name 'deliveredStockCount') -as [int])
+    $CloudUniverseStatus = Read-OutputValue -Text $Output -Name 'cloudUniverseStatus'
+    $CloudUniverseCode = Read-OutputValue -Text $Output -Name 'cloudUniverseCode'
     $Task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     $TaskInfo = if ($Task) { Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction SilentlyContinue } else { $null }
     $Schedule = if ($Task -and $Task.Triggers) { ($Task.Triggers | ForEach-Object { "$(($_.DaysOfWeek -join ',')) $($_.StartBoundary)" }) -join '; ' } else { '' }
@@ -97,6 +99,8 @@ try {
         workbench_bridge_path = $BridgePath
         delivered_generated_at = $DeliveredGeneratedAt
         delivered_stock_count = $DeliveredStockCount
+        cloud_universe_status = $CloudUniverseStatus
+        cloud_universe_warning = $CloudUniverseCode
         log_path = $LogPath
         error = if ($FinalCode -eq 0) { '' } else { (@($CommandOutput | Where-Object { $_ -match 'Error:|error=' }) -join '; ') }
     }

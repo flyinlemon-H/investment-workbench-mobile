@@ -22,15 +22,10 @@ SYMBOL_PATTERN = re.compile(r"^(?:\d{6}\.(?:SS|SZ)|\d{4,5}\.HK)$")
 MARKET_FACT_FIELDS = ("priceHistory", "marketDataFreshness", "technicalIndicators")
 
 
-def canonical_symbol(value: object) -> str:
-    symbol = str(value or "").strip().upper()
-    match = re.fullmatch(r"(\d{6})\.(SS|SH|SZ)", symbol)
-    if match:
-        return f"{match.group(1)}.{('SS' if match.group(2) == 'SH' else match.group(2))}"
-    match = re.fullmatch(r"(\d{1,5})\.HK", symbol)
-    if match:
-        return f"{match.group(1).zfill(4)}.HK"
-    return ""
+try:
+    from .market_symbol_contract import canonical_symbol
+except ImportError:
+    from market_symbol_contract import canonical_symbol
 
 
 def canonical_json(value: object) -> str:
@@ -175,35 +170,39 @@ def load_registry(path: Path) -> dict[str, Any]:
     return normalized
 
 
-def ingest_manifest(registry: dict[str, Any], manifest: dict[str, Any] | None, now: str) -> tuple[int, int]:
+def merge_additions(registry: dict[str, Any], rows: list[dict[str, Any]], now: str) -> tuple[int, int]:
     known = {record["symbol"]: record for record in registry["symbols"]}
     added = 0
     already_known = 0
-    if manifest:
-        for incoming in manifest["symbols"]:
-            symbol = incoming["symbol"]
-            if symbol in known:
-                already_known += 1
-                if incoming.get("displayName") and not known[symbol].get("displayName"):
-                    known[symbol]["displayName"] = incoming["displayName"]
-                continue
-            known[symbol] = {
-                "symbol": symbol,
-                "active": True,
-                "displayName": incoming.get("displayName", ""),
-                "addedAt": now,
-                "marketFacts": {"priceHistory": [], "marketDataFreshness": {}, "technicalIndicators": {}},
-            }
-            added += 1
-        registry["lastManifest"] = {
-            "revision": manifest["revision"],
-            "generatedAt": manifest["generatedAt"],
-            "checksum": manifest["checksum"]["value"],
+    for incoming in rows:
+        symbol = incoming["symbol"]
+        if symbol in known:
+            already_known += 1
+            if incoming.get("displayName") and not known[symbol].get("displayName"):
+                known[symbol]["displayName"] = incoming["displayName"]
+            continue
+        known[symbol] = {
+            "symbol": symbol, "active": True,
+            "displayName": incoming.get("displayName", ""), "addedAt": now,
+            "marketFacts": {"priceHistory": [], "marketDataFreshness": {}, "technicalIndicators": {}},
         }
+        added += 1
     registry["symbols"] = [known[symbol] for symbol in sorted(known)]
-    if manifest:
+    if rows:
         registry["updatedAt"] = now
     return added, already_known
+
+
+def ingest_manifest(registry: dict[str, Any], manifest: dict[str, Any] | None, now: str) -> tuple[int, int]:
+    if not manifest:
+        return 0, 0
+    result = merge_additions(registry, manifest["symbols"], now)
+    registry["lastManifest"] = {
+        "revision": manifest["revision"], "generatedAt": manifest["generatedAt"],
+        "checksum": manifest["checksum"]["value"],
+    }
+    registry["updatedAt"] = now
+    return result
 
 
 def portfolio_symbol(stock: dict[str, Any]) -> str:
@@ -368,25 +367,42 @@ def run_update(
     bridge_path: Path,
     update_function: Callable[..., list[dict[str, Any]]],
     dry_run: bool = False,
+    cloud_fetch: Callable[[], dict[str, Any]] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     moment = now or datetime.now(timezone.utc)
     now_iso = moment.isoformat().replace("+00:00", "Z")
     portfolio = load_portfolio(formal_path)
     registry = load_registry(registry_path)
+    # Called by the PowerShell runner while its existing market_update.lock is held.
+    # A cloud failure is a warning, never an empty replacement of the local set.
+    cloud = {"status": "not_configured", "rows": [], "code": "not_configured"}
+    if cloud_fetch:
+        try:
+            cloud = cloud_fetch()
+        except Exception:
+            cloud = {"status": "error", "rows": [], "code": "cloud_error"}
+    cloud_added, cloud_known = merge_additions(registry, cloud["rows"], now_iso) if cloud["status"] == "success" else (0, 0)
     manifest, diagnostics = discover_manifest(inbox_path)
     newly_added, already_known = ingest_manifest(registry, manifest, now_iso)
-    diagnostics.update(newly_added=newly_added, already_known=already_known)
+    diagnostics.update(newly_added=newly_added, already_known=already_known,
+                       cloud_status=cloud["status"], cloud_code=cloud["code"],
+                       cloud_newly_added=cloud_added, cloud_already_known=cloud_known)
+    ingestion_backups = []
+    if not dry_run and (newly_added or cloud_added):
+        # Membership acceptance survives a later market-provider exception.
+        ingestion_backups = transactional_write_json(
+            [(registry_path, registry)], moment.strftime("%Y%m%d_%H%M%S") + "_universe")
     update_state, portfolio_symbols, registry_only = build_update_state(portfolio, registry)
     results = update_function(update_state, symbols=None)
     apply_updated_facts(portfolio, registry, update_state)
     if results:
         registry["updatedAt"] = now_iso
     payload = bridge_payload(update_state, now_iso)
-    backups: list[Path] = []
+    backups: list[Path] = ingestion_backups
     if not dry_run and results:
         timestamp = moment.astimezone().strftime("%Y%m%d_%H%M%S")
-        backups = transactional_write_json(
+        backups += transactional_write_json(
             [(formal_path, portfolio), (registry_path, registry)],
             timestamp,
         )
@@ -396,7 +412,7 @@ def run_update(
     latest_dates = sorted(str(row.get("latest_trade_date") or "") for row in results if row.get("latest_trade_date"))
     return {
         "diagnostics": diagnostics,
-        "registry_write_success": bool(not dry_run and results),
+        "registry_write_success": bool(not dry_run and (results or newly_added or cloud_added)),
         "portfolio_symbol_count": len(portfolio_symbols),
         "registry_only_symbol_count": len(registry_only),
         "symbols": len(results),
@@ -437,6 +453,10 @@ def main(argv: list[str] | None = None) -> int:
     bridge = Path(args.bridge).resolve() if args.bridge else workbench_root / "data" / "market_data_bridge.js"
     inbox.mkdir(parents=True, exist_ok=True)
     try:
+        try:
+            from .fetch_cloud_universe import fetch_cloud_universe
+        except ImportError:
+            from fetch_cloud_universe import fetch_cloud_universe
         summary = run_update(
             formal_path=formal,
             registry_path=registry,
@@ -444,6 +464,7 @@ def main(argv: list[str] | None = None) -> int:
             bridge_path=bridge,
             update_function=load_source_updater(source_root),
             dry_run=args.dry_run,
+            cloud_fetch=fetch_cloud_universe,
         )
     except Exception as exc:
         print(f"universeIngestionStatus: failed")
@@ -454,6 +475,9 @@ def main(argv: list[str] | None = None) -> int:
         print("bridgeStatus: skipped")
         return 1
     diagnostic = summary["diagnostics"]
+    print(f"cloudUniverseStatus: {diagnostic['cloud_status']}")
+    print(f"cloudUniverseCode: {diagnostic['cloud_code']}")
+    print(f"cloudUniverseAdded: {diagnostic['cloud_newly_added']}")
     print(f"manifestDiscovered: {str(diagnostic['manifest_discovered']).lower()}")
     print(f"manifestRevision: {diagnostic['manifest_revision']}")
     print(f"manifestStatus: {'accepted' if diagnostic['accepted'] else ('rejected' if diagnostic['manifest_discovered'] else 'absent')}")
