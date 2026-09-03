@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "e9ee1c4d0ad6b278525958cfa8e0b1cb264cf96c",
-  "assetVersion": "state-watch-definition-phase1b-20260903",
-  "dataMode": "Plan V2 Phase 1B: state-watch Definition schema, nullable non-executable observation Plans, strict session-bound manual and AI Draft Preview/Diff/Confirm, same-ID versioned edits and fail-closed roundtrip; legacy behavior and snapshotHash unchanged; no Runtime, Current State output change, automatic migration, execution or Allocation mutation; only manifest-allowlisted browser assets are delivered",
+  "sourceCommit": "1577e2cd033fea4d1c0d0c6476a3f4f3fce4954b",
+  "assetVersion": "discussion-anchor-guard-20260903",
+  "dataMode": "Discussion Current State technical-anchor readiness guards and visible localized save failure feedback; strict program-owned archive contract, protected-context rejection, history and critical storage unchanged; Plan V2 Phase 1B preserved, no Runtime or market-universe changes; only manifest-allowlisted browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -49,8 +49,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56859,
-      "sha256": "eb463f80d26d3dfb4c2efec2aa81e84cbc84a1eace323aa589f02873d3764921"
+      "bytes": 56418,
+      "sha256": "9ed6e7e243275df4d85d0a2a3be137975fef4bdcd2a5e7431293be601a8bf02c"
     },
     {
       "path": "social_posts.json",
@@ -133,8 +133,8 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime",
-      "bytes": 19255,
-      "sha256": "c4ed9d4e5656d78288384333017e60faffac37019b060f022fb7b3da58a53da3"
+      "bytes": 21267,
+      "sha256": "c0d51e80108640587fb3994383cb4a3329ecf930313a02e962f31ec687970251"
     },
     {
       "path": "src/discussion-workbench.js",
@@ -349,8 +349,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
-      "bytes": 662759,
-      "sha256": "ca9cd80c7eacb00828c8d9ea463c842237a8bf1e8c7bcd2ebb38470627e7ebad"
+      "bytes": 665115,
+      "sha256": "8fa5711f1cbadc069c9ace86dd07dc99686c16b93a5f3c6e928aafc78ce99dec"
     },
     {
       "path": "src/universe-handoff.js",
