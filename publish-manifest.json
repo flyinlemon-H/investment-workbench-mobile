@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "81d62fc60aff616a5051822f531a4109b65ea63a",
-  "assetVersion": "pc-ai-bridge-empty-storage-hotfix-20260902",
-  "dataMode": "PC AI Bridge transport and Long-Term Logic POC: Manual/API share one Prompt, strict JSON parser, exact bound contract, atomic candidate commit and bounded history; user-initiated loopback health and AI requests retain manual fallback; program-owned holdings, allocation, orders, Plan and other judgment modules remain unchanged; only manifest-allowlisted browser assets are delivered",
+  "sourceCommit": "ea1218de177f0fea5f7650a6843f9a5929dfe6d2",
+  "assetVersion": "plan-mode-compatibility-phase1a-20260903",
+  "dataMode": "Plan Phase 0/1A: explicit legacy_price/state_watch compatibility, existing nullable Plan preservation, and mode-gated legacy execution/conversion; no state-watch creation workflow, Runtime, Current State contract change, or semantic migration; only manifest-allowlisted browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -49,8 +49,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56779,
-      "sha256": "42679b28cf54b51d9bf290f0683171f3d49905b426714dd2ca82c6828c81db63"
+      "bytes": 56738,
+      "sha256": "007c26a73f1f0413d756ebed606f6546cbc8d97902c460755a63376182c1a2cb"
     },
     {
       "path": "social_posts.json",
@@ -127,8 +127,8 @@
     {
       "path": "src/discussion-plan-workflow.js",
       "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
-      "bytes": 39377,
-      "sha256": "0c92ee052172205aeae1168a3283641a1821b55a575bf96739c444bc38072427"
+      "bytes": 40345,
+      "sha256": "56b21f64a8bcd3dc3800bc80d6eb763ab28e7d47df0d8c836afece39e2a87fe0"
     },
     {
       "path": "src/discussion-state-contract.js",
@@ -193,26 +193,26 @@
     {
       "path": "src/plan-review-ui.js",
       "role": "Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow",
-      "bytes": 24524,
-      "sha256": "1e08313563cb5d5cb904f8893d1b8b99bfff1bf4c6c092254296b39a683e4dea"
+      "bytes": 25153,
+      "sha256": "4a79af921d8fb5885e2cc526ba1dde31dfb3b4f6ea3df44940e9a76a087be282"
     },
     {
       "path": "src/plan-review.js",
       "role": "Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime",
-      "bytes": 29752,
-      "sha256": "26a2737448c4da52a456225d9dbd46742f692e8929e75e1dd5c96467643f5c12"
+      "bytes": 29928,
+      "sha256": "462101f9a89bb3e0135720302201a01a0036254af7c093e25a87de1f911b33ad"
     },
     {
       "path": "src/plan-update-draft.js",
       "role": "Plan V2 confirmed browser-side draft application runtime",
-      "bytes": 14003,
-      "sha256": "5f037487f509440bdc40dcb3cc8effae5d7e584ac17af503c2254085a11a5f70"
+      "bytes": 14831,
+      "sha256": "edb4efd84b8c85f615cc890ac5a344a2c1db88c04de8973a8687c6f4a54d5474"
     },
     {
       "path": "src/plan-v2.js",
       "role": "Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime",
-      "bytes": 21725,
-      "sha256": "f0db188768f5a4928ef0235a96a4ba3acf4f18584ab051c5804f37e220a24de4"
+      "bytes": 23852,
+      "sha256": "a29b541df870c54d6bd42a7db2bea9e1b3f52dd36eb73f27296c597d8dc83940"
     },
     {
       "path": "src/portfolio-review-context.js",
@@ -235,8 +235,8 @@
     {
       "path": "src/position.js",
       "role": "browser runtime dependency",
-      "bytes": 4086,
-      "sha256": "e9f6c7e31b24894e186aca999a77cdb5f3f8582b172215f78f3a8a5d6900b52e"
+      "bytes": 4178,
+      "sha256": "68221ecf492bbd97dc3b87d3fdae23d47e44ec97b429522aa2298f5c4b6747d0"
     },
     {
       "path": "src/price-refresh.js",
@@ -247,8 +247,8 @@
     {
       "path": "src/rebalance.js",
       "role": "Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime",
-      "bytes": 7215,
-      "sha256": "690baf599b3b01ee2eb9d6808949f7e4ecd7cb1e7151a09e8684a47259c8483c"
+      "bytes": 7491,
+      "sha256": "8e9370945e38e4714a575bc483bdc94e07dfc26be664422373cad59b3dd91583"
     },
     {
       "path": "src/social.js",
@@ -259,8 +259,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 121518,
-      "sha256": "87910fd9b21ec63ab99a3a97dfc82c904448937608f6fb2013b130d21b021ce9"
+      "bytes": 121932,
+      "sha256": "f7b769d39b70ebb7edd8efb2db161a4305ee8839dd33c2914e8e5ba8d55526c5"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -337,8 +337,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
-      "bytes": 658302,
-      "sha256": "c69434469be94ed3c7a70149208b413a78322b932689b8cb18680fbf1907b2bc"
+      "bytes": 661520,
+      "sha256": "766d28a225b1de1d99acaae152ec7df22e573282ef5c24f81beb05dd396aac9a"
     },
     {
       "path": "src/universe-handoff.js",
@@ -367,14 +367,14 @@
     {
       "path": "src/v13-plan-engine.js",
       "role": "Plan V2 lifecycle-aware plan orchestration runtime",
-      "bytes": 3373,
-      "sha256": "c3df9ec5c33421aa5a87eacfb9473311542e5bf9ad7cf15432ad6246fd5ccbf0"
+      "bytes": 4066,
+      "sha256": "c709d70f2a60ed724c038d9b6237ae445ea6eca4d36c7b445c0c2cff9ef476f2"
     },
     {
       "path": "src/v13-recommendation-engine.js",
       "role": "Plan V2 lifecycle-aware recommendation compatibility runtime",
-      "bytes": 11356,
-      "sha256": "5bc5c774e5c591f2139bf8022a54dc36e55d0dbecec26a74bfb7b0d9f20ce237"
+      "bytes": 11574,
+      "sha256": "97533a2624b0019552f33a2a0e93e5127cef121fd6ba5934e4e8581833f2e088"
     },
     {
       "path": "src/v13-risk-engine.js",
