@@ -1,0 +1,39 @@
+```json
+{
+  "currentState": {
+    "symbol": "600487.SS",
+    "sourceDiscussionVersion": "__SOURCE_DISCUSSION_VERSION__",
+    "actionAssessment": {
+      "category": "hold_watch",
+      "priority": "low",
+      "headline": "当前缺少完整技术锚点支持时，仅维持例行观察。",
+      "reasons": ["结构修复未被完整日K完全确认，先继续观察。"],
+      "upgradeConditions": ["完整技术锚点补齐后再评估是否提高复核频率。"],
+      "downgradeConditions": ["若后续数据继续缺失，维持或下调观察口径。"]
+    },
+    "attentionLevel": "normal",
+    "trendAssessment": {
+      "overall": "sideways",
+      "timeframes": [
+        {
+          "timeframe": "日线",
+          "status": "sideways",
+          "explanation": "关键支撑与压力仍在震荡区间，缺少新锚点时不宜做结构性转向。"
+        }
+      ]
+    },
+    "structureAssessment": [],
+    "stage": "技术补齐观察",
+    "focusPoints": ["等待完整日K锚点后再给出更明确结论。"],
+    "summary": "目前讨论只确认到可追踪观察结论，技术锚点未按完整日K补齐前不应形成连续结论。",
+    "keyChanges": ["未出现新的可复核结构确认。"],
+    "risks": ["完整日K缺失导致技术锚点可用性受限。"],
+    "watchPoints": ["观察是否出现新完整日K并验证锚点一致性。"],
+    "planRelation": {
+      "status": "neutral",
+      "summary": "当前不改变计划关系，价格触发不等于完整条件满足。"
+    },
+    "confidence": "medium"
+  }
+}
+```

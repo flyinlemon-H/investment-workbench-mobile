@@ -5274,6 +5274,8 @@ function ensureDiscussionArchiveContext(stock){
   if(!window.DiscussionWorkbench)throw new Error('讨论工作台模块未加载。');
   const key=discussionStockKey(stock);let prepared=discussionPreparedContexts.get(key);
   if(!prepared)prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());
+  const readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(prepared);
+  if(!readiness.ready)throw new Error(readiness.message);
   if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
   prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
@@ -5349,7 +5351,7 @@ function discussionHistoryPanel(stock,presentation){
 function ensureDiscussionImportDialog(){
   let el=document.getElementById('discussionImportDialog');if(el)return el;
   el=document.createElement('div');el.className='modal-bg import-layer';el.id='discussionImportDialog';
-  el.innerHTML=`<div class="modal"><h2>导入讨论结论</h2><div class="modal-sub">严格校验 AI JSON；预览不会写入，只有“确认保存”会更新当前结论。</div><div class="card-note">请完整复制 AI 返回的 JSON 代码块。</div><div class="alert">AI 不能提供日期、技术锚点、引用或内部编号；这些字段由程序从本次受保护上下文中补齐。保存后将成为下次讨论的起点。</div><div class="form-row"><label for="discussionImportText">AI 返回的严格 JSON</label><textarea id="discussionImportText" style="min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='\`\`\`json\n{"currentState":{...}}\n\`\`\`'></textarea></div><div id="discussionImportMessage" class="card-note"></div><div id="discussionImportPreview"></div><div class="modal-actions"><button class="btn ghost" id="discussionImportCancelBtn" type="button">取消</button><button class="btn ghost" id="discussionImportPreviewBtn" type="button">预览结果</button><button class="btn" id="discussionImportConfirmBtn" type="button" disabled>确认保存</button></div></div>`;
+  el.innerHTML=`<div class="modal"><h2>导入讨论结论</h2><div class="modal-sub">严格校验 AI JSON；预览不会写入，只有“确认保存”会更新当前结论。</div><div class="card-note">请完整复制 AI 返回的 JSON 代码块。</div><div class="alert">AI 不能提供日期、技术锚点、引用或内部编号；这些字段由程序从本次受保护上下文中补齐。保存后将成为下次讨论的起点。</div><div class="form-row"><label for="discussionImportText">AI 返回的严格 JSON</label><textarea id="discussionImportText" style="min-height:240px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='\`\`\`json\n{"currentState":{...}}\n\`\`\`'></textarea></div><div id="discussionImportMessage" class="card-note" role="status" aria-live="polite" tabindex="-1"></div><div id="discussionImportPreview"></div><div class="modal-actions"><button class="btn ghost" id="discussionImportCancelBtn" type="button">取消</button><button class="btn ghost" id="discussionImportPreviewBtn" type="button">预览结果</button><button class="btn" id="discussionImportConfirmBtn" type="button" disabled>确认保存</button></div></div>`;
   document.body.appendChild(el);el.addEventListener('click',event=>{if(event.target===el)closeDiscussionImportDialog()});
   document.getElementById('discussionImportCancelBtn').addEventListener('click',closeDiscussionImportDialog);
   document.getElementById('discussionImportPreviewBtn').addEventListener('click',previewDiscussionImport);
@@ -5360,21 +5362,56 @@ function ensureDiscussionImportDialog(){
 function openDiscussionImportDialog(stock){
   try{
     ensureDiscussionArchiveContext(stock);discussionImportPreview=null;
-    const el=ensureDiscussionImportDialog();el.dataset.stockId=stock.id;document.getElementById('discussionImportText').value='';document.getElementById('discussionImportMessage').textContent='本次结论的受保护上下文已准备。请完整复制 AI 返回的 JSON 代码块，粘贴后先预览。';document.getElementById('discussionImportPreview').innerHTML='';document.getElementById('discussionImportConfirmBtn').disabled=true;el.classList.add('show');
+    const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
+    const el=ensureDiscussionImportDialog(),message=document.getElementById('discussionImportMessage'),confirmButton=document.getElementById('discussionImportConfirmBtn'),readiness=prepared&&window.DiscussionStateContract.assessTechnicalAnchorReadiness(prepared);
+    el.dataset.stockId=stock.id;
+    document.getElementById('discussionImportText').value='';
+    document.getElementById('discussionImportPreview').innerHTML='';
+    if(confirmButton)confirmButton.disabled=true;
+    if(readiness&&readiness.ready===false){
+      message.textContent='缺少完整日K技术锚点，当前讨论可以继续，但暂不能保存为连续结论。请先刷新技术数据后重新整理结论。';
+    }else{
+      message.textContent='本次结论的受保护上下文已准备。请完整复制 AI 返回的 JSON 代码块，粘贴后先预览。';
+    }
+    if(message)message.focus({preventScroll:true});
+    el.classList.add('show');
   }catch(error){alert(`无法准备导入上下文：${error&&error.message?error.message:error}`)}
 }
 function closeDiscussionImportDialog(){document.getElementById('discussionImportDialog')?.classList.remove('show');discussionImportPreview=null}
+function translateDiscussionImportFailureMessage(error){
+  const raw=error&&error.message?String(error.message):'',code=error&&(error.code||error.type);
+  if(code==='stale_tab'||raw.includes('stale_tab'))return '检测到其它页面已保存更新。当前旧页面不能覆盖最新数据，请重新加载后再试。';
+  if(code==='anchor_not_ready'||/technical anchor mismatch|technical anchor bar invalid|完整日K|技术锚点日期|程序确认日期|技术锚点的收盘价/.test(raw))return '当前缺少有效的完整日K技术锚点，无法保存为连续结论。请先刷新技术数据，再重新开始整理。';
+  if(/受保护的持仓|讨论上下文缺失或已过期|重新开始讨论/.test(raw))return '持仓、技术锚点、计划或长期逻辑已经变化，请重新开始本次讨论后再保存。';
+  return '保存失败，数据未确认保存。请稍后重试；若仍失败，请重新打开讨论。';
+}
+function showDiscussionImportFailure(message){
+  const region=document.getElementById('discussionImportMessage');
+  if(!region)return alert(message);
+  region.textContent=message;
+  region.scrollIntoView({block:'center',inline:'nearest'});
+  region.focus({preventScroll:true});
+}
 function previewDiscussionImport(){
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock)),message=document.getElementById('discussionImportMessage'),preview=document.getElementById('discussionImportPreview'),confirmButton=document.getElementById('discussionImportConfirmBtn');
   if(!stock||!prepared){message.textContent='本次讨论上下文已丢失，请关闭后重新开始讨论。';confirmButton.disabled=true;return}
-  const facts=prepared.context&&prepared.context.currentFacts||{},holding=facts.holding||{},plans=Array.isArray(facts.plans)?facts.plans:[],technical=facts.technical||{},result=window.DiscussionStateContract.process(document.getElementById('discussionImportText').value,{expectedSymbol:discussionStockKey(stock),sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:holding.shares,hasActivePlan:plans.length>0,technicalDataStatus:technical.dataStatus,programProvesFullPlanConditions:false});discussionImportPreview=result;
+  const facts=prepared.context&&prepared.context.currentFacts||{},holding=facts.holding||{},plans=Array.isArray(facts.plans)?facts.plans:[],technical=facts.technical||{},result=window.DiscussionStateContract.process(document.getElementById('discussionImportText').value,{expectedSymbol:discussionStockKey(stock),sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:holding.shares,hasActivePlan:plans.length>0,technicalDataStatus:technical.dataStatus,programProvesFullPlanConditions:false,prepared});
+  discussionImportPreview=result;
   if(!result.ok){message.textContent=result.message;preview.innerHTML='';confirmButton.disabled=true;return}
-  const date=window.DiscussionWorkbench.localCalendarDate(new Date(),{timeZone:'Asia/Shanghai'});message.textContent=result.message;preview.innerHTML=window.DiscussionStateContract.renderPreview(result,{technicalAsOf:prepared.technicalSnapshot.anchorBar.date,confirmedDate:date});confirmButton.disabled=false;
+  const date=window.DiscussionWorkbench.localCalendarDate(new Date(),{timeZone:'Asia/Shanghai'});message.textContent=result.message;preview.innerHTML=window.DiscussionStateContract.renderPreview(result,{technicalAsOf:prepared.technicalSnapshot?.anchorBar?.date,confirmedDate:date});
+  confirmButton.disabled=!result.previewReady;
+  if(!result.previewReady){
+    showDiscussionImportFailure('AI结论格式已通过校验，但当前缺少完整日K技术锚点，暂不能保存为连续结论。请先刷新技术数据后重新开始讨论并整理结论。');
+  }
 }
 async function confirmDiscussionImport(){
-  const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));if(!stock||!prepared||!discussionImportPreview||!discussionImportPreview.ok)return;
-  const original=state,result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
-  if(result.status!=='completed'){document.getElementById('discussionImportMessage').textContent=result.error&&result.error.message?result.error.message:'保存失败，数据未确认写入。';state=original;return}
+  const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));if(!stock||!prepared||!discussionImportPreview||!discussionImportPreview.previewReady){showDiscussionImportFailure('本次结论尚未就绪，请重新开始讨论并预览后再保存。');return;}
+  const original=state,message=document.getElementById('discussionImportMessage'),result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
+  if(result.status!=='completed'){
+    showDiscussionImportFailure(translateDiscussionImportFailureMessage(result.error));
+    state=original;
+    return;
+  }
   discussionPreparedContexts.delete(discussionStockKey(stock));closeDiscussionImportDialog();renderStockDetail();alert('当前结论已确认保存；上一个结论已移入历史。');
 }
 function ensureDiscussionPlanImportDialog(){

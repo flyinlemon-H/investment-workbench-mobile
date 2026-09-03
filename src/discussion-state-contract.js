@@ -91,14 +91,29 @@
     if(!expected.programProvesFullPlanConditions&&hasAffirmativeFullConditionClaim(prose))errors.push('价格触发不能被表述为完整计划条件已满足');
     return {ok:errors.length===0,errors,judgment:{symbol,sourceDiscussionVersion,actionAssessment,attentionLevel,trendAssessment,structureAssessment,stage,focusPoints,summary,keyChanges,risks,watchPoints,planRelation,confidence}};
   }
-  function process(raw,options={}){
-    const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
-    const top=object(parsed.value),topKeys=Object.keys(top);
-    if(topKeys.length!==1||topKeys[0]!=='currentState')return invalid('schema_error',StrictAiJson.contractMessage('顶层只能包含 currentState。'),parsed.input);
-    const validation=validateJudgment(top.currentState,{symbol:options.expectedSymbol,sourceDiscussionVersion:options.sourceDiscussionVersion,holdingShares:options.holdingShares,hasActivePlan:options.hasActivePlan,technicalDataStatus:options.technicalDataStatus,programProvesFullPlanConditions:options.programProvesFullPlanConditions});
-    if(!validation.ok)return invalid('validation_error',StrictAiJson.contractMessage(validation.errors.join('；')),parsed.input);
-    return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论已通过严格校验，尚未写入。',input:parsed.input,currentState:validation.judgment};
+  function assessTechnicalAnchorReadiness(prepared){
+    const snapshot=object(prepared&&prepared.technicalSnapshot),anchor=object(snapshot.anchorBar);
+    const reference=object(object(prepared&&prepared.references).technical),facts=object(object(object(prepared&&prepared.context).currentFacts).technical);
+    const date=Workbench.validDate(anchor.date),close=Number(anchor.close);
+    let reason='anchor_ready';
+    if(!date)reason='anchor_date_invalid';
+    else if(anchor.is_complete_bar===false)reason='anchor_incomplete';
+    else if(!Number.isFinite(close)||close<=0)reason='anchor_close_invalid';
+    else if(Workbench.validDate(reference.technicalAsOf)!==date)reason='anchor_date_mismatch';
+    else if([snapshot.technicalAsOf,facts.technicalAsOf,prepared&&prepared.technicalAsOf].some(value=>value!==undefined&&Workbench.validDate(value)!==date))reason='anchor_date_mismatch';
+    const ready=reason==='anchor_ready';
+    return {ready,code:ready?'anchor_ready':'anchor_not_ready',reason,message:ready?'技术锚点可用于连续结论保存。':'缺少完整日K技术锚点，当前讨论可以继续，但暂不能保存为连续结论。请先刷新或补齐该标的的完整日K技术数据，再重新开始讨论并整理结论。'};
   }
+function process(raw,options={}){
+  const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
+  const top=object(parsed.value),topKeys=Object.keys(top);
+  if(topKeys.length!==1||topKeys[0]!=='currentState')return invalid('schema_error',StrictAiJson.contractMessage('顶层只能包含 currentState。'),parsed.input);
+  const validation=validateJudgment(top.currentState,{symbol:options.expectedSymbol,sourceDiscussionVersion:options.sourceDiscussionVersion,holdingShares:options.holdingShares,hasActivePlan:options.hasActivePlan,technicalDataStatus:options.technicalDataStatus,programProvesFullPlanConditions:options.programProvesFullPlanConditions});
+  if(!validation.ok)return invalid('validation_error',StrictAiJson.contractMessage(validation.errors.join('；')),parsed.input);
+  const anchorReadiness=options.prepared?assessTechnicalAnchorReadiness(options.prepared):null;
+  if(anchorReadiness&&!anchorReadiness.ready)return {ok:true,previewReady:false,writes:0,code:anchorReadiness.code,reason:anchorReadiness.reason,message:anchorReadiness.message,input:parsed.input,currentState:validation.judgment};
+  return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论已通过严格校验，尚未写入。',input:parsed.input,currentState:validation.judgment};
+}
   function findStock(state,symbol){const target=Workbench.canonical(symbol),stocks=array(state&&state.stocks),index=stocks.findIndex(stock=>Workbench.canonical(stock)===target);return {stocks,index,stock:index>=0?stocks[index]:null}}
   function buildCandidate(state,result,options={}){
     if(!result||!result.ok||!result.previewReady)throw new Error('必须先完成有效预览。');
@@ -108,8 +123,10 @@
     if(!found.stock)throw new Error('找不到本次讨论对应的股票。');
     const rebuilt=Workbench.buildContext(found.stock,{state:candidate,allStocks:candidate.stocks,planReviewStore:candidate.planReviews,planReviewApi:options.planReviewApi,timeZone:options.timeZone,now:options.now});
     if(rebuilt.sourceDiscussionVersion!==prepared.sourceDiscussionVersion||rebuilt.protectedHash!==prepared.protectedHash)throw new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。');
-    const confirmedAt=(()=>{const raw=options.now instanceof Date?options.now:new Date(options.now||Date.now());if(!Number.isFinite(raw.getTime()))throw new Error('确认时间无效。');return raw.toISOString()})();
+  const confirmedAt=(()=>{const raw=options.now instanceof Date?options.now:new Date(options.now||Date.now());if(!Number.isFinite(raw.getTime()))throw new Error('确认时间无效。');return raw.toISOString()})();
     const confirmedDate=Workbench.localCalendarDate(confirmedAt,{timeZone:options.timeZone||'Asia/Shanghai'}),judgment=result.currentState,store=Workbench.normalizeStore(found.stock.discussionState);
+    const anchorReadiness=assessTechnicalAnchorReadiness({technicalSnapshot:prepared&&prepared.technicalSnapshot,references:prepared&&prepared.references});
+    if(!anchorReadiness.ready)throw Object.assign(new Error(anchorReadiness.message),{code:anchorReadiness.code,reason:anchorReadiness.reason});
     const next=Workbench.normalizeState({
       schemaVersion:Workbench.STATE_SCHEMA_VERSION,
       stateId:`discussionstate_${Workbench.hash(`${judgment.symbol}|${judgment.sourceDiscussionVersion}|${confirmedAt}`)}`,
@@ -129,7 +146,7 @@
     let built;try{built=buildCandidate(state,result,options)}catch(error){return {status:'invalid',writes:0,error}}
     try{
       const saved=await deps.saveCandidate(built.candidate,{critical:true}),next=saved&&saved.state?saved.state:(saved&&Array.isArray(saved.stocks)?saved:built.candidate);
-      if(saved===false||(saved&&saved.ok===false))throw new Error('critical save failed');
+      if(saved===false||(saved&&saved.ok===false))throw Object.assign(new Error('critical save failed'),{code:saved&&saved.type||'save_failed',cause:saved&&saved.error});
       if(typeof deps.adoptCandidate==='function')deps.adoptCandidate(next);
       if(typeof deps.render==='function')deps.render();
       return {status:'completed',writes:1,state:next,currentState:built.currentState};
@@ -144,5 +161,5 @@
   function list(items){return items.length?`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'无'}
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
-  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,process,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
+  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,assessTechnicalAnchorReadiness:assessTechnicalAnchorReadiness,process,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
 });

@@ -81,6 +81,16 @@ test('Current State and Plan imports ask for the complete JSON code block and ke
   assert.match(contract,/StrictAiJson\.contractMessage/);
 });
 
+test('discussion import modal exposes anchor-blocker copy and uses explicit status region at preview/save error path',()=>{
+  const imported=ui.slice(ui.indexOf('function ensureDiscussionImportDialog'),ui.indexOf('function ensureDiscussionPlanImportDialog'));
+  assert.match(imported,/discussionImportMessage\" class=\"card-note\" role=\"status\" aria-live=\"polite\" tabindex=\"-1\"/);
+  assert.match(imported,/缺少完整日K技术锚点，当前讨论可以继续，但暂不能保存为连续结论/);
+  assert.match(imported,/translateDiscussionImportFailureMessage/);
+  assert.match(imported,/confirmButton\.disabled=!result\.previewReady/);
+  assert.match(imported,/region\.scrollIntoView/);
+  assert.match(imported,/translateDiscussionImportFailureMessage\(result\.error\)/);
+});
+
 test('开始讨论 prepares the current request and opens its modal immediately without rendering or scrolling the page',()=>{
   const action=ui.slice(ui.indexOf('function startStockDiscussion'),ui.indexOf('function prepareDiscussionArchive'));
   assert.match(action,/buildDiscussionRequest\(stock,discussionOptions\(\)\)/);assert.match(action,/discussionPreparedContexts\.set/);assert.match(action,/openDiscussionPromptDialog\(stock,'discussion'\)/);

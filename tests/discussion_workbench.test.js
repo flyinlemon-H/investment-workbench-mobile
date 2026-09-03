@@ -9,11 +9,13 @@ const Contract=require('../src/discussion-state-contract.js');
 
 function dateAt(index,start='2026-07-01'){return new Date(Date.parse(`${start}T00:00:00Z`)+index*86400000).toISOString().slice(0,10)}
 function bars(count,start='2026-07-01'){return Array.from({length:count},(_,index)=>({date:dateAt(index,start),close:100+index,adjustment:'qfq',price_basis:'adjusted',provider:'fixture',is_complete_bar:true}))}
+function fixture(name){return fs.readFileSync(path.join(__dirname,'fixtures',name),'utf8')}
 function stock(overrides={}){
   return {id:'stock-1',code:'601138.SS',name:'工业富联',type:'holding',role:'核心仓',shares:100,avgCost:42,currentPrice:55,priceUpdatedAt:'2026-08-31',priceSource:'fixture',priceHistory:bars(30),technicalData:{technicalDataStatus:'fresh',trendStatus:'uptrend',supportLevels:[50,48],resistanceLevels:[58],latestCompleteBar:dateAt(29),technicalAsOf:dateAt(29)},technicalReview:{updatedAt:'2026-08-31T08:00:00Z',shortTermTechnical:{trendStatus:'uptrend',cyclePosition:'mid_uptrend',technicalSummary:'趋势延续',riskFlags:['near_resistance'],confidence:'medium'}},plans:[],longTermLogic:{updatedAt:'2026-08-20T08:00:00Z',logicStatus:'valid',investmentThesis:'长期逻辑',coreDrivers:['增长'],longTermRisks:['波动']},...overrides};
 }
-function judgment(prepared,overrides={}){return {currentState:{symbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,actionAssessment:{category:'hold_watch',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势修复但尚未出现需要调整仓位的确认信号。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前修复结构被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'recovery',timeframes:[{timeframe:'日线',status:'recovery',explanation:'价格延续修复但仍需量价确认。'}]},structureAssessment:[],stage:'修复观察',focusPoints:['观察量价能否确认修复延续。'],summary:'本轮确认继续观察。',keyChanges:['价格修复'],risks:['压力位风险'],watchPoints:['观察成交量'],planRelation:{status:'neutral',summary:'当前计划仅作为观察条件，不自动修改；价格触发不等于完整条件满足。'},confidence:'medium',...overrides}}}
-function preview(prepared,overrides={}){const facts=prepared.context.currentFacts;return Contract.process(JSON.stringify(judgment(prepared,overrides)),{expectedSymbol:'601138.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,programProvesFullPlanConditions:false})}
+function stock600(overrides={}){return stock({id:'stock-600487',code:'600487.SS',name:'青岛啤酒',type:'holding',role:'核心仓',...overrides});}
+function judgment(prepared,overrides={}){const symbol=prepared&&prepared.context&&prepared.context.symbol||'601138.SS';return {currentState:{symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,actionAssessment:{category:'hold_watch',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势修复但尚未出现需要调整仓位的确认信号。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前修复结构被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'recovery',timeframes:[{timeframe:'日线',status:'recovery',explanation:'价格延续修复但仍需量价确认。'}]},structureAssessment:[],stage:'修复观察',focusPoints:['观察量价能否确认修复延续。'],summary:'本轮确认继续观察。',keyChanges:['价格修复'],risks:['压力位风险'],watchPoints:['观察成交量'],planRelation:{status:'neutral',summary:'当前计划仅作为观察条件，不自动修改；价格触发不等于完整条件满足。'},confidence:'medium',...overrides}}}
+function preview(prepared,overrides={}){const facts=prepared.context.currentFacts;return Contract.process(JSON.stringify(judgment(prepared,overrides)),{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,programProvesFullPlanConditions:false})}
 function confirmedState(sourceStock,now='2026-08-31T08:00:00Z'){
   const prepared=Workbench.buildDiscussionRequest(sourceStock),result=preview(prepared),built=Contract.buildCandidate({stocks:[sourceStock]},result,{prepared,now,timeZone:'Asia/Shanghai'});
   return {prepared,result,built,state:built.candidate.stocks[0].discussionState.current,stock:built.candidate.stocks[0]};
@@ -161,13 +163,83 @@ test('Archive Prompt carries the actual four-state technical freshness fact and 
 });
 
 test('production input-only boundary fixtures preserve strict schema and freshness guards with zero writes',()=>{
-  const fixture=name=>fs.readFileSync(path.join(__dirname,'fixtures',name),'utf8'),options={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_input_only_boundary',holdingShares:2000,hasActivePlan:true,technicalDataStatus:'stale',programProvesFullPlanConditions:false};
+  const options={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_input_only_boundary',holdingShares:2000,hasActivePlan:true,technicalDataStatus:'stale',programProvesFullPlanConditions:false};
   const invalidRaw=fixture('production-current-state-input-only-boundary-invalid.json.txt'),parsed=Contract.parse(invalidRaw),invalid=Contract.process(invalidRaw,options);
   assert.equal(parsed.ok,true);assert.equal(invalid.ok,false);assert.equal(invalid.code,'validation_error');assert.equal(invalid.previewReady,false);assert.equal(invalid.writes,0);assert.match(invalid.message,/currentState contains unknown fields: technicalDataStatus/);assert.doesNotMatch(invalid.message,/JSON 格式/);
   const validRaw=fixture('production-current-state-input-only-boundary-valid.json.txt'),valid=Contract.process(validRaw,options);
   assert.equal(Contract.parse(validRaw).ok,true);assert.equal(valid.ok,true,valid.message);assert.equal(valid.previewReady,true);assert.equal(valid.writes,0);assert.equal(valid.currentState.confidence,'medium');assert.equal('technicalDataStatus' in valid.currentState,false);
   const freshHighValue=Contract.parse(validRaw).value;freshHighValue.currentState.confidence='high';const freshHigh=Contract.process(JSON.stringify(freshHighValue),{...options,technicalDataStatus:'fresh'});assert.equal(freshHigh.ok,true,freshHigh.message);assert.equal(freshHigh.previewReady,true);assert.equal(freshHigh.writes,0);
   const staleHigh=Contract.process(JSON.stringify(freshHighValue),options);assert.equal(staleHigh.ok,false);assert.equal(staleHigh.code,'validation_error');assert.equal(staleHigh.previewReady,false);assert.equal(staleHigh.writes,0);assert.match(staleHigh.message,/技术资料未标记为较新时 confidence 不能为 high/);
+});
+
+test('600487 production-like missing anchor is blocked at archive readiness with clear explanation',()=>{
+  const raw=fixture('production-current-state-600487-missing-anchor.json.txt'),source=stock600({technicalData:{technicalDataStatus:'stale',latestCompleteBar:'2026-09-01',technicalAsOf:'2026-09-01'}}),prepared=Workbench.buildDiscussionRequest(source),preparedMissingAnchor=Object.assign({},prepared,{technicalSnapshot:Object.assign({},prepared.technicalSnapshot,{anchorBar:{}})}),validRaw=raw.replace('__SOURCE_DISCUSSION_VERSION__',prepared.sourceDiscussionVersion),fact=prepared.context.currentFacts;
+  const valid=Contract.parse(validRaw),result=Contract.process(validRaw,{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:fact.holding.shares,hasActivePlan:fact.plans.length>0,technicalDataStatus:fact.technical.dataStatus,programProvesFullPlanConditions:false,prepared:preparedMissingAnchor});
+  assert.equal(valid.ok,true);
+  assert.equal(result.ok,true);
+  assert.equal(result.previewReady,false);
+  assert.equal(result.code,'anchor_not_ready');
+  assert.equal(result.writes,0);
+  assert.match(result.message,/完整日K技术锚点|缺少有效的完整日K技术锚点/);
+});
+
+test('preview readiness requires valid anchor and blocks missing or invalid close',()=>{
+  const base=stock600({technicalData:{technicalDataStatus:'stale'}}),prepared=Workbench.buildDiscussionRequest(base),fact=prepared.context.currentFacts,raw=fixture('production-current-state-600487-missing-anchor.json.txt').replace('__SOURCE_DISCUSSION_VERSION__',prepared.sourceDiscussionVersion);
+  const missingAnchor=Contract.process(raw,{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:fact.holding.shares,hasActivePlan:false,technicalDataStatus:fact.technical.dataStatus,programProvesFullPlanConditions:false,prepared:{...prepared,technicalSnapshot:{...prepared.technicalSnapshot,anchorBar:{}}}});
+  assert.equal(missingAnchor.ok,true);
+  assert.equal(missingAnchor.previewReady,false);
+  assert.equal(missingAnchor.writes,0);
+
+  const invalidClose=Contract.process(raw,{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:fact.holding.shares,hasActivePlan:false,technicalDataStatus:fact.technical.dataStatus,programProvesFullPlanConditions:false,prepared:{...prepared,technicalSnapshot:{...prepared.technicalSnapshot,anchorBar:{...prepared.technicalSnapshot.anchorBar,close:0}}}});
+  assert.equal(invalidClose.ok,true);
+  assert.equal(invalidClose.previewReady,false);
+  assert.equal(invalidClose.writes,0);
+});
+
+test('anchor mismatch blocks readiness with explicit Chinese blocker',()=>{
+  const base=stock600({technicalData:{technicalDataStatus:'stale'}}),prepared=Workbench.buildDiscussionRequest(base),fact=prepared.context.currentFacts,raw=fixture('production-current-state-600487-missing-anchor.json.txt').replace('__SOURCE_DISCUSSION_VERSION__',prepared.sourceDiscussionVersion);
+  const mismatch=Contract.process(raw,{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:fact.holding.shares,hasActivePlan:false,technicalDataStatus:fact.technical.dataStatus,programProvesFullPlanConditions:false,prepared:{...prepared,references:{...(prepared.references||{}),technical:{...(prepared.references&&prepared.references.technical||{}),technicalAsOf:'2026-01-02'}}}});
+  assert.equal(mismatch.ok,true);
+  assert.equal(mismatch.previewReady,false);
+  assert.equal(mismatch.code,'anchor_not_ready');
+  assert.match(mismatch.message,/缺少完整日K技术锚点/);assert.equal(mismatch.reason,'anchor_date_mismatch');
+});
+
+test('commit is blocked when readiness is false and saveCandidate is never called',async()=>{
+  const source=stock600({technicalData:{technicalDataStatus:'stale'}}),prepared=Workbench.buildDiscussionRequest(source),fact=prepared.context.currentFacts,raw=fixture('production-current-state-600487-missing-anchor.json.txt').replace('__SOURCE_DISCUSSION_VERSION__',prepared.sourceDiscussionVersion);
+  const invalidPrepared=Object.assign({},prepared,{
+    technicalSnapshot:Object.assign({}, prepared.technicalSnapshot, {
+      anchorBar:Object.assign({}, prepared.technicalSnapshot.anchorBar, { close: 0 }),
+    }),
+  });
+  const result=Contract.process(
+    raw,
+    {
+      expectedSymbol: prepared.context.symbol,
+      sourceDiscussionVersion: prepared.sourceDiscussionVersion,
+      holdingShares: fact.holding.shares,
+      hasActivePlan: false,
+      technicalDataStatus: fact.technical.dataStatus,
+      programProvesFullPlanConditions: false,
+      prepared: invalidPrepared,
+    },
+  );
+  let called=0;
+  const commitResult=await Contract.commit(result,{stocks:[source]},{saveCandidate:()=>{called+=1;return {}}},{prepared});
+  assert.equal(commitResult.status,'preview_required');
+  assert.equal(commitResult.writes,0);
+  assert.equal(called,0);
+});
+
+test('anchor changes after preview reject commit as stale and do not write',async()=>{
+  const first=confirmedState(stock600());
+  const prepared=Workbench.buildDiscussionRequest(first.stock),result=preview(prepared);
+  const stale=JSON.parse(JSON.stringify(first.stock));
+  stale.priceHistory=stale.priceHistory.concat([{date:'2026-09-01',close:88,adjustment:'qfq',price_basis:'adjusted',provider:'fixture',is_complete_bar:true}]);
+  const failed=await Contract.commit(result,{stocks:[stale]},{saveCandidate:()=>{throw new Error('must not write')}},{prepared,timeZone:'Asia/Shanghai'});
+  assert.equal(failed.status,'invalid');
+  assert.equal(failed.writes,0);
+  assert.match(failed.error&&failed.error.message?failed.error.message:'',/受保护的持仓、技术锚点、计划或长期逻辑已经变化/);
 });
 
 test('archive validation rejects wrong symbol/version, unknown fields, malformed and truncated JSON with zero writes',()=>{
