@@ -59,10 +59,10 @@
       userId=value;
       await mutate(data=>{
         data=data||{schemaVersion:VERSION,observed:[],lastOwner:null,items:[]};
-        if(userId){
-          data.lastOwner=userId;
+        if(value){
+          data.lastOwner=value;
           // Offline-before-first-login additions bind once. Account changes never move them.
-          for(const item of data.items)if(item.owner===null)item.owner=userId;
+          for(const item of data.items)if(item.owner===null)item.owner=value;
           const merged=new Map();
           for(const item of data.items){const id=String(item.owner)+':'+item.symbol;const prior=merged.get(id);if(!prior||item.state==='synced')merged.set(id,item)}
           data.items=[...merged.values()];

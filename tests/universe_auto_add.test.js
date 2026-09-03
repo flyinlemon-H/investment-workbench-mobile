@@ -46,6 +46,11 @@ test('crash recovery retains previous owner even if another account signs in fir
  await reloaded.queue.setUser(B);await reloaded.queue.pump();assert.equal(reloaded.requests.length,0);
  await reloaded.queue.setUser(A);await reloaded.queue.pump();assert.equal(reloaded.requests[0].user_id,A);
 });
+test('overlapping Auth notifications bind first-login additions to the first captured owner',async()=>{
+ const e=environment();await e.queue.initialize({stocks:[]});await e.queue.committed({stocks:[stock('600487.SS')]});
+ await Promise.all([e.queue.setUser(A),e.queue.setUser(B)]);await e.queue.pump();assert.equal(e.requests.length,0);
+ await e.queue.setUser(A);await e.queue.pump();assert.equal(e.requests[0].user_id,A);
+});
 test('new additions during an in-flight request are drained without another user action',async()=>{
  let release,started;const ready=new Promise(r=>started=r),pause=new Promise(r=>release=r);
  const e=environment({insert:async row=>{if(row.symbol==='600000.SS'){started();await pause}}});
