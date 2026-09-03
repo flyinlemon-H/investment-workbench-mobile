@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "018d5dfcd75c6adf00e382aa04fdf265a8edf1cf",
+  "sourceCommit": "f707d16b1541122aed759f1234d74e18ffec1c85",
   "assetVersion": "stock-universe-auto-add-v1a-20260903",
   "dataMode": "Stock Universe V1A local-first automatic additions through Supabase Auth with scoped PC read access; membership only, no removals or full-state sync; existing Current State anchor guards, Plan V2 Phase 1B and market calculations preserved; only manifest-allowlisted public browser assets are delivered",
   "files": [
@@ -361,8 +361,8 @@
     {
       "path": "src/universe-auto-add.js",
       "role": "durable local-first canonical stock addition queue and standard Auth",
-      "bytes": 10838,
-      "sha256": "03136780eb938157944ea0f587d2577c49f8bdc31166f8a27e4c22951ee3272d"
+      "bytes": 10835,
+      "sha256": "4dc6c1184ac246d0ca9189fe27305cb51e23c1c47d193ece6b19565d80a6db24"
     },
     {
       "path": "src/universe-handoff.js",
