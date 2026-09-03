@@ -1,0 +1,13 @@
+[
+  {"input":"600000.SH","canonical":"600000.SS"},
+  {"input":"600000.SS","canonical":"600000.SS"},
+  {"input":"000001.SZ","canonical":"000001.SZ"},
+  {"input":"700.hk","canonical":"0700.HK"},
+  {"input":"  1810.hk ","canonical":"1810.HK"},
+  {"input":"12345.HK","canonical":"12345.HK"},
+  {"input":"600000","canonical":""},
+  {"input":"ABC.SS","canonical":""},
+  {"input":"６０００００.SS","canonical":""},
+  {"input":"600000.ſſ","canonical":""},
+  {"input":"600000.SS?token=x","canonical":""}
+]

@@ -465,6 +465,9 @@ function syncStorageMaintenanceUi(){
 }
 let applicationServicesStarted=false;
 async function activateLoadedApplication(){
+  if(window.UniverseAutoAdd){
+    try{await window.UniverseAutoAdd.initialize(state)}catch(_error){}
+  }
   if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge();
   if(window.UniverseHandoff){
     const reconciliation=window.UniverseHandoff.reconcileState(state,window.MARKET_DATA_BRIDGE);
@@ -473,6 +476,7 @@ async function activateLoadedApplication(){
   const main=document.getElementById('main');
   if(main)main.dataset.storageState='ready';
   render();
+  if(window.renderUniverseCloudStatus)window.renderUniverseCloudStatus();
   if(applicationServicesStarted)return Object.freeze({status:'ready'});
   applicationServicesStarted=true;
   void refreshShadowMigrationPanel();

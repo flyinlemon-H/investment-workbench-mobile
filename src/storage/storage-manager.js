@@ -29,6 +29,7 @@
     let idleWaiters=[];
     let migrationRunner=null;
     let cutoverRunner=null;
+    const stateCommitListeners=new Set();
     let draftAdapter=null;
 
     function status(){
@@ -203,6 +204,11 @@
           persistenceStatus='saved';
           lastError=null;
           const result=Object.freeze({revision,persistedAt:new Date().toISOString(),activeSource});
+          // Observers see the snapshot actually committed (including queue coalescing).
+          // Their failure can never turn a successful local write into a failed save.
+          stateCommitListeners.forEach(listener=>{
+            try{Promise.resolve(listener(cloneState(batch.snapshot))).catch(()=>{})}catch(_error){}
+          });
           batch.waiters.forEach(waiter=>waiter.resolve(result));
         }catch(error){
           const normalized=storageErrors().normalize(error,'storageManager.saveState','write_failed');
@@ -255,6 +261,7 @@
       loadState,
       canInitializeEmptyState,
       saveState,
+      subscribeStateCommits:listener=>{stateCommitListeners.add(listener);return ()=>stateCommitListeners.delete(listener)},
       flush,
       getMigrationStatus,
       getShadowMigrationPreflight,
@@ -286,6 +293,7 @@
     loadState:(...args)=>defaultManager().loadState(...args),
     canInitializeEmptyState:(...args)=>defaultManager().canInitializeEmptyState(...args),
     saveState:(...args)=>defaultManager().saveState(...args),
+    subscribeStateCommits:(...args)=>defaultManager().subscribeStateCommits(...args),
     flush:(...args)=>defaultManager().flush(...args),
     getMigrationStatus:(...args)=>defaultManager().getMigrationStatus(...args),
     getShadowMigrationPreflight:(...args)=>defaultManager().getShadowMigrationPreflight(...args),

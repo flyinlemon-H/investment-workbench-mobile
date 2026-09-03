@@ -7,10 +7,24 @@ const {execFileSync}=require('node:child_process');
 const {ALLOWLIST:MARKET_PATHS,validateBridgeContent,validateStatusContent}=require('./publish_market_bridges.js');
 const ROOT_FILES=new Set(['index.html','favicon.svg','social_posts.json','social_summary.json']);
 const DATA_FILES=new Set(['data/backend_config.js','data/ai_decision_review_data.js',
+  'data/supabase_config.js',
   'data/market_data_bridge.js','data/market_task_status_bridge.js',
   'data/operation_application_status_bridge.js','data/plan_application_status_bridge.js']);
 const digest=data=>crypto.createHash('sha256').update(data).digest('hex');
 const normalize=data=>Buffer.from(String(data).replace(/\r\n/g,'\n'),'utf8');
+
+function containsCredential(content){
+  if(/DEEPSEEK_API_KEY|-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----|\bsk-[A-Za-z0-9_-]{16,}|\bsb_secret_[A-Za-z0-9_-]+/i.test(content))return true;
+  // Header names and token variable names are legitimate Auth code. Literal user/
+  // service JWTs are not; public anon keys remain allowed only as public routing.
+  for(const match of content.matchAll(/eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g)){
+    try{const claims=JSON.parse(Buffer.from(match[0].split('.')[1],'base64url').toString());if(claims.role!=='anon'||claims.sub)return true}catch(_error){return true}
+  }
+  if(/(?:access_token|refresh_token|p_token|service_role_key|database_password)["']?\s*[:=]\s*["'][A-Za-z0-9_./+\-=]{24,}["']/i.test(content))return true;
+  if(/["']Bearer\s+[A-Za-z0-9_./+\-=]{24,}["']/i.test(content))return true;
+  if(/["']?token["']?\s*:\s*["'][0-9a-f]{64}["']/i.test(content))return true;
+  return false;
+}
 
 function permittedPath(value){
   return typeof value==='string'&&(ROOT_FILES.has(value)||DATA_FILES.has(value)
@@ -30,7 +44,7 @@ function artifactPlan(manifest,readSource,deploymentCommit,{validateMarket=true}
     if(!MARKET_PATHS.includes(entry.path)&&(entry.bytes!==bytes.length||entry.sha256!==sha256)){
       throw new Error(`Published source integrity mismatch: ${entry.path}`);
     }
-    if(/DEEPSEEK_API_KEY|\bAuthorization\b|\bBearer\s+|-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----|\bsk-[A-Za-z0-9_-]{16,}/i.test(bytes.toString('utf8'))){
+    if(containsCredential(bytes.toString('utf8'))){
       throw new Error(`Credential marker in Pages asset: ${entry.path}`);
     }
     assets.set(entry.path,bytes);entries.push({...entry,bytes:bytes.length,sha256});
@@ -70,4 +84,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={artifactPlan,permittedPath,digest,normalize};
+module.exports={artifactPlan,permittedPath,digest,normalize,containsCredential};

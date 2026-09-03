@@ -9,6 +9,10 @@ const root=path.resolve(__dirname,'..');
 const manifestPath=path.join(root,'publish-manifest.json');
 const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
+roleByPath.set('data/supabase_config.js','public Supabase URL and publishable key only');
+roleByPath.set('src/vendor/supabase-client.js','pinned Supabase SDK with MIT license; browser Auth and add-only inserts');
+roleByPath.set('src/universe-auto-add.js','durable local-first canonical stock addition queue and standard Auth');
+roleByPath.set('src/universe-sync-ui.js','local/cloud/market status, login and scoped PC reader setup');
 roleByPath.set('src/api/ai-api.js','PC AI Bridge raw request/response transport envelope');
 roleByPath.set('src/api/api-client.js','loopback-only GET/POST transport with timeouts and Local Network Access handling');
 roleByPath.set('src/api/health-api.js','user-initiated Bridge health and AI capability checks');
@@ -49,6 +53,10 @@ roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recom
 
 const paths=[...new Set([
   // Custom Pages workflows do not run Jekyll; upload-pages-artifact excludes dotfiles.
+  'data/supabase_config.js',
+  'src/vendor/supabase-client.js',
+  'src/universe-auto-add.js',
+  'src/universe-sync-ui.js',
   ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'),
   'src/api/ai-api.js',
   'src/long-term-logic-contract.js',
