@@ -154,6 +154,7 @@ function v13RecommendationFromRiskManagement(stock={}){
   return null;
 }
 function v13RecommendationPlanReason(plan,level){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return '';
   const trigger=plan&&plan.triggerPrice!==null&&plan.triggerPrice!==undefined?`计划价 ${plan.triggerPrice}`:'计划价缺失';
   const summary=plan&&plan.summary?`，${plan.summary}`:'';
   if(level==='triggered')return `${trigger} 已进入正式触发复核区${summary}`;
@@ -162,6 +163,7 @@ function v13RecommendationPlanReason(plan,level){
   return '';
 }
 function v13RecommendationFromPlan(stock={},plan={},priceSnapshot={},ruleConfig={}){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return null;
   if(!plan||plan.status!=='active'||['invalid','completed'].includes(plan.validityStatus))return null;
   const level=typeof checkPlanTriggerLevel==='function'?checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig):plan.stage;
   if(!['triggered','level2','level1'].includes(level))return null;

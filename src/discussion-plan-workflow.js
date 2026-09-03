@@ -50,6 +50,7 @@
   }
   function planSnapshotHash(plan){return PlanReview.planSnapshotHash(PlanV2.normalizePlan(plan))}
   function planLabelBase(plan){
+    if(!PlanV2.isLegacyPricePlan(plan))return '状态观察计划（只读）';
     const action=PlanV2.normalizePlan(plan).action;return action==='buy'?'建仓计划':(action==='add'?'加仓计划':(['reduce','sell'].includes(action)?'减仓计划':'计划'));
   }
   function replacementRootId(plan,byId){
@@ -69,6 +70,7 @@
   function compactPlan(plan,displayLabel=''){
     const normalized=PlanV2.normalizePlan(plan),conditions={};
     CONDITION_FIELDS.forEach(category=>{conditions[category]=array(normalized.conditions&&normalized.conditions[category]).map(item=>item.text).filter(Boolean)});
+    if(!PlanV2.isLegacyPricePlan(normalized))return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),planMode:'state_watch',readOnly:true,action:'observe',triggerPrice:null,triggerDirection:null,quantity:null,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus,conditions:{},invalidationConditions:[],allocationConstraint:{},validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate};
     return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),action:normalized.action,triggerPrice:normalized.triggerPrice,triggerDirection:normalized.triggerDirection,quantity:normalized.quantity,conditions,invalidationConditions:array(normalized.conditions&&normalized.conditions.invalidation).map(item=>item.text).filter(Boolean),allocationConstraint:clone(normalized.allocationConstraint),validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus};
   }
   function compactCurrentState(current){
@@ -101,6 +103,7 @@
     if(requestedTarget!==undefined&&requestedTarget!==null){
       const targetId=text(requestedTarget);if(!targetId)throw new Error('本次整理的目标计划无效，请重新整理计划。');
       const matched=array(facts.plans).find(plan=>plan.id===targetId);if(!matched)throw new Error('本次整理的目标计划不属于当前正式计划，请重新整理计划。');
+      if(matched.readOnly)throw new Error('状态观察计划暂不支持通过此草案入口处理。');
       targetPlan={id:matched.id,planVersion:matched.planVersion,snapshotHash:matched.snapshotHash};targetLabel=text(matched.displayLabel);
     }
     const hashInput={id,version,protectedFactsHash:facts.hash};if(targetPlan)hashInput.targetPlan=targetPlan;
@@ -129,6 +132,7 @@
       optional.context?'程序中已有当前结论，可作为辅助参考。':'程序中没有已保存的当前结论，这不是错误，也不影响整理计划。',
       '只输出本轮 AI 对话中明确讨论并形成结论的一个计划。没有被本轮讨论涉及的既有计划不得输出，程序会自动保持其原状态。',
       '本 V1 信封一次只表示一个计划操作；如果本轮明确讨论了多个计划，请分别整理，不要合并成批量结果。',
+      '标记 readOnly 的状态观察计划仅供参考，不得生成针对它的 Plan Draft。',
       '对已有计划：内容相同使用 no_change，实质变化使用 update，明确取消使用 invalidate，已经完成使用 complete；这四种 operation 都必须精确复制对应计划的 targetPlan id、planVersion、snapshotHash，不得省略、修改或猜测。',
       '如果本轮对话已经针对某个具体既有计划作出判断，即使结论是“不修改”，也不能返回 targetPlan:null；必须返回 no_change 并精确复制该计划的 targetPlan。',
       '同一业务计划发生变化必须使用 update，不能用 create 逃避绑定。create 仅用于本轮明确建立的全新独立计划，例如新增一个不同档位；它的 targetPlan 必须为 null，且不会替换其他计划。',
@@ -215,6 +219,7 @@
         const sessionPlan=array(prepared&&prepared.plans).find(plan=>plan.id===target.id&&plan.planVersion===target.planVersion&&plan.snapshotHash===target.snapshotHash);
         if(!sessionPlan)errors.push('targetPlan 不属于本次 Plan Draft Session，请重新整理计划');else targetLabel=text(sessionPlan.displayLabel);
         currentPlan=findCurrentPlan(stock,target);
+        if(currentPlan&&!PlanV2.isLegacyPricePlan(currentPlan))errors.push('状态观察计划暂不支持通过此草案入口处理。');
         if(!currentPlan||currentPlan.planVersion!==target.planVersion||planSnapshotHash(currentPlan)!==target.snapshotHash)errors.push('当前计划已发生变化，请重新整理计划');
       }
     }

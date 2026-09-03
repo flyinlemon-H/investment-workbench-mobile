@@ -1,5 +1,5 @@
 function targetSum(filter){return state.stocks.filter(filter).reduce((a,b)=>a+(Number(b.targetPct)||0),0)}
-function plansCount(type){return state.stocks.reduce((a,s)=>a+(s.plans||[]).filter(p=>type==='buy'?(p.action||'buy')==='buy':p.action==='sell').length,0)}
+function plansCount(type){return state.stocks.reduce((a,s)=>a+(s.plans||[]).filter(p=>!Object.prototype.hasOwnProperty.call(p,'planMode')||p.planMode==='legacy_price').filter(p=>type==='buy'?(p.action||'buy')==='buy':p.action==='sell').length,0)}
 function daysSince(dateStr){if(!dateStr)return null;const t=new Date(dateStr+'T00:00:00').getTime();if(isNaN(t))return null;return Math.floor((Date.now()-t)/86400000)}
 function freshnessLabel(dateStr){const d=daysSince(dateStr);if(d===null)return '未记录更新';if(d<=7)return '新';if(d<=30)return '可参考';return '已过期'}
 function freshnessText(dateStr){const d=daysSince(dateStr);if(d===null)return '未记录更新';return `更新 ${esc(dateStr)} · ${freshnessLabel(dateStr)}${d>30?' · 建议更新':''}`}

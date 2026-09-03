@@ -16,12 +16,13 @@ function getArchivedPlans(plans){
 }
 
 function getActivePlanByType(plans,planType){
-  return sortPlansByPriority(getActivePlans(plans).filter(plan=>plan.action===planType))[0]||null;
+  return sortPlansByPriority(getActivePlans(plans).filter(plan=>(!Object.prototype.hasOwnProperty.call(plan,'planMode')||plan.planMode==='legacy_price')&&plan.action===planType))[0]||null;
 }
 
 function getDisplayActivePlans(plans){
   const grouped=new Map();
   sortPlansByPriority(getActivePlans(plans)).forEach(plan=>{
+    if(Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return;
     if(!grouped.has(plan.action))grouped.set(plan.action,plan);
   });
   return Array.from(grouped.values());
@@ -47,11 +48,13 @@ function v13PlanCurrentPrice(priceSnapshot){
 }
 
 function v13PlanTriggerPrice(plan){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return null;
   const value=Number(plan&&plan.triggerPrice);
   return Number.isFinite(value)&&value>0?value:null;
 }
 
 function v13PlanTriggerDirection(plan){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return '';
   const explicit=String(plan&&plan.triggerDirection||'').toLowerCase();
   if(['above','gte','up','sell_above'].includes(explicit))return 'above';
   if(['below','lte','down','buy_below'].includes(explicit))return 'below';
@@ -59,6 +62,7 @@ function v13PlanTriggerDirection(plan){
 }
 
 function checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')return 'none';
   const normalized=typeof normalizeV13Plan==='function'?normalizeV13Plan(plan):plan;
   const current=v13PlanCurrentPrice(priceSnapshot);
   const trigger=v13PlanTriggerPrice(normalized);
@@ -77,6 +81,7 @@ function checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig){
 }
 
 function archivePlan(plan,reason){
+  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')throw new Error('状态观察计划暂不支持旧价格计划归档。');
   if(typeof PlanV2!=='undefined')return PlanV2.terminatePlan(plan,'replaced',{reason});
   return {...plan,status:'replaced'};
 }

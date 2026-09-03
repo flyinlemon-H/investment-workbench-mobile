@@ -211,6 +211,7 @@ body.discussion-prompt-open{overflow:hidden}.discussion-prompt-bg{overscroll-beh
 <div class="form-row"><label>为什么持有 / 建仓逻辑</label><textarea id="fThesis" placeholder="买它的理由、核心变量、未来要跟踪什么"></textarea></div>
 <div class="form-row"><label>什么情况下卖出 / 降仓</label><textarea id="fSellRule" placeholder="逻辑破坏、估值过热、仓位超标、到达止盈区间等"></textarea></div>
 <div class="form-row"><label>补充纪律 / 备注</label><textarea id="fNotes" placeholder="不为解套补仓、只做再平衡、观察仓不升级等"></textarea></div>
+<div id="planEditorReadOnly" class="hint" hidden style="white-space:normal;overflow-wrap:anywhere;margin-bottom:12px"></div>
 <div class="form-row"><label>加仓 / 建仓动作</label><div class="plan-editor"><table class="plan-table"><thead><tr><th>触发价格</th><th>数量</th><th>动作备注</th><th></th></tr></thead><tbody id="buyRows"></tbody></table><button class="link-btn" id="addBuy" type="button">＋ 添加一档</button></div></div>
 <div class="form-row" id="sellBox"><label>减仓 / 止盈动作</label><div class="plan-editor"><table class="plan-table"><thead><tr><th>触发价格</th><th>数量</th><th>动作备注</th><th></th></tr></thead><tbody id="sellRows"></tbody></table><button class="link-btn" id="addSell" type="button">＋ 添加一档</button></div></div>
 <div class="modal-actions"><button class="btn ghost" id="testCodeBtn" type="button">测试行情代码</button><button class="btn ghost" id="cancelBtn">取消</button><button class="btn" id="saveBtn">保存</button></div></div></div>

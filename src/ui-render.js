@@ -619,6 +619,7 @@ function v13RecommendationForEvent(stock,event){
 }
 function v13PlanDisplayName(plan){
   if(!plan||typeof plan!=='object')return '';
+  if(!PlanV2.isLegacyPricePlan(plan))return '状态观察计划（只读）';
   const name=String(plan.name||plan.title||'').trim();
   return name&&!/^[a-z0-9_-]+$/i.test(name)?name:'';
 }
@@ -667,6 +668,7 @@ function v13DisplayActivePlans(plans){
   return v13ActivePlans(plans).map(plan=>PlanV2.normalizePlan(plan));
 }
 function v13PlanDisplayCategory(plan){
+  if(!PlanV2.isLegacyPricePlan(plan))return 'observe';
   const type=String(plan&&plan.type||'').trim().toLowerCase();
   const action=String(plan&&plan.action||'').trim().toLowerCase();
   const text=`${type} ${action}`;
@@ -677,10 +679,12 @@ function v13PlanDisplayCategory(plan){
   return action==='sell'?'sell':(action==='observe'?'observe':'buy');
 }
 function v13PlanTriggerText(plan){
+  if(!PlanV2.isLegacyPricePlan(plan))return '状态观察计划';
   const value=plan&&plan.triggerPrice!==undefined?plan.triggerPrice:(plan&&plan.price!==undefined?plan.price:null);
   return value===null||value===undefined||value===''?'—':fmtMaybe(value,2);
 }
 function v13PlanQuantityText(plan){
+  if(!PlanV2.isLegacyPricePlan(plan))return '暂不支持在此处编辑或执行';
   const value=plan&&plan.quantity!==undefined?plan.quantity:(plan&&plan.shares!==undefined?plan.shares:null);
   return value===null||value===undefined||value===''?'数量待复核':fmtInt(value);
 }
@@ -697,11 +701,13 @@ function v13PlanSignature(stock,plan){
   ].map(x=>String(x??'').trim()).join('::');
 }
 function v13PlanGapInfo(stock,plan){
+  if(!PlanV2.isLegacyPricePlan(plan))return null;
   const cp=getComparablePrice(stock);
   const normalized=PlanV2.normalizePlan(plan);if(!(Number(cp)>0)||!(Number(normalized.triggerPrice)>0))return null;
   return planGap(cp,normalized.triggerPrice,normalized.action,normalized.triggerDirection);
 }
 function v13DerivedPlanValidity(stock,plan){
+  if(!PlanV2.isLegacyPricePlan(plan))return {status:'unavailable',label:'只读',reason:'状态观察计划暂不支持在此处编辑或执行',gap:null,priceTriggered:false,refreshNeeded:false,homeEligible:false,reviewRequired:false,freshness:PlanV2.freshness(plan,todayDate()),plan:PlanV2.normalizePlan(plan)};
   const p=PlanV2.normalizePlan(plan),freshness=PlanV2.freshness(p,todayDate()),gap=v13PlanGapInfo(stock,p),priceTriggered=Boolean(gap&&gap.triggered),inactive=freshness==='inactive',reviewNeeded=['needs_review','historical_only'].includes(freshness);
   const derivedStatus=inactive?(p.status==='completed'?'inactive_archived':'legacy_stale'):(reviewNeeded?(priceTriggered?'legacy_triggered_candidate':'legacy_active_candidate'):(priceTriggered?'valid_triggered':'valid_active'));
   const label=inactive?(p.status==='completed'?'已完成':'已失效'):(reviewNeeded?'需复核':'有效'),reason=inactive?'计划已经结束或超过明确有效边界':(freshness==='historical_only'?'历史计划缺少可靠复核日期':(freshness==='needs_review'?'已到复核日期或有效性待确认':(priceTriggered?'价格已触发，完整条件仍待确认':'当前计划仍在有效期内'))),refreshNeeded=reviewNeeded||inactive,homeEligible=!inactive&&!reviewNeeded&&priceTriggered;
@@ -740,7 +746,7 @@ function v13PlanRefreshRows(){
   const rows=[];
   (state.stocks||[]).forEach(stock=>{
     normalizeStockAnalysis(stock);
-    const plans=v13DisplayActivePlans(stock.plans);
+    const plans=v13DisplayActivePlans(stock.plans).filter(PlanV2.isLegacyPricePlan);
     const seen=new Set();
     plans.forEach(plan=>{
       const key=v13PlanSignature(stock,plan);
@@ -898,6 +904,7 @@ function v13ValidatePlanRefreshPayload(stock,payload){
   const warnings=[];
   const data=payload&&typeof payload==='object'&&!Array.isArray(payload)?payload:null;
   if(!data)return {ok:false,errors:['JSON 根对象必须是对象。'],warnings,plans:[]};
+  if(!PlanV2.isLegacyPricePlan(data))errors.push('此导入入口仅支持价格计划。');
   if(!String(data.symbol||'').trim())errors.push('缺少 symbol。');
   else if(!v13StockSymbolMatches(stock,data.symbol))errors.push('symbol 与当前选择标的不一致。');
   if(!Array.isArray(data.plans))errors.push('plans 必须是数组。');
@@ -907,6 +914,7 @@ function v13ValidatePlanRefreshPayload(stock,payload){
   plans.forEach((plan,index)=>{
     const prefix=`第 ${index+1} 条 plan`;
     if(!plan||typeof plan!=='object'||Array.isArray(plan)){errors.push(`${prefix} 必须是对象。`);return}
+    if(!PlanV2.isLegacyPricePlan(plan))errors.push(`${prefix} 不支持该 planMode。`);
     ['type','status','summary','validity','reviewRequirement'].forEach(field=>{
       if(plan[field]===undefined||plan[field]===null||String(plan[field]).trim()==='')errors.push(`${prefix} 缺少 ${field}。`);
     });
@@ -924,6 +932,7 @@ function v13ValidatePlanRefreshPayload(stock,payload){
   return {ok:errors.length===0,errors,warnings,plans,replaceExistingPlans:data.replaceExistingPlans===true,updatedAt:String(data.updatedAt||'')};
 }
 function v13NormalizeImportedRefreshPlan(stock,plan,batchId){
+  PlanV2.assertLegacyPricePlan(plan);
   const trigger=plan.triggerPrice===null||plan.triggerPrice===undefined?null:Number(plan.triggerPrice);
   const quantity=plan.quantity===null||plan.quantity===undefined?null:Number(plan.quantity);
   const type=String(plan.type||'').toLowerCase();
@@ -961,7 +970,7 @@ async function v13ImportPlanRefreshPayload(stock,payload,options={}){
   if(options.confirmed!==true)return {...validation,ok:false,errors:['必须由用户明确确认后才能写入正式计划。']};
   const today=typeof todayDate==='function'?todayDate():new Date().toISOString().slice(0,10);
   const batchId=`plan-refresh-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`;
-  let archivedCount=0,newPlans=[];const authoritativeState=state,result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('刷新标的不存在。');let current=(target.plans||[]).map(plan=>PlanV2.normalizePlan(plan));if(validation.replaceExistingPlans)current=current.map(plan=>{if(plan.status!=='active')return plan;archivedCount++;return PlanV2.terminatePlan(plan,'replaced',{reason:'由用户确认的 AI 刷新计划替换'})});newPlans=validation.plans.map(plan=>v13NormalizeImportedRefreshPlan(target,plan,batchId));target.plans=current.concat(newPlans);target.reviewState={...(target.reviewState&&typeof target.reviewState==='object'?target.reviewState:{}),planRefresh:{status:'imported',refreshBatchId:batchId,updatedAt:new Date().toISOString(),oldPlansArchivedCount:archivedCount,newPlansImportedCount:newPlans.length}};v13AppendPlanRefreshAudit(candidate,target,batchId,archivedCount,newPlans.length);return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
+  let archivedCount=0,newPlans=[];const authoritativeState=state,result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('刷新标的不存在。');let current=(target.plans||[]).map(plan=>PlanV2.normalizePlan(plan));if(validation.replaceExistingPlans)current=current.map(plan=>{if(!PlanV2.isLegacyPricePlan(plan)||plan.status!=='active')return plan;archivedCount++;return PlanV2.terminatePlan(plan,'replaced',{reason:'由用户确认的 AI 刷新计划替换'})});newPlans=validation.plans.map(plan=>v13NormalizeImportedRefreshPlan(target,plan,batchId));target.plans=current.concat(newPlans);target.reviewState={...(target.reviewState&&typeof target.reviewState==='object'?target.reviewState:{}),planRefresh:{status:'imported',refreshBatchId:batchId,updatedAt:new Date().toISOString(),oldPlansArchivedCount:archivedCount,newPlansImportedCount:newPlans.length}};v13AppendPlanRefreshAudit(candidate,target,batchId,archivedCount,newPlans.length);return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
   if(result.status!=='completed'){criticalWriteFailure(result.error);return {...validation,ok:false,errors:['保存失败，数据尚未确认保存，请重试'],warnings:validation.warnings||[]}}
   render();
   return {...validation,batchId,oldPlansArchivedCount:archivedCount,newPlansImportedCount:newPlans.length};
@@ -2774,7 +2783,7 @@ function renderEditCenter(){
 function bars(rows){return rows.map(r=>`<div class="bar-row"><div>${esc(r.name)}</div><div class="bar-bg"><div class="bar ${r.name.includes('AI')?'ai':r.name.includes('黄金')?'res':r.name.includes('核心')||r.name.includes('宽基')?'core':r.name.includes('卫星')?'sat':''}" style="width:${Math.min(100,r.p)}%"></div></div><div class="num">${fmt(r.p,1)}%</div></div>`).join('')}
 function filtered(){return state.stocks.filter(s=>s.type===currentTab)}
 function renderTable(){const raw=filtered();const total=getEstimatedTotalAssets();const withU=raw.map(s=>({s,u:stockUrgency(s),info:getPositionInfo(s,total)}));withU.sort((a,b)=>a.u.score-b.u.score);const arr=withU.map(x=>x.s);const totalTrig=withU.reduce((a,b)=>a+b.u.triggered,0);const tabMv=raw.reduce((a,s)=>a+(getMarketValue(s)||0),0);const overweights=withU.filter(x=>x.info&&x.info.status==='overweight').length;const underweights=withU.filter(x=>x.info&&x.info.status==='underweight').length;const typeName=currentTab==='holding'?'个股':currentTab==='etf'?'ETF':'观察';const trigBadge=totalTrig>0?` · <strong style="color:var(--seal)">⚠ 已触发 ${totalTrig} 条</strong>`:'';const rebalBadge=(overweights+underweights)>0?` · <strong style="color:var(--gold)">⚖ 偏差>5% ${overweights+underweights} 只</strong>`:'';document.getElementById('summary').innerHTML=`${typeName} <strong>${arr.length}</strong> 只 · 目标 <strong>${fmt(arr.reduce((a,b)=>a+(Number(b.targetPct)||0),0),1)}%</strong> · 市值 <strong>${fmtMoney(tabMv)}</strong>${trigBadge}${rebalBadge}`;const main=document.getElementById('main');if(!arr.length){main.innerHTML='<div class="empty">暂无标的</div>';return}const trigAlert=totalTrig>0?`<div class="alert-trig">⚠ 当前有 ${totalTrig} 条价位计划已触发，已置顶显示。</div>`:'';main.innerHTML=`${trigAlert}<div class="table-wrap"><table><colgroup><col style="width:7%"><col style="width:6.5%"><col style="width:9.5%"><col style="width:16%"><col style="width:19%"><col style="width:14.5%"><col style="width:5.5%"><col style="width:9.5%"><col style="width:6%"><col style="width:6.5%"></colgroup><thead><tr><th>名称</th><th>定位/主题</th><th>目标/实际</th><th>为什么持有</th><th>加仓/建仓动作</th><th>卖出/降仓条件</th><th>成本</th><th>${currentTab==='etf'?'当前市值':'当前价格'}</th><th>数量</th><th>操作</th></tr></thead><tbody>${arr.map(s=>row(s,total)+(typeof socialPanel==='function'?socialPanel(s):'')).join('')}</tbody></table></div>`;main.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.action==='detail')openStockDetail(b.dataset.id);if(b.dataset.action==='refresh')refreshOnePrice(b.dataset.id);if(b.dataset.action==='edit')openModal(b.dataset.id);if(b.dataset.action==='delete')del(b.dataset.id)}))}
-function row(s,total){const cp=getComparablePrice(s);const buys=(s.plans||[]).filter(p=>(p.action||'buy')==='buy').sort((a,b)=>Number(b.price||0)-Number(a.price||0));const sells=(s.plans||[]).filter(p=>p.action==='sell').sort((a,b)=>Number(b.price||0)-Number(a.price||0));const info=getPositionInfo(s,total);let targetCell='';if(!info)targetCell=`<div class="target-line">${fmtMaybe(s.targetPct,1)}%</div>`;else if(info.status==='no-price')targetCell=`<div class="target-line">${info.target.toFixed(1)}%</div><div class="actual-line">实际：未填${s.type==='etf'?'当前市值':'当前价格'}</div><span class="dev-badge na">无法计算偏差</span>`;else{const sign=info.deviation>=0?'+':'';const cls=info.status==='overweight'?'over':info.status==='underweight'?'under':'ok';const word=info.status==='overweight'?'超配':info.status==='underweight'?'低配':'平衡';targetCell=`<div class="target-line">${info.target.toFixed(1)}%</div><div class="actual-line">实际 ${info.actualPct.toFixed(1)}% · ${fmtMoney(info.mv)}</div><span class="dev-badge ${cls}">${word} ${sign}${info.deviation.toFixed(1)}%</span>`;const _cap=Number(s.capPct);if(_cap>0&&info.actualPct>=_cap)targetCell+=`<span class="dev-badge over">✖ ≥冻结线${_cap}%·禁买</span>`;const _ta=getTrimAction(s,info,total);if(_ta)targetCell+=`<span class="dev-badge over">▼ 削减线${_ta.trim}%→削回${_ta.toPct}%${_ta.sharesTxt?'·'+_ta.sharesTxt:''}</span>`}return `<tr><td class="name cell-name"><button class="link-btn detail-name" data-action="detail" data-id="${s.id}">${esc(s.name)}</button></td><td class="cell-role" data-label="定位/主题"><div class="chips"><span class="chip role">${esc(s.role||'—')}</span><span class="chip tag">${esc(s.theme||'—')}</span></div></td><td class="num cell-target" data-label="目标 / 实际">${targetCell}</td><td class="text cell-thesis" data-label="为什么持有">${esc(s.thesis||s.notes||'')||'<span class="muted">—</span>'}</td><td class="cell-buy" data-label="加仓/建仓">${chips(buys,'buy',cp)||'<div class="text">'+esc(s.buyRule||'—')+'</div>'}</td><td class="cell-sell" data-label="卖出/降仓"><div class="text">${esc(s.sellRule||'—')}</div>${sells.length?chips(sells,'sell',cp):''}</td><td class="num cell-cost" data-label="成本">${fmtMaybe(s.avgCost)}</td><td class="num cell-current" data-label="${s.type==='etf'?'当前市值':'当前价格'}">${currentDisplay(s)}</td><td class="num cell-shares" data-label="数量">${fmtInt(s.shares)}</td><td class="cell-actions"><div class="row-actions"><button class="link-btn" data-action="refresh" data-id="${s.id}">${s.type==='etf'?'刷新市值':'刷新价格'}</button><button class="link-btn" data-action="edit" data-id="${s.id}">编辑</button><button class="link-btn danger" data-action="delete" data-id="${s.id}">删除</button></div></td></tr>`}
+function row(s,total){const cp=getComparablePrice(s);const buys=(s.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&(p.action||'buy')==='buy').sort((a,b)=>Number(b.price||0)-Number(a.price||0));const sells=(s.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&p.action==='sell').sort((a,b)=>Number(b.price||0)-Number(a.price||0));const info=getPositionInfo(s,total);let targetCell='';if(!info)targetCell=`<div class="target-line">${fmtMaybe(s.targetPct,1)}%</div>`;else if(info.status==='no-price')targetCell=`<div class="target-line">${info.target.toFixed(1)}%</div><div class="actual-line">实际：未填${s.type==='etf'?'当前市值':'当前价格'}</div><span class="dev-badge na">无法计算偏差</span>`;else{const sign=info.deviation>=0?'+':'';const cls=info.status==='overweight'?'over':info.status==='underweight'?'under':'ok';const word=info.status==='overweight'?'超配':info.status==='underweight'?'低配':'平衡';targetCell=`<div class="target-line">${info.target.toFixed(1)}%</div><div class="actual-line">实际 ${info.actualPct.toFixed(1)}% · ${fmtMoney(info.mv)}</div><span class="dev-badge ${cls}">${word} ${sign}${info.deviation.toFixed(1)}%</span>`;const _cap=Number(s.capPct);if(_cap>0&&info.actualPct>=_cap)targetCell+=`<span class="dev-badge over">✖ ≥冻结线${_cap}%·禁买</span>`;const _ta=getTrimAction(s,info,total);if(_ta)targetCell+=`<span class="dev-badge over">▼ 削减线${_ta.trim}%→削回${_ta.toPct}%${_ta.sharesTxt?'·'+_ta.sharesTxt:''}</span>`}return `<tr><td class="name cell-name"><button class="link-btn detail-name" data-action="detail" data-id="${s.id}">${esc(s.name)}</button></td><td class="cell-role" data-label="定位/主题"><div class="chips"><span class="chip role">${esc(s.role||'—')}</span><span class="chip tag">${esc(s.theme||'—')}</span></div></td><td class="num cell-target" data-label="目标 / 实际">${targetCell}</td><td class="text cell-thesis" data-label="为什么持有">${esc(s.thesis||s.notes||'')||'<span class="muted">—</span>'}</td><td class="cell-buy" data-label="加仓/建仓">${chips(buys,'buy',cp)||'<div class="text">'+esc(s.buyRule||'—')+'</div>'}</td><td class="cell-sell" data-label="卖出/降仓"><div class="text">${esc(s.sellRule||'—')}</div>${sells.length?chips(sells,'sell',cp):''}</td><td class="num cell-cost" data-label="成本">${fmtMaybe(s.avgCost)}</td><td class="num cell-current" data-label="${s.type==='etf'?'当前市值':'当前价格'}">${currentDisplay(s)}</td><td class="num cell-shares" data-label="数量">${fmtInt(s.shares)}</td><td class="cell-actions"><div class="row-actions"><button class="link-btn" data-action="refresh" data-id="${s.id}">${s.type==='etf'?'刷新市值':'刷新价格'}</button><button class="link-btn" data-action="edit" data-id="${s.id}">编辑</button><button class="link-btn danger" data-action="delete" data-id="${s.id}">删除</button></div></td></tr>`}
 function renderTable(){const raw=filtered();const total=getEstimatedTotalAssets();const withU=raw.map(s=>({s,u:stockUrgency(s),info:getPositionInfo(s,total)}));withU.sort((a,b)=>a.u.score-b.u.score);const arr=withU.map(x=>x.s);const totalTrig=withU.reduce((a,b)=>a+b.u.triggered,0);const tabMv=raw.reduce((a,s)=>a+(getMarketValue(s)||0),0);const overweights=withU.filter(x=>x.info&&x.info.status==='overweight').length;const underweights=withU.filter(x=>x.info&&x.info.status==='underweight').length;const typeName=currentTab==='holding'?'个股':currentTab==='etf'?'ETF':'观察';const trigBadge=totalTrig>0?` · <strong style="color:var(--seal)">⚠ 已触发 ${totalTrig} 条</strong>`:'';const rebalBadge=(overweights+underweights)>0?` · <strong style="color:var(--gold)">⚖ 偏差>5% ${overweights+underweights} 只</strong>`:'';document.getElementById('summary').innerHTML=`${typeName} <strong>${arr.length}</strong> 只 · 目标 <strong>${fmt(arr.reduce((a,b)=>a+(Number(b.targetPct)||0),0),1)}%</strong> · 市值 <strong>${fmtMoney(tabMv)}</strong>${trigBadge}${rebalBadge}`;const main=document.getElementById('main');if(!arr.length){main.innerHTML='<div class="empty">暂无标的</div>';return}const trigAlert=totalTrig>0?`<div class="alert-trig">⚠ 当前有 ${totalTrig} 条价位计划已触发。进入详情页可查看并记录执行。</div>`:'';main.innerHTML=`${trigAlert}<div class="entry-list">${arr.map(s=>entryCard(s,total)).join('')}</div>`;main.querySelectorAll('[data-action="detail"]').forEach(b=>b.addEventListener('click',()=>openStockDetail(b.dataset.id)))}
 function entryTags(s){
   const f=normalizeDataFreshness(s.dataFreshness);
@@ -2825,7 +2834,7 @@ function aiComprehensiveLatestAction(s){
 }
 function planLatestAction(s){
   const cp=getComparablePrice(s);
-  const plans=v13DisplayActivePlans(s.plans).map(p=>({p,g:planGap(cp,p.triggerPrice,p.action,p.triggerDirection),validity:v13DerivedPlanValidity(s,p)})).filter(x=>Number(x.p&&x.p.triggerPrice)>0);
+  const plans=v13DisplayActivePlans(s.plans).filter(PlanV2.isLegacyPricePlan).map(p=>({p,g:planGap(cp,p.triggerPrice,p.action,p.triggerDirection),validity:v13DerivedPlanValidity(s,p)})).filter(x=>Number(x.p&&x.p.triggerPrice)>0);
   if(!plans.length)return '';
   plans.sort((a,b)=>{
     const ag=a.g?(a.g.triggered?-1000+a.g.absPct:a.g.absPct):9999;
@@ -2884,7 +2893,7 @@ function nearestLevel(price,levels,mode){
 function nearestPlanForAction(stock,action){
   const cp=getComparablePrice(stock);
   const rows=v13DisplayActivePlans(stock.plans)
-    .filter(p=>(action==='buy'?['buy','add'].includes(p.action):['sell','reduce'].includes(p.action))&&Number(p.triggerPrice)>0)
+    .filter(p=>PlanV2.isLegacyPricePlan(p)&&(action==='buy'?['buy','add'].includes(p.action):['sell','reduce'].includes(p.action))&&Number(p.triggerPrice)>0)
     .map(p=>({p,g:planGap(cp,p.triggerPrice,p.action,p.triggerDirection)}));
   if(!rows.length)return null;
   rows.sort((a,b)=>{
@@ -3020,18 +3029,38 @@ function entryCard(s,total){
   return `<div class="entry-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'—')}</div><div class="entry-code">${esc(s.code||'无代码')}</div></div><div class="entry-tags">${entryTags(s)||'<span class="chip tag">待分析</span>'}</div></div><div class="entry-line">${esc(entryBaseLine(s))}</div>${plan?`<div class="entry-hint">${esc(formatChineseText(plan))}</div>`:''}<div class="entry-hint"><b>最新操作：</b>${esc(formatChineseText(getLatestActionHint(s)))}</div><div class="entry-actions"><button class="btn" data-action="detail" data-id="${esc(s.id)}">进入分析</button></div></div>`;
 }
 function renderTable(){const raw=filtered();const total=getEstimatedTotalAssets();const withU=raw.map(s=>({s,u:stockUrgency(s),info:getPositionInfo(s,total)}));withU.sort((a,b)=>a.u.score-b.u.score);const arr=withU.map(x=>x.s);const totalTrig=withU.reduce((a,b)=>a+b.u.triggered,0);const tabMv=raw.reduce((a,s)=>a+(getMarketValue(s)||0),0);const overweights=withU.filter(x=>x.info&&x.info.status==='overweight').length;const underweights=withU.filter(x=>x.info&&x.info.status==='underweight').length;const typeName=currentTab==='holding'?'个股':currentTab==='etf'?'ETF':'观察';const trigBadge=totalTrig>0?` · <strong style="color:var(--seal)">⚠ 已触发 ${totalTrig} 条</strong>`:'';const rebalBadge=(overweights+underweights)>0?` · <strong style="color:var(--gold)">⚖ 偏差>5% ${overweights+underweights} 只</strong>`:'';document.getElementById('summary').innerHTML=`${typeName} <strong>${arr.length}</strong> 只 · 目标 <strong>${fmt(arr.reduce((a,b)=>a+(Number(b.targetPct)||0),0),1)}%</strong> · 市值 <strong>${fmtMoney(tabMv)}</strong>${trigBadge}${rebalBadge}`;const main=document.getElementById('main');if(!arr.length){main.innerHTML='<div class="empty">暂无标的</div>';return}const trigAlert=totalTrig>0?`<div class="alert-trig">⚠ 当前有 ${totalTrig} 条价位计划已触发。进入详情页可查看并记录执行。</div>`:'';main.innerHTML=`${trigAlert}<div class="entry-list">${arr.map(s=>entryCard(s,total)).join('')}</div>`;main.querySelectorAll('[data-action="detail"]').forEach(b=>b.addEventListener('click',()=>openStockDetail(b.dataset.id)))}
-function chips(ps,type,cp){if(!ps.length)return'';return `<div class="chips">${ps.map(raw=>{const p=PlanV2.normalizePlan(raw),g=planGap(cp,p.triggerPrice,p.action,p.triggerDirection),trigCls=(g&&g.triggered)?' triggered':'',arrow=g?(g.direction==='below'?'↓':'↑'):'',gapHtml=g?(g.triggered?`<span class="gap trig">⚠ 已触发</span>`:`<span class="gap">${arrow}${g.absPct.toFixed(1)}%</span>`):'<span class="gap">需复核</span>';return `<span class="chip ${type}${trigCls}"><span>${type==='buy'?'▲':'▼'}</span><span class="price">${fmtMaybe(p.triggerPrice)}</span><span class="shares">${fmtInt(p.quantity)}</span>${gapHtml}${p.note?`<span>· ${esc(p.note)}</span>`:''}</span>`}).join('')}</div>`}
+function chips(ps,type,cp){ps=ps.filter(PlanV2.isLegacyPricePlan);if(!ps.length)return'';return `<div class="chips">${ps.map(raw=>{const p=PlanV2.normalizePlan(raw),g=planGap(cp,p.triggerPrice,p.action,p.triggerDirection),trigCls=(g&&g.triggered)?' triggered':'',arrow=g?(g.direction==='below'?'↓':'↑'):'',gapHtml=g?(g.triggered?`<span class="gap trig">⚠ 已触发</span>`:`<span class="gap">${arrow}${g.absPct.toFixed(1)}%</span>`):'<span class="gap">需复核</span>';return `<span class="chip ${type}${trigCls}"><span>${type==='buy'?'▲':'▼'}</span><span class="price">${fmtMaybe(p.triggerPrice)}</span><span class="shares">${fmtInt(p.quantity)}</span>${gapHtml}${p.note?`<span>· ${esc(p.note)}</span>`:''}</span>`}).join('')}</div>`}
 function setType(t){formType=t;document.querySelectorAll('#typeToggle button').forEach(b=>b.classList.toggle('active',b.dataset.type===t));document.getElementById('sellBox').style.display=t==='watching'?'none':'block'}
-function openModal(id){editModalReturnTab=currentTab;editingId=id||null;const s=state.stocks.find(x=>x.id===id);document.getElementById('modalTitle').textContent=s?'编辑标的':'新增标的';setType(s?s.type:(currentTab==='etf'?'etf':currentTab==='watching'?'watching':'holding'));document.getElementById('fName').value=s?.name||'';document.getElementById('fCode').value=s?.code||'';document.getElementById('fCurrency').value=s?.currency||'';document.getElementById('fShares').value=s?.shares??'';document.getElementById('fCost').value=s?.avgCost??'';document.getElementById('fTarget').value=s?.targetPct??'';document.getElementById('fTrim').value=s?.trimPct??'';document.getElementById('fTrimTo').value=s?.trimToPct??'';document.getElementById('fCap').value=s?.capPct??'';document.getElementById('fCurrentPrice').value=s?.currentPrice??'';document.getElementById('fCurrentValue').value=s?.currentValue??'';document.getElementById('fRole').value=s?.role||'核心仓';document.getElementById('fTheme').value=s?.theme||'其他';document.getElementById('fThesis').value=s?.thesis||s?.notes||'';document.getElementById('fSellRule').value=s?.sellRule||'';document.getElementById('fNotes').value=s?.notes||'';planEditorOriginalPlans=(s?.plans||[]).map(plan=>PlanV2.normalizePlan(plan));tempBuy=planEditorOriginalPlans.filter(p=>p.status==='active'&&['buy','add'].includes(p.action)).map(PlanV2.clone);tempSell=planEditorOriginalPlans.filter(p=>p.status==='active'&&['sell','reduce'].includes(p.action)).map(PlanV2.clone);renderPlanEditor();document.getElementById('modal').classList.add('show');setTimeout(()=>document.getElementById('fName').focus(),50)}
+function openModal(id){editModalReturnTab=currentTab;editingId=id||null;const s=state.stocks.find(x=>x.id===id);document.getElementById('modalTitle').textContent=s?'编辑标的':'新增标的';setType(s?s.type:(currentTab==='etf'?'etf':currentTab==='watching'?'watching':'holding'));document.getElementById('fName').value=s?.name||'';document.getElementById('fCode').value=s?.code||'';document.getElementById('fCurrency').value=s?.currency||'';document.getElementById('fShares').value=s?.shares??'';document.getElementById('fCost').value=s?.avgCost??'';document.getElementById('fTarget').value=s?.targetPct??'';document.getElementById('fTrim').value=s?.trimPct??'';document.getElementById('fTrimTo').value=s?.trimToPct??'';document.getElementById('fCap').value=s?.capPct??'';document.getElementById('fCurrentPrice').value=s?.currentPrice??'';document.getElementById('fCurrentValue').value=s?.currentValue??'';document.getElementById('fRole').value=s?.role||'核心仓';document.getElementById('fTheme').value=s?.theme||'其他';document.getElementById('fThesis').value=s?.thesis||s?.notes||'';document.getElementById('fSellRule').value=s?.sellRule||'';document.getElementById('fNotes').value=s?.notes||'';planEditorOriginalPlans=(s?.plans||[]).map(plan=>PlanV2.normalizePlan(plan));tempBuy=planEditorOriginalPlans.filter(p=>PlanV2.isLegacyPricePlan(p)&&p.status==='active'&&['buy','add'].includes(p.action)).map(PlanV2.clone);tempSell=planEditorOriginalPlans.filter(p=>PlanV2.isLegacyPricePlan(p)&&p.status==='active'&&['sell','reduce'].includes(p.action)).map(PlanV2.clone);renderPlanEditor();document.getElementById('modal').classList.add('show');setTimeout(()=>document.getElementById('fName').focus(),50)}
 function closeModal(){document.getElementById('modal').classList.remove('show');editingId=null;editModalReturnTab=''}
-function renderPlanEditor(){document.getElementById('buyRows').innerHTML=tempBuy.map((p,i)=>planRow(p,i,'buy')).join('')||'<tr><td colspan="4" class="muted">暂无动作</td></tr>';document.getElementById('sellRows').innerHTML=tempSell.map((p,i)=>planRow(p,i,'sell')).join('')||'<tr><td colspan="4" class="muted">暂无动作</td></tr>';document.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.type==='buy'?tempBuy:tempSell;a.splice(Number(b.dataset.remove),1);renderPlanEditor()}));document.querySelectorAll('[data-field]').forEach(inp=>inp.addEventListener('input',()=>{const a=inp.dataset.type==='buy'?tempBuy:tempSell;const p=a[Number(inp.dataset.index)];p[inp.dataset.field]=inp.dataset.field==='note'?inp.value:parseFloat(inp.value)}))}
+function renderPlanEditor(){const readOnly=(planEditorOriginalPlans||[]).filter(p=>!PlanV2.isLegacyPricePlan(p)&&p.status==='active').map(p=>`<div>状态观察计划 · 暂不支持在此处编辑${p.note?' · '+esc(p.note):''}</div>`).join('');const notice=document.getElementById('planEditorReadOnly');notice.hidden=!readOnly;notice.innerHTML=readOnly;document.getElementById('buyRows').innerHTML=tempBuy.map((p,i)=>planRow(p,i,'buy')).join('')||'<tr><td colspan="4" class="muted">暂无动作</td></tr>';document.getElementById('sellRows').innerHTML=tempSell.map((p,i)=>planRow(p,i,'sell')).join('')||'<tr><td colspan="4" class="muted">暂无动作</td></tr>';document.querySelectorAll('[data-remove]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.type==='buy'?tempBuy:tempSell;a.splice(Number(b.dataset.remove),1);renderPlanEditor()}));document.querySelectorAll('[data-field]').forEach(inp=>inp.addEventListener('input',()=>{const a=inp.dataset.type==='buy'?tempBuy:tempSell;const p=a[Number(inp.dataset.index)];p[inp.dataset.field]=inp.dataset.field==='note'?inp.value:(inp.value===''?null:parseFloat(inp.value))}))}
 function planRow(p,i,type){return `<tr><td><input type="number" step="any" value="${esc(p.triggerPrice??'')}" data-type="${type}" data-index="${i}" data-field="triggerPrice"></td><td><input type="number" step="any" value="${esc(p.quantity??'')}" data-type="${type}" data-index="${i}" data-field="quantity"></td><td><input type="text" value="${esc(p.note??'')}" data-type="${type}" data-index="${i}" data-field="note"></td><td><button class="link-btn danger" type="button" data-type="${type}" data-remove="${i}">删除</button></td></tr>`}
 function addPlan(type){(type==='buy'?tempBuy:tempSell).push({id:'',action:type,triggerPrice:'',quantity:'',note:'',triggerDirection:type==='buy'?'below':'above'});renderPlanEditor()}
 function collectPlans(capPct){
-  const originals=(planEditorOriginalPlans||[]).map(plan=>PlanV2.normalizePlan(plan)),originalById=new Map(originals.map(plan=>[plan.id,plan])),editedRows=[...tempBuy,...(formType==='watching'?[]:tempSell)],editedIds=new Set(editedRows.map(plan=>plan.id).filter(Boolean)),editableOriginals=originals.filter(plan=>plan.status==='active'&&(['buy','add','sell','reduce'].includes(plan.action))&&(formType!=='watching'||!['sell','reduce'].includes(plan.action))),result=[];
-  originals.filter(plan=>!editableOriginals.some(item=>item.id===plan.id)).forEach(plan=>result.push(plan));
-  editableOriginals.filter(plan=>!editedIds.has(plan.id)).forEach(plan=>result.push(PlanV2.terminatePlan(plan,'cancelled',{reason:'用户在普通计划编辑器中取消'})));
-  editedRows.forEach(row=>{const triggerPrice=Number(row.triggerPrice),quantity=Number(row.quantity);if(!(triggerPrice>0)||!(quantity>0))return;const existing=originalById.get(row.id),note=String(row.note||'').trim();if(existing)result.push(PlanV2.applyAuthoritativeEdit(existing,{action:existing.action,triggerPrice,quantity,note,triggerDirection:existing.triggerDirection}));else result.push(PlanV2.createPlan({action:row.action,triggerPrice,triggerDirection:row.triggerDirection,quantity,note,allocationConstraint:{maxPositionPct:Number(capPct)>0?Number(capPct):null,targetWeightRange:null}},{source:'manual'}))});
+  const originals=(planEditorOriginalPlans||[]).map(plan=>PlanV2.normalizePlan(plan)),originalById=new Map(originals.map(plan=>[plan.id,plan]));
+  const editable=plan=>PlanV2.isLegacyPricePlan(plan)&&plan.status==='active'&&['buy','add','sell','reduce'].includes(plan.action)&&(formType!=='watching'||!['sell','reduce'].includes(plan.action));
+  const editedRows=[...tempBuy,...(formType==='watching'?[]:tempSell)],edits=new Map(),created=[];
+  const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
+  for(const row of editedRows){
+    PlanV2.assertLegacyPricePlan(row);
+    const existing=originalById.get(row.id),note=String(row.note||'').trim();
+    if(row.id&&(!existing||!editable(existing)||edits.has(row.id)))throw new Error('计划编辑目标无效或重复。');
+    if(existing){
+      const patch={note};
+      for(const field of ['triggerPrice','quantity']){
+        const value=row[field]===null||row[field]===''?null:Number(row[field]);
+        if(value===existing[field])continue;
+        if(!positive(value))throw new Error('修改的计划价格和数量必须为正数。');
+        patch[field]=value;
+      }
+      if(row.action!==existing.action)throw new Error('普通编辑器不支持更改计划动作。');
+      edits.set(existing.id,PlanV2.applyAuthoritativeEdit(existing,patch));
+    }else{
+      if(!positive(row.triggerPrice)||!positive(row.quantity))throw new Error('新计划的价格和数量必须为正数。');
+      created.push(PlanV2.createPlan({action:row.action,triggerPrice:Number(row.triggerPrice),triggerDirection:row.triggerDirection,quantity:Number(row.quantity),note,allocationConstraint:{maxPositionPct:Number(capPct)>0?Number(capPct):null,targetWeightRange:null}},{source:'manual'}));
+    }
+  }
+  const result=originals.map(plan=>!editable(plan)?plan:(edits.get(plan.id)||PlanV2.terminatePlan(plan,'cancelled',{reason:'用户在普通计划编辑器中取消'}))).concat(created);
   const validation=PlanV2.validatePlanCollection(result);if(!validation.ok)throw new Error(validation.errors.join('；'));return result;
 }
 async function save(){
@@ -3212,7 +3241,7 @@ function actionKindLabel(text,decisionAction){
 }
 function nearestDetailPlan(stock){
   const cp=getComparablePrice(stock);
-  const rows=v13DisplayActivePlans(stock.plans).map(p=>({p,g:planGap(cp,p.triggerPrice,p.action,p.triggerDirection)})).filter(x=>Number(x.p&&x.p.triggerPrice)>0);
+  const rows=v13DisplayActivePlans(stock.plans).filter(PlanV2.isLegacyPricePlan).map(p=>({p,g:planGap(cp,p.triggerPrice,p.action,p.triggerDirection)})).filter(x=>Number(x.p&&x.p.triggerPrice)>0);
   if(!rows.length)return null;
   rows.sort((a,b)=>{
     const av=a.g?(a.g.triggered?-1000+a.g.absPct:a.g.absPct):9999;
@@ -3369,7 +3398,7 @@ function positionPlanPanel(stock){
   const observeRows=activePlans.filter(p=>v13PlanDisplayCategory(p)==='observe').map(p=>`${v13PlanTriggerText(p)}：${v13PlanQuantityText(p)} · ${p.note||p.summary||p.actionHint||'—'}`);
   const sellRows=activePlans.filter(p=>v13PlanDisplayCategory(p)==='sell').map(p=>`${v13PlanTriggerText(p)}：${v13PlanQuantityText(p)} · ${p.note||p.summary||p.actionHint||'—'}`);
   const riskRows=activePlans.filter(p=>v13PlanDisplayCategory(p)==='risk').map(p=>`${v13PlanTriggerText(p)}：${v13PlanQuantityText(p)} · ${p.note||p.summary||p.actionHint||'—'}`);
-  const allActiveRows=activePlans.map(p=>`${p.type||p.action||'plan'} ${fmtMaybe(p.triggerPrice!==undefined?p.triggerPrice:p.price)} · ${p.summary||p.actionHint||p.note||'—'}`);
+  const allActiveRows=activePlans.map(p=>!PlanV2.isLegacyPricePlan(p)?`状态观察计划（只读） · ${p.note||'—'}`:`${p.type||p.action||'plan'} ${fmtMaybe(p.triggerPrice!==undefined?p.triggerPrice:p.price)} · ${p.summary||p.actionHint||p.note||'—'}`);
   const planList=arr=>arr.length?'<ul style="margin:6px 0 0 18px;padding:0">'+arr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'—';
   const originalPlanContent=activePlans.length?`<details class="card" style="margin-top:10px" open><summary class="card-title" style="cursor:pointer">当前有效计划</summary><div class="text" style="max-width:none;margin-top:8px"><b>有效计划：</b>${planList(allActiveRows)}<b>加仓计划：</b>${planList(buyRows)}<b>观察/防守计划：</b>${planList(observeRows)}<b>减仓计划：</b>${planList(sellRows)}<b>风险复核计划：</b>${planList(riskRows)}</div></details>`:'<div class="card-note">暂无当前有效计划。</div>';
   const fallback=`<div class="text" style="max-width:none"><b>最近计划：</b>${esc(main)}<br><b>计划摘要：</b>${esc(planSummary||'暂无明确仓位计划')}</div>`;
@@ -3517,8 +3546,8 @@ function allocationDecisionContext(stock){
     socialReview:reviews.socialReview||null,
     newsReview:reviews.newsReview||null,
     comprehensiveReview:reviews.comprehensiveReview||null,
-    buyPlans:(stock.plans||[]).filter(p=>(p.action||'buy')==='buy'),
-    sellPlans:(stock.plans||[]).filter(p=>p.action==='sell'),
+    buyPlans:(stock.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&(p.action||'buy')==='buy'),
+    sellPlans:(stock.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&p.action==='sell'),
     tradePlan:stock.tradePlan||null,
     dataFreshness:normalizeDataFreshness(stock.dataFreshness)
   };
@@ -4026,7 +4055,7 @@ function aiDiscussionPromptText(stock){
       addTriggerLine(state,`- ${action}计划，${price}，数量 ${it.quantity!==null&&it.quantity!==undefined?fmtInt(it.quantity):'未定'}，${formatChineseText(it.note||it.condition||'无备注')}`,key);
     });
   }
-  (stock.plans||[]).map(plan=>PlanV2.normalizePlan(plan)).forEach(p=>{
+  (stock.plans||[]).map(plan=>PlanV2.normalizePlan(plan)).filter(PlanV2.isLegacyPricePlan).forEach(p=>{
     const price=Number(p.triggerPrice);
     if(!(price>0)||!(cp>0))return;
     const actionRaw=['sell','reduce'].includes(p.action)?'sell':'buy';
@@ -4137,6 +4166,7 @@ function copyAiDiscussionPrompt(){
   startStockDiscussion(stock);
 }
 function formatPlanForDiscussion(stock,p){
+  if(!PlanV2.isLegacyPricePlan(p))return '- 状态观察计划（只读）：'+String(p.note||'');
   const plan=PlanV2.normalizePlan(p),action=['sell','reduce'].includes(plan.action)?'减仓':'加仓';
   return `- ${action}：触发价 ${fmtMaybe(plan.triggerPrice)}，数量 ${fmtInt(plan.quantity)}，${planDistanceText(stock,plan)}，备注：${plan.note||'未填写'}`;
 }
@@ -4150,8 +4180,8 @@ function fullAddDiscussionPromptText(stock){
   const cp=getComparablePrice(stock)||stockCurrentPrice(stock)||null;
   const mv=getMarketValue(stock);
   const currentShares=stockCurrentShares(stock);
-  const buyPlans=(stock.plans||[]).filter(p=>(p.action||'buy')==='buy');
-  const sellPlans=(stock.plans||[]).filter(p=>p.action==='sell');
+  const buyPlans=(stock.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&(p.action||'buy')==='buy');
+  const sellPlans=(stock.plans||[]).filter(p=>PlanV2.isLegacyPricePlan(p)&&p.action==='sell');
   const review=normalizeAiReviews(stock.aiReviews).comprehensiveReview||null;
   const sentiment=sentimentReviewContext(stock);
   const fundamental=stock.type==='etf'?null:fundamentalSummaryForPrompt(stock);
@@ -4300,7 +4330,8 @@ function copyFullAddDiscussionPrompt(){
 function normalizeImportedTradePlan(parsed,stock){
   const src=(parsed&&typeof parsed==='object'&&(parsed.plan||parsed.tradePlan||parsed.positionPlan))||(parsed&&typeof parsed==='object'?parsed:null);
   if(!src||typeof src!=='object'||Array.isArray(src))throw new Error('JSON 必须是计划对象，或顶层包含 plan / tradePlan / positionPlan。');
-  const items=Array.isArray(src.planItems)?src.planItems:[];
+  PlanV2.assertLegacyPricePlan(parsed);PlanV2.assertLegacyPricePlan(src);
+  const items=Array.isArray(src.planItems)?src.planItems:[];items.forEach(PlanV2.assertLegacyPricePlan);
   const now=new Date().toISOString();
   return {
     symbol:String(src.symbol||stock.code||stock.symbol||''),
@@ -4328,6 +4359,7 @@ function normalizeImportedTradePlan(parsed,stock){
   };
 }
 function tradePlanToPlans(tradePlan,stock){
+  PlanV2.assertLegacyPricePlan(tradePlan);(tradePlan.planItems||[]).forEach(PlanV2.assertLegacyPricePlan);
   return (tradePlan.planItems||[]).map(item=>{
     const action=item.action==='reduce'||item.action==='sell'?'sell':(item.action==='add'||item.action==='buy'?'buy':'');
     const price=Number(item.triggerPrice);
@@ -4370,7 +4402,7 @@ async function importTradePlanJson(){
   try{
     const tradePlan=normalizeImportedTradePlan(parsed,stock);
     const mapped=tradePlanToPlans(tradePlan,stock);if(!confirm(`确认导入 ${mapped.length} 条可跟踪计划？\n\n导入内容是计划建议；程序会生成正式时间，价格触发仍不代表完整条件满足。`))return;
-    const authoritativeState=state,result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('导入标的不存在。');target.tradePlan=tradePlan;target.plans=(target.plans||[]).map(plan=>{const normalized=PlanV2.normalizePlan(plan);return normalized.status==='active'&&normalized.source==='tradeplan_import'?PlanV2.terminatePlan(normalized,'replaced',{reason:'由用户确认的新 TradePlan 替换'}):normalized}).concat(mapped);target.updatedAt=Date.now();return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});if(result.status!=='completed'){criticalWriteFailure(result.error);return}
+    const authoritativeState=state,result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('导入标的不存在。');target.tradePlan=tradePlan;target.plans=(target.plans||[]).map(plan=>{const normalized=PlanV2.normalizePlan(plan);return PlanV2.isLegacyPricePlan(normalized)&&normalized.status==='active'&&normalized.source==='tradeplan_import'?PlanV2.terminatePlan(normalized,'replaced',{reason:'由用户确认的新 TradePlan 替换'}):normalized}).concat(mapped);target.updatedAt=Date.now();return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});if(result.status!=='completed'){criticalWriteFailure(result.error);return}
     closeTradePlanImportModal();
     render();
     alert(`加仓/减仓计划已导入。已保存 ${tradePlan.planItems.length} 条计划项，其中 ${mapped.length} 条可跟踪触发价。不会自动修改持仓或成本。`);
@@ -4969,7 +5001,7 @@ function v13PlanCenterSummary(stock){
   const order=['buy','observe','sell','risk'];
   const groups=order.map(key=>({key,items:plans.filter(plan=>v13PlanDisplayCategory(plan)===key)})).filter(group=>group.items.length);
   if(!plans.length)return '<div class="empty">暂无当前有效计划</div>';
-  const groupHtml=group=>`<section class="card" style="background:rgba(255,255,255,.58)"><div class="card-title">${esc(labels[group.key])}</div>${group.items.map(raw=>{const plan=PlanV2.normalizePlan(raw),view=v13DerivedPlanValidity(stock,plan),date=plan.lastReviewedAt?`最后复核 ${plan.lastReviewedAt.slice(0,10)}`:(plan.source==='migrated_legacy'?'历史计划，日期未知':'尚未复核'),next=plan.nextReviewDate?` · 下次复核 ${plan.nextReviewDate}`:'';return `<div class="trig-row ${group.key==='sell'?'sell':'buy'}"><div class="trig-name">${esc(businessLabels.get(plan.id)||`${labels[group.key]}计划`)} · ${v13PlanTriggerText(plan)} <span class="chip ${view.label==='有效'?'role':'warn'}">${esc(view.label)}</span></div><div class="trig-dist">${v13PlanQuantityText(plan)}</div><div class="trig-desc">${esc(v13PlanCenterShortText(plan))}<div class="card-note">${esc(date+next)}</div>${view.reviewRequired?`<button class="btn small" type="button" data-plan-reconfirm-id="${esc(plan.id)}">确认继续有效</button>`:''}</div></div>`}).join('')}</section>`;
+  const groupHtml=group=>`<section class="card" style="background:rgba(255,255,255,.58)"><div class="card-title">${esc(labels[group.key])}</div>${group.items.map(raw=>{const plan=PlanV2.normalizePlan(raw),view=v13DerivedPlanValidity(stock,plan),date=plan.lastReviewedAt?`最后复核 ${plan.lastReviewedAt.slice(0,10)}`:(plan.source==='migrated_legacy'?'历史计划，日期未知':'尚未复核'),next=plan.nextReviewDate?` · 下次复核 ${plan.nextReviewDate}`:'';return `<div class="trig-row ${PlanV2.isLegacyPricePlan(plan)?(group.key==='sell'?'sell':'buy'):''}"><div class="trig-name">${esc(businessLabels.get(plan.id)||`${labels[group.key]}计划`)} · ${v13PlanTriggerText(plan)} <span class="chip ${view.label==='有效'?'role':'warn'}">${esc(view.label)}</span></div><div class="trig-dist">${v13PlanQuantityText(plan)}</div><div class="trig-desc">${esc(v13PlanCenterShortText(plan))}<div class="card-note">${esc(date+next)}</div>${view.reviewRequired?`<button class="btn small" type="button" data-plan-reconfirm-id="${esc(plan.id)}">确认继续有效</button>`:''}</div></div>`}).join('')}</section>`;
   return `<div class="dash" style="margin-top:10px">${groups.map(groupHtml).join('')}</div>`;
 }
 function v13PlanCompactSummary(stock){
@@ -4994,7 +5026,7 @@ function v13PlanCenterHistory(stock){
   return `<div class="trig-list">${archived.map(plan=>`<div class="trig-row"><div class="trig-name">${esc((plan.terminatedAt||plan.updatedAt||plan.createdAt||'日期未知').slice(0,10))}</div><div class="trig-dist">${esc(statusLabel[plan.status]||'已失效')}</div><div class="trig-desc">${esc(v13PlanDisplayCategory(plan)==='sell'?'减仓计划':'计划')} · ${v13PlanTriggerText(plan)} · ${esc(formatChineseText(plan.invalidationReason||plan.note||'历史计划'))}</div></div>`).join('')}</div>`;
 }
 async function reconfirmPlanFromCenter(planId){
-  const stock=state.stocks.find(item=>item.id===detailStockId),sourcePlan=stock&&(stock.plans||[]).find(plan=>plan.id===planId);if(!stock||!sourcePlan)return;if(!confirm('确认已人工复核该计划，并继续将其视为有效计划？\n\n这会记录本次复核日期，并安排 30 天后的下次复核。'))return;
+  const stock=state.stocks.find(item=>item.id===detailStockId),sourcePlan=stock&&(stock.plans||[]).find(plan=>plan.id===planId);if(!stock||!sourcePlan)return;if(!PlanV2.isLegacyPricePlan(sourcePlan)){alert('状态观察计划暂不支持在此处编辑。');return}if(!confirm('确认已人工复核该计划，并继续将其视为有效计划？\n\n这会记录本次复核日期，并安排 30 天后的下次复核。'))return;
   const next=new Date();next.setDate(next.getDate()+30);const authoritativeState=state,result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id),index=(target.plans||[]).findIndex(plan=>plan.id===planId);if(index<0)throw new Error('计划不存在。');target.plans[index]=PlanV2.reconfirmPlan(target.plans[index],{nextReviewDate:next.toISOString().slice(0,10)});target.updatedAt=Date.now();return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
   if(result.status!=='completed'){criticalWriteFailure(result.error);return}renderPlanCenter();
 }
@@ -5415,7 +5447,7 @@ function stockWorkspaceTabs(stock){
 function planListHtml(plans,type,cp){
   const arr=v13DisplayActivePlans(plans).filter(p=>v13PlanDisplayCategory(p)===type).sort((a,b)=>Number(b.triggerPrice||0)-Number(a.triggerPrice||0));
   if(!arr.length)return '<div class="empty" style="padding:18px 0">暂无计划</div>';
-  return `<div class="trig-list">${arr.map(p=>{const g=planGap(cp,p.triggerPrice,p.action,p.triggerDirection);const tag={buy:'加仓',sell:'减仓',observe:'观察/防守',risk:'风险复核'}[type]||'计划',validity=v13DerivedPlanValidity({currentPrice:cp},p);const gap=g?(g.triggered?'价格已触发，条件待确认':(g.near?`接近目标 ${g.absPct.toFixed(1)}%`:`距目标 ${g.absPct.toFixed(1)}%`)):'方向待复核';return `<div class="trig-row ${type==='sell'?'sell':'buy'}"><div class="trig-name">${tag} · ${v13PlanTriggerText(p)} · ${esc(validity.label)}</div><div class="trig-dist">${gap}</div><div class="trig-desc">${v13PlanQuantityText(p)}${p.note?' · '+esc(p.note):''}</div></div>`}).join('')}</div>`;
+  return `<div class="trig-list">${arr.map(p=>{const g=PlanV2.isLegacyPricePlan(p)?planGap(cp,p.triggerPrice,p.action,p.triggerDirection):null;const tag={buy:'加仓',sell:'减仓',observe:'观察/防守',risk:'风险复核'}[type]||'计划',validity=v13DerivedPlanValidity({currentPrice:cp},p);const gap=!PlanV2.isLegacyPricePlan(p)?'仅供只读参考':g?(g.triggered?'价格已触发，条件待确认':(g.near?`接近目标 ${g.absPct.toFixed(1)}%`:`距目标 ${g.absPct.toFixed(1)}%`)):'方向待复核';return `<div class="trig-row ${PlanV2.isLegacyPricePlan(p)?(type==='sell'?'sell':'buy'):''}"><div class="trig-name">${tag} · ${v13PlanTriggerText(p)} · ${esc(validity.label)}</div><div class="trig-dist">${gap}</div><div class="trig-desc">${v13PlanQuantityText(p)}${p.note?' · '+esc(p.note):''}</div></div>`}).join('')}</div>`;
 }
 function stockExecutionRows(name){
   const rows=(Array.isArray(state.executionLog)?state.executionLog:[]).filter(x=>x.stock===name).sort((a,b)=>(Number(b.t)||0)-(Number(a.t)||0));
@@ -5517,7 +5549,7 @@ async function saveAnalysisModule(){
   render();
 }
 function planPromptList(plans,type){
-  return (plans||[]).map(plan=>PlanV2.normalizePlan(plan)).filter(p=>type==='buy'?['buy','add'].includes(p.action):['sell','reduce'].includes(p.action)).map(p=>({triggerPrice:p.triggerPrice||'',quantity:p.quantity||'',note:p.note||'',triggerDirection:p.triggerDirection||'',validity:p.validityStatus==='active'?'有效':'需复核'}));
+  return (plans||[]).map(plan=>PlanV2.normalizePlan(plan)).filter(PlanV2.isLegacyPricePlan).filter(p=>type==='buy'?['buy','add'].includes(p.action):['sell','reduce'].includes(p.action)).map(p=>({triggerPrice:p.triggerPrice||'',quantity:p.quantity||'',note:p.note||'',triggerDirection:p.triggerDirection||'',validity:p.validityStatus==='active'?'有效':'需复核'}));
 }
 function buildAnalysisPrompt(stock){
   normalizeStockAnalysis(stock);
@@ -7626,7 +7658,7 @@ function exportPlanUpdateDraftJson(){
   const ctx=latestPlanUpdateContext(stock),saved=ctx&&window.PlanUpdateDraft.saved(ctx.request.request_id);if(!saved||!saved.draft)return alert('当前没有可导出的计划草案。');
   const blob=new Blob([JSON.stringify(saved.draft,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`plan_update_draft_${ctx.request.symbol}_${todayDate()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function planDraftValue(plan){return {action:plan&& (plan.action_type||plan.type||plan.action||'—'),price:plan&& (plan.trigger_price??plan.triggerPrice??plan.price??null),quantity:plan&& (plan.quantity??plan.shares??null),status:plan&& (plan.status||'active'),reason:plan&& (plan.reason||plan.summary||plan.note||'—')}}
+function planDraftValue(plan){if(!PlanV2.isLegacyPricePlan(plan))return {action:'状态观察计划（只读）',price:null,quantity:null,status:plan.status,reason:plan.note||'—'};return {action:plan&& (plan.action_type||plan.type||plan.action||'—'),price:plan&& (plan.trigger_price??plan.triggerPrice??plan.price??null),quantity:plan&& (plan.quantity??plan.shares??null),status:plan&& (plan.status||'active'),reason:plan&& (plan.reason||plan.summary||plan.note||'—')}}
 function planDraftActionLabel(action){return {add_review:'加仓复核',add:'加仓',buy:'加仓',reduce_review:'减仓复核',reduce:'减仓',sell:'减仓',take_profit:'利润兑现',hold_review:'观察/防守',hold:'观察',observe:'观察',risk_review:'风险复核',stop_loss:'趋势防守',risk:'风险复核'}[action]||action||'计划'}
 function openPlanUpdateDraftDiff(stock){
   const ctx=latestPlanUpdateContext(stock),saved=ctx&&window.PlanUpdateDraft.saved(ctx.request.request_id);if(!saved||!saved.validation||!saved.validation.business_valid)return alert('计划草案尚未通过校验。');
@@ -7641,7 +7673,7 @@ async function confirmPlanUpdateApplication(stock,ctx,saved,rows,modal){
   const currentHash=await window.PlanUpdateDraft.snapshotHash(stock.plans||[]);if(currentHash!==saved.current_plan_snapshot_hash)return alert('当前计划已变化，请重新生成计划草案。');
   if(!confirm('二次确认：确认后将更新正式计划，但不会执行交易或改变持仓。是否继续？'))return;
   const draft=saved.draft,archiveIds=new Set([...arrSafe(draft.plans_to_archive),...arrSafe(draft.plans_to_delete)].map(String)),authoritativeState=state;
-  const result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('计划标的不存在。');const byId=new Map((target.plans||[]).map(plan=>{const normalized=PlanV2.normalizePlan(plan);return [normalized.id,normalized]})),next=[];byId.forEach(plan=>{if(archiveIds.has(plan.id))next.push(PlanV2.terminatePlan(plan,'replaced',{reason:'由用户确认的计划更新草案替换'}))});arrSafe(draft.proposed_plans).forEach(proposed=>{const id=String(proposed.plan_id||proposed.id||''),existing=id&&byId.get(id),action=PlanV2.normalizeAction(proposed.action_type),patch={action,triggerPrice:proposed.trigger_price,quantity:proposed.quantity,note:String(proposed.reason||draft.summary||''),conditions:{other:arrSafe(proposed.conditions),invalidation:arrSafe(proposed.invalidation_conditions)},validUntil:proposed.valid_until,fullConditionStatus:'unproven'};if(existing){next.push(PlanV2.applyAuthoritativeEdit(existing,{...patch,triggerDirection:existing.triggerDirection,allocationConstraint:existing.allocationConstraint}))}else next.push(PlanV2.createPlan({...patch,triggerDirection:PlanV2.normalizeDirection(proposed.trigger_direction),allocationConstraint:{maxPositionPct:['buy','add'].includes(action)?(Number(target.capPct)||Number(target.strategy&&target.strategy.maxWeight)||null):null,targetWeightRange:null}},{source:'ai_refresh'}))});const included=new Set(next.map(plan=>plan.id));byId.forEach(plan=>{if(!included.has(plan.id)&&!archiveIds.has(plan.id))next.push(plan)});target.plans=next;target.updatedAt=Date.now();return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
+  const result=await PlanV2.commitCandidate(authoritativeState,candidate=>{const target=candidate.stocks.find(item=>item.id===stock.id);if(!target)throw new Error('计划标的不存在。');const byId=new Map((target.plans||[]).map(plan=>{const normalized=PlanV2.normalizePlan(plan);return [normalized.id,normalized]})),next=[];byId.forEach(plan=>{if(archiveIds.has(plan.id))next.push(PlanV2.terminatePlan(plan,'replaced',{reason:'由用户确认的计划更新草案替换'}))});arrSafe(draft.proposed_plans).forEach(proposed=>{PlanV2.assertLegacyPricePlan(draft);PlanV2.assertLegacyPricePlan(proposed);const id=String(proposed.plan_id||proposed.id||''),existing=id&&byId.get(id),action=PlanV2.normalizeAction(proposed.action_type),patch={action,triggerPrice:proposed.trigger_price,quantity:proposed.quantity,note:String(proposed.reason||draft.summary||''),conditions:{other:arrSafe(proposed.conditions),invalidation:arrSafe(proposed.invalidation_conditions)},validUntil:proposed.valid_until,fullConditionStatus:'unproven'};if(existing){next.push(PlanV2.applyAuthoritativeEdit(existing,{...patch,triggerDirection:existing.triggerDirection,allocationConstraint:existing.allocationConstraint}))}else next.push(PlanV2.createPlan({...patch,triggerDirection:PlanV2.normalizeDirection(proposed.trigger_direction),allocationConstraint:{maxPositionPct:['buy','add'].includes(action)?(Number(target.capPct)||Number(target.strategy&&target.strategy.maxWeight)||null):null,targetWeightRange:null}},{source:'ai_refresh'}))});const included=new Set(next.map(plan=>plan.id));byId.forEach(plan=>{if(!included.has(plan.id)&&!archiveIds.has(plan.id))next.push(plan)});target.plans=next;target.updatedAt=Date.now();return candidate},{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
   if(result.status!=='completed'){criticalWriteFailure(result.error);return}
   const now=new Date().toISOString(),application={application_id:`plan_application_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,draft_id:draft.draft_id,source_request_id:ctx.request.request_id,source_decision_id:ctx.outcome.decision_id,symbol:ctx.request.symbol,current_plan_snapshot_hash:currentHash,user_confirmed_at:now,status:'applied_in_browser',created_at:now};
   try{await window.PlanUpdateDraft.markApplicationRequest(ctx.request.request_id,application)}catch(error){console.warn('计划已保存，但草案审计状态保存失败。',error)}modal.classList.remove('show');renderStockDetail();alert('计划更新已确认并保存。原计划按历史状态保留；未执行任何交易。');

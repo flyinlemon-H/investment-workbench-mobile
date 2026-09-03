@@ -40,6 +40,7 @@
     return Boolean(stock&&outcome.outcome_type==='plan_update'&&request.request_type==='plan_update'&&request.request_id&&symbol(request.symbol)===symbol(stock.code||stock.symbol)&&obj(request.current_plan_reference)&&Object.keys(obj(request.current_plan_reference)).length);
   }
   function formalPlan(plan){
+    if(Object.prototype.hasOwnProperty.call(obj(plan),'planMode')&&plan.planMode!=='legacy_price')throw new Error('状态观察计划不支持旧价格草案转换。');
     return {plan_id:planId(plan),action_type:String(plan.type||plan.action||''),trigger_price:plan.triggerPrice??plan.price??null,quantity:plan.quantity??plan.shares??null,status:String(plan.status||'active'),priority:Number(plan.priority||0)||null,reason:String(plan.reason||plan.summary||plan.note||''),created_at:plan.createdAt||plan.created_at||'',updated_at:plan.updatedAt||plan.updated_at||''};
   }
   function prompt(reviewId,stock){
@@ -54,7 +55,7 @@
       generated_at:new Date().toISOString(),source_decision_id:ctx.outcome.decision_id,
       stock:{name:s.name,symbol:s.code||s.symbol,marketType:String(s.code||'').endsWith('.HK')?'HK':(s.type==='etf'?'CN_ETF':'CN'),role:s.role,theme:s.theme,investmentStyle:strategy.investmentStyle},
       position:{shares:s.shares,avgCost:s.avgCost,currentPrice,currentWeight:position&&position.actualPct,targetWeight:strategy.targetWeight,maxWeight:strategy.maxWeight,minTradeUnit:resolveUnit(s).value,minTradeUnitSource:resolveUnit(s).source,minTradeUnitReliable:resolveUnit(s).reliable},
-      active_plans:(typeof v13DisplayActivePlans==='function'?v13DisplayActivePlans(s.plans):arr(s.plans)).map(formalPlan),
+      active_plans:(typeof v13DisplayActivePlans==='function'?v13DisplayActivePlans(s.plans):arr(s.plans)).filter(plan=>!Object.prototype.hasOwnProperty.call(plan,'planMode')||plan.planMode==='legacy_price').map(formalPlan),
       analysis:{longTermLogic:obj(s.longTermLogic),technicalReview:obj(s.technicalReview),fundamentalReview:obj(s.fundamentalReview),valuationReview:obj(s.valuationReview),allocationDecision:obj(s.allocationDecision),dataFreshness:obj(s.dataFreshness),marketDataFreshness:obj(s.marketDataFreshness),riskState:obj(s.riskState||s.riskManagement)},
       decision_outcome:ctx.outcome,discussion_result:ctx.discussion,user_constraints:arr(ctx.discussion.user_constraints),requested_changes:arr(ctx.request.requested_changes),plan_update_request:ctx.request
     };
@@ -65,6 +66,10 @@
   }
   function validate(draft,ctx){
     const errors=[],warnings=[],d=obj(draft),request=obj(ctx&&ctx.request),stock=ctx&&ctx.stock||{};
+    const legacy=plan=>!Object.prototype.hasOwnProperty.call(obj(plan),'planMode')||plan.planMode==='legacy_price';
+    if(!legacy(d))errors.push('此草案入口不支持该 planMode');
+    const guardedIds=new Set(arr(stock.plans).filter(p=>!legacy(p)).map(planId));
+    [...arr(d.plans_to_archive),...arr(d.plans_to_delete),...arr(d.proposed_plans).map(planId)].forEach(id=>{if(guardedIds.has(String(id)))errors.push('状态观察计划暂不支持在此处编辑或归档')});
     required.filter(key=>!(key in d)).forEach(key=>errors.push(`缺少字段：${key}`));
     if(d.draft_status!=='draft')errors.push('draft_status 必须为 draft');
     if(d.source_request_id!==request.request_id)errors.push('source_request_id 与计划更新请求不一致');
@@ -78,6 +83,7 @@
     const unitInfo=resolveUnit(stock),unit=unitInfo.value;
     const cp=typeof getComparablePrice==='function'?Number(getComparablePrice(stock)):Number(stock.currentPrice||stock.lastUnitPrice||0),seen=new Set();
     plans.forEach((plan,index)=>{
+      if(!legacy(plan))errors.push('此草案入口不支持该 planMode');
       const p=obj(plan),prefix=`第 ${index+1} 条计划`;
       planRequired.filter(key=>!(key in p)).forEach(key=>errors.push(`${prefix}缺少字段：${key}`));
       if(!ACTIONS.has(String(p.action_type||'')))errors.push(`${prefix}动作类型无效`);

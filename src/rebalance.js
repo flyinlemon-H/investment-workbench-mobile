@@ -23,6 +23,7 @@ function planGap(cp,tp,action,triggerOn){
 function stockUrgency(s){
   const cp=getComparablePrice(s);if(cp==null)return {score:Infinity,triggered:0,nearest:null};let minAbs=Infinity,triggered=0,nearest=null;
   for(const raw of (s.plans||[])){
+    if(raw&&Object.prototype.hasOwnProperty.call(raw,'planMode')&&raw.planMode!=='legacy_price')continue;
     const p=typeof PlanV2!=='undefined'?PlanV2.normalizePlan(raw):raw;
     if(typeof PlanV2!=='undefined'&&!['current','needs_review'].includes(PlanV2.freshness(p)))continue;
     const g=planGap(cp,p.triggerPrice??p.price,p.action,p.triggerDirection??p.triggerOn);if(!g)continue;if(g.triggered)triggered++;if(g.absPct<minAbs){minAbs=g.absPct;nearest=g}
@@ -33,6 +34,7 @@ function stockUrgency(s){
 async function executePlan(stockId,planId){
   const sourceStock=state.stocks.find(stock=>stock.id===stockId);if(!sourceStock)return;
   const sourcePlan=(sourceStock.plans||[]).find(plan=>plan.id===planId);if(!sourcePlan)return;
+  if(Object.prototype.hasOwnProperty.call(sourcePlan,'planMode')&&sourcePlan.planMode!=='legacy_price'){alert('状态观察计划不能记录为交易执行。');return}
   const plan=typeof PlanV2!=='undefined'?PlanV2.normalizePlan(sourcePlan):sourcePlan,price=Number(plan.triggerPrice??plan.price),quantity=Number(plan.quantity??plan.shares),isBuy=['buy','add'].includes(plan.action),verb=isBuy?'加仓':'减仓';
   if(!(price>0)||!(quantity>0)){alert('该计划的价格或数量不完整，需先复核后再记录执行。');return}
   const total=getEstimatedTotalAssets();let warn='';
