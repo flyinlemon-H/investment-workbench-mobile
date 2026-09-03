@@ -98,8 +98,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-anchor-guard-20260903',
-  dataMode:'Discussion Current State technical-anchor readiness guards and visible localized save failure feedback; strict program-owned archive contract, protected-context rejection, history and critical storage unchanged; Plan V2 Phase 1B preserved, no Runtime or market-universe changes; only manifest-allowlisted browser assets are delivered',
+  assetVersion:'stock-universe-auto-add-v1a-20260903',
+  dataMode:'Stock Universe V1A local-first automatic additions through Supabase Auth with scoped PC read access; membership only, no removals or full-state sync; existing Current State anchor guards, Plan V2 Phase 1B and market calculations preserved; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

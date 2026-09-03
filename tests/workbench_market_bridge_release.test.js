@@ -98,12 +98,16 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Discussion anchor guard release cache-busts the transport and Workbench modules',()=>{
+test('Universe V1A release cache-busts Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='discussion-anchor-guard-20260903';
+  const version='stock-universe-auto-add-v1a-20260903';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
+    'data/supabase_config.js',
+    'src/vendor/supabase-client.js',
+    'src/universe-auto-add.js',
+    'src/universe-sync-ui.js',
     'src/api/api-errors.js',
     'src/api/api-client.js',
     'src/api/health-api.js',
