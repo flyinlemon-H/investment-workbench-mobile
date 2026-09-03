@@ -15,6 +15,11 @@
   const CONDITION_STATUSES=Object.freeze(['unconfirmed','confirmed','not_applicable']);
   const SOURCES=Object.freeze(['manual','ai_refresh','tradeplan_import','migrated_legacy']);
   const EDITABLE_FIELDS=Object.freeze(['action','triggerPrice','triggerDirection','quantity','conditions','allocationConstraint','invalidationReason','validUntil','nextReviewDate','fullConditionStatus','note']);
+  const WATCH_FIELDS=Object.freeze(['planMode','name','applicableConditions','entryConditions','confirmationConditions','invalidationConditions','reviewAction','priceReferences','allocationConstraint','note','validUntil','nextReviewDate']);
+  const WATCH_REQUIRED=Object.freeze(['planMode','name','entryConditions','confirmationConditions','invalidationConditions','reviewAction']);
+  const WATCH_RULE_FIELDS=Object.freeze(['applicableConditions','entryConditions','confirmationConditions','invalidationConditions']);
+  const REVIEW_ACTION_LABELS=Object.freeze({reduce_review:'减仓复核',add_review:'加仓复核',hold_watch:'持有观察',risk_control:'风险控制复核'});
+  const WATCH_LABELS=Object.freeze({name:'计划主题',applicableConditions:'适用背景',entryConditions:'进入观察',confirmationConditions:'进一步确认',invalidationConditions:'失效条件',reviewAction:'复核方向',priceReferences:'价格参考',allocationConstraint:'配置约束',note:'纪律备注',validUntil:'有效至',nextReviewDate:'下次复核'});
 
   function object(value){return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}
   function clone(value){return value===undefined?undefined:JSON.parse(JSON.stringify(value))}
@@ -75,17 +80,107 @@
     const unknown=legacyUnknownFields(source),timestamps={createdAt:source.createdAt??null,updatedAt:source.updatedAt??null,lastReviewedAt:source.lastReviewedAt??null,triggeredAt:source.triggeredAt??null};return {...existing,migratedFrom:text(source.schemaVersion)||'legacy',originalTimestamps:{...object(existing.originalTimestamps),...timestamps},originalFields:{...object(existing.originalFields),...unknown}};
   }
   function defaultPlan(){return {id:'',schemaVersion:SCHEMA_VERSION,planMode:'legacy_price',planVersion:1,action:'observe',triggerPrice:null,triggerDirection:null,status:'active',validityStatus:'active',createdAt:null,updatedAt:null,lastReviewedAt:null,nextReviewDate:null,validUntil:null,priceTriggerStatus:'unavailable',triggeredAt:null,fullConditionStatus:'unproven',conditions:normalizeConditions({}),allocationConstraint:{maxPositionPct:null,targetWeightRange:null},invalidationReason:null,terminatedAt:null,source:'manual',note:'',quantity:null,legacy:{}}}
+  function hasWatchDefinition(plan){return plan&&plan.planMode==='state_watch'&&['name',...WATCH_RULE_FIELDS,'reviewAction','priceReferences'].some(key=>Object.prototype.hasOwnProperty.call(plan,key))}
+  function watchDefinition(plan){return Object.fromEntries(WATCH_FIELDS.filter(key=>Object.prototype.hasOwnProperty.call(object(plan),key)).map(key=>[key,clone(plan[key])]))}
+  function exactWatchFields(value,allowed,required,label,errors){
+    if(!value||typeof value!=='object'||Array.isArray(value)){errors.push(`${label} 必须是对象`);return false}
+    const extra=Object.keys(value).filter(key=>!allowed.includes(key)),missing=required.filter(key=>!Object.prototype.hasOwnProperty.call(value,key));
+    if(extra.length)errors.push(`${label} 包含未知字段：${extra.join('、')}`);
+    if(missing.length)errors.push(`${label} 缺少字段：${missing.join('、')}`);
+    return !extra.length&&!missing.length;
+  }
+  // Focused guard against storing today's judgments as enduring rules, not an NLP classifier.
+  function runtimeStatement(value){return /当前(?:已经|已|阶段(?:为|是))|今天(?:已经|已)?(?:触发|确认|失守)|(?:支撑|趋势|结构)今天(?:已)?(?:失守|确认|破坏)|已进入\s*(?:action_review|watch_zone|forming|confirmed)|当前已?进入.*阶段/i.test(value)}
+  function validateWatchDefinition(value){
+    const source=object(value),errors=[],result={};
+    exactWatchFields(value,WATCH_FIELDS,WATCH_REQUIRED,'观察计划 Definition',errors);
+    if(source.planMode!=='state_watch')errors.push('planMode 必须是 state_watch');
+    result.planMode='state_watch';
+    const string=(raw,label,limit,required=false)=>{if(typeof raw!=='string'||raw.trim().length>limit||(required&&!raw.trim())){errors.push(`${label} 必须是${required?'非空、':''}${limit} 字以内的文字`);return ''}const normalized=raw.trim();if(runtimeStatement(normalized))errors.push(`${label} 应描述条件规则，不能保存当前阶段或今日判断`);return normalized};
+    result.name=string(source.name,'计划主题',80,true);
+    for(const key of WATCH_RULE_FIELDS){
+      const rows=source[key]===undefined&&key==='applicableConditions'?[]:source[key];
+      if(!Array.isArray(rows)){errors.push(`${WATCH_LABELS[key]} 必须是字符串数组`);result[key]=[];continue}
+      if(rows.length>12||key!=='applicableConditions'&&!rows.length)errors.push(`${WATCH_LABELS[key]} 需要 ${key==='applicableConditions'?'0':'1'} 至 12 项`);
+      result[key]=rows.map(row=>string(row,WATCH_LABELS[key],240,true));
+    }
+    if(!Object.prototype.hasOwnProperty.call(REVIEW_ACTION_LABELS,source.reviewAction))errors.push('复核方向无效');
+    result.reviewAction=source.reviewAction;
+    const refs=source.priceReferences===undefined?[]:source.priceReferences;
+    result.priceReferences=[];
+    if(!Array.isArray(refs)||refs.length>8)errors.push('价格参考必须是最多 8 项的数组');
+    else result.priceReferences=refs.map(ref=>{
+      const r=object(ref),range=r.type==='watch_zone',fields=range?['type','from','to','meaning']:['type','price','meaning'];
+      exactWatchFields(ref,fields,fields,'价格参考',errors);
+      if(!['watch_zone','reference'].includes(r.type))errors.push('价格参考类型无效');
+      for(const key of range?['from','to']:['price'])if(typeof r[key]!=='number'||!Number.isFinite(r[key])||r[key]<=0)errors.push('参考价格必须是有限正数');
+      if(range&&r.from>r.to)errors.push('价格区间必须从低到高');
+      const meaning=string(r.meaning,'参考含义',120,true);
+      return range?{type:r.type,from:r.from,to:r.to,meaning}:{type:r.type,price:r.price,meaning};
+    });
+    const allocation=source.allocationConstraint===undefined?{}:source.allocationConstraint;
+    exactWatchFields(allocation,['maxPositionPct','targetWeightRange'],[],'配置约束',errors);
+    const max=(allocation&&allocation.maxPositionPct)??null,range=(allocation&&allocation.targetWeightRange)??null;
+    if(max!==null&&(typeof max!=='number'||!Number.isFinite(max)||max<=0||max>100))errors.push('配置上限必须是 0 至 100 之间的正数或空');
+    if(range!==null&&(typeof range!=='string'||!range.trim()||range.trim().length>80))errors.push('配置范围必须是 1 至 80 字的文字或空');
+    result.allocationConstraint={maxPositionPct:max,targetWeightRange:typeof range==='string'?range.trim():range};
+    result.note=string(source.note===undefined?'':source.note,'纪律备注',1000);
+    for(const key of ['validUntil','nextReviewDate']){
+      const raw=source[key]??null;
+      if(raw!==null&&(typeof raw!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(raw)||!dateValue(raw)||new Date(raw).toISOString().slice(0,10)!==raw))errors.push(`${WATCH_LABELS[key]} 日期无效`);
+      result[key]=raw;
+    }
+    return {ok:!errors.length,errors,definition:result};
+  }
+  function validateWatchCanonical(source,{requireDefinition=false}={}){
+    const errors=[];
+    exactWatchFields(source,[...Object.keys(defaultPlan()),...WATCH_FIELDS],[],'观察计划',errors);
+    if(requireDefinition||hasWatchDefinition(source)){
+      exactWatchFields(source,[...Object.keys(defaultPlan()),...WATCH_FIELDS],[...Object.keys(defaultPlan()),...WATCH_REQUIRED],'正式观察计划',errors);
+      if(source.schemaVersion!==SCHEMA_VERSION||typeof source.id!=='string'||!source.id.trim()||!Number.isInteger(source.planVersion)||source.planVersion<1)errors.push('观察计划身份或版本无效');
+      if(!PLAN_STATUSES.includes(source.status)||!VALIDITY_STATUSES.includes(source.validityStatus)||!SOURCES.includes(source.source))errors.push('观察计划生命周期无效');
+      for(const key of ['createdAt','updatedAt','lastReviewedAt','terminatedAt'])if(source[key]!==null&&!dateValue(source[key]))errors.push('观察计划时间无效');
+      errors.push(...validateWatchDefinition(Object.fromEntries(WATCH_FIELDS.filter(key=>Object.prototype.hasOwnProperty.call(source,key)).map(key=>[key,source[key]]))).errors);
+      for(const key of ['action','triggerPrice','triggerDirection','quantity','triggeredAt'])if(source[key]!==undefined&&source[key]!==null)errors.push(`观察计划 ${key} 必须为空`);
+      if(source.priceTriggerStatus!==undefined&&source.priceTriggerStatus!=='unavailable')errors.push('观察计划不能保存价格触发状态');
+      if(source.fullConditionStatus!==undefined&&source.fullConditionStatus!=='unproven')errors.push('观察计划不能保存条件确认状态');
+      if(source.conditions!==undefined&&(!source.conditions||Array.isArray(source.conditions)||Object.entries(source.conditions).some(([key,rows])=>!CONDITION_CATEGORIES.includes(key)||!Array.isArray(rows)||rows.length)))errors.push('观察计划规则必须使用 Definition 字符串数组');
+    }
+    return {ok:!errors.length,errors};
+  }
+  function createWatchPlan(input,options={}){
+    const checked=validateWatchDefinition(input);if(!checked.ok)throw new Error(checked.errors.join('；'));
+    const now=nowIso(options);
+    return {...defaultPlan(),...checked.definition,id:generatedId(),action:null,createdAt:now,updatedAt:now,source:normalizeSource(options.source,false)};
+  }
+  function editWatchPlan(existing,input,options={}){
+    if(!hasWatchDefinition(existing))throw new Error('目标不是可编辑的观察计划 Definition');
+    const current=normalizePlan(existing);if(current.status!=='active')throw new Error('已结束的观察计划不能编辑');
+    const checked=validateWatchDefinition(input);if(!checked.ok)throw new Error(checked.errors.join('；'));
+    if(stable(watchDefinition(current))===stable(checked.definition))return current;
+    return {...current,...checked.definition,planVersion:current.planVersion+1,updatedAt:nowIso(options)};
+  }
+  function terminateWatchPlan(existing,status,options={}){
+    if(!hasWatchDefinition(existing)||!['cancelled','completed'].includes(status))throw new Error('观察计划生命周期操作无效');
+    const current=normalizePlan(existing);if(current.status!=='active')throw new Error('计划已经结束');
+    const now=nowIso(options);
+    // Lifecycle changes retain the canonical revision convention; no market judgment can call this automatically.
+    return {...current,status,validityStatus:status==='completed'?'completed':'invalid',planVersion:current.planVersion+1,updatedAt:now,terminatedAt:now,invalidationReason:text(options.reason)||null};
+  }
   function normalizePlan(value={},options={}){
     const source=object(value),planMode=normalizeMode(source),isLegacy=source.schemaVersion!==SCHEMA_VERSION;
+    if(planMode==='state_watch'){const checked=validateWatchCanonical(source);if(!checked.ok)throw new Error(checked.errors.join('；'));}
     const status=normalizeStatus(source.status||source.versionStatus),action=normalizeAction(source.action||source.type||source.planType),triggerDirection=normalizeDirection(source.triggerDirection||source.triggerOn),triggerPrice=positive(source.triggerPrice??source.price),allocationConstraint=normalizeAllocation(source.allocationConstraint,source),normalizedSource=normalizeSource(source.source,isLegacy),untrustedLegacyAi=isLegacy&&normalizedSource==='ai_refresh';
     let validityStatus=normalizeValidity(source.validityStatus,status,isLegacy);
     if(isLegacy&&(!triggerDirection||(['buy','add'].includes(action)&&!hasAllocationPremise({action,allocationConstraint}))))validityStatus='needs_review';
     const plan={...defaultPlan(),planMode,id:text(source.id)||generatedId(stable(source)),planVersion:integer(source.planVersion),action,triggerPrice,triggerDirection,status,validityStatus,createdAt:untrustedLegacyAi?null:dateValue(source.createdAt),updatedAt:untrustedLegacyAi?null:dateValue(source.updatedAt),lastReviewedAt:untrustedLegacyAi?null:dateValue(source.lastReviewedAt),nextReviewDate:dateOnly(source.nextReviewDate),validUntil:dateOnly(source.validUntil),priceTriggerStatus:PRICE_TRIGGER_STATUSES.includes(text(source.priceTriggerStatus).toLowerCase())?text(source.priceTriggerStatus).toLowerCase():'unavailable',triggeredAt:untrustedLegacyAi?null:dateValue(source.triggeredAt),fullConditionStatus:untrustedLegacyAi?'unproven':(FULL_CONDITION_STATUSES.includes(text(source.fullConditionStatus).toLowerCase())?text(source.fullConditionStatus).toLowerCase():'unproven'),conditions:normalizeConditions(source.conditions,source),allocationConstraint,invalidationReason:nullableText(source.invalidationReason),terminatedAt:dateValue(source.terminatedAt||source.archivedAt),source:normalizedSource,note:text(source.note||source.summary||source.planSummary||source.actionHint||source.description),quantity:positive(source.quantity??source.shares),legacy:normalizeLegacyArea(source,isLegacy)};
     if(status!=='active'&&!plan.terminatedAt)plan.terminatedAt=null;
+    if(hasWatchDefinition(source))Object.assign(plan,validateWatchDefinition(watchDefinition(source)).definition,{action:null,triggerPrice:null,triggerDirection:null,quantity:null});
     if(planMode==='legacy_price'&&options.currentPrice!==undefined){const evaluation=evaluatePriceTrigger(plan,options.currentPrice,options);plan.priceTriggerStatus=evaluation.status;if(evaluation.status==='triggered'&&!plan.triggeredAt&&options.observePrice===true&&!isLegacy&&['not_triggered','near'].includes(text(source.priceTriggerStatus).toLowerCase()))plan.triggeredAt=nowIso(options)}
     return plan;
   }
   function createPlan(input={},options={}){
+    if(input.planMode==='state_watch')return createWatchPlan(input,options);
     const now=nowIso(options),source={...object(input),schemaVersion:SCHEMA_VERSION,id:text(input.id)||generatedId(),planVersion:1,status:'active',validityStatus:text(input.validityStatus)||'active',createdAt:now,updatedAt:now,lastReviewedAt:null,triggeredAt:null,terminatedAt:null,source:normalizeSource(options.source||input.source,false)};
     delete source.legacy;
     const plan=normalizePlan(source);
@@ -134,7 +229,7 @@
   }
   function compactForPortfolio(plan,currentPrice,reviewDate){
     const normalized=normalizePlan(plan),price=evaluatePriceTrigger(normalized,currentPrice),conditionCategories={};CONDITION_CATEGORIES.forEach(category=>{const rows=normalized.conditions[category];if(rows.length)conditionCategories[category]=clone(rows)});
-    if(!isLegacyPricePlan(normalized))return {id:normalized.id,planVersion:normalized.planVersion,planMode:'state_watch',readOnly:true,action:'observe',triggerPrice:null,triggerDirection:null,priceTriggerStatus:'unavailable',triggeredAt:null,fullConditionStatus:'unproven',validityStatus:normalized.validityStatus,freshness:freshness(normalized,reviewDate),conditions:conditionCategories,note:normalized.note,userMeaning:'状态观察计划，暂不支持在此处编辑或执行'};
+    if(!isLegacyPricePlan(normalized))return {id:normalized.id,planVersion:normalized.planVersion,planMode:'state_watch',readOnly:true,...(hasWatchDefinition(normalized)?watchDefinition(normalized):{}),definitionSummary:hasWatchDefinition(normalized)?`${normalized.name} · 复核方向：${REVIEW_ACTION_LABELS[normalized.reviewAction]} · 进入观察：${normalized.entryConditions.join('；')}`:'状态观察计划（只读）',action:'observe',triggerPrice:null,triggerDirection:null,priceTriggerStatus:'unavailable',triggeredAt:null,fullConditionStatus:'unproven',validityStatus:normalized.validityStatus,freshness:freshness(normalized,reviewDate),conditions:conditionCategories,note:normalized.note,userMeaning:'状态观察计划，暂不支持在此处编辑或执行'};
     return {id:normalized.id,planVersion:normalized.planVersion,action:normalized.action,triggerPrice:normalized.triggerPrice,triggerDirection:normalized.triggerDirection,priceTriggerStatus:price.status,triggeredAt:normalized.triggeredAt,fullConditionStatus:normalized.fullConditionStatus,validityStatus:normalized.validityStatus,freshness:freshness(normalized,reviewDate),createdAt:normalized.createdAt,updatedAt:normalized.updatedAt,lastReviewedAt:normalized.lastReviewedAt,nextReviewDate:normalized.nextReviewDate,validUntil:normalized.validUntil,conditions:conditionCategories,allocationConstraint:clone(normalized.allocationConstraint),source:normalized.source,userMeaning:price.status==='triggered'?'价格已触发，待确认其他条件':(price.status==='near'?'接近计划价格，完整条件仍待确认':(price.status==='unavailable'?'触发方向或价格不明确，需复核':'尚未达到计划价格')),note:normalized.note};
   }
   function buildContextReference(stockContexts,reviewDate){
@@ -142,7 +237,7 @@
     const compact={reviewDate:dateOnly(reviewDate),stocks:references};return {...compact,contextHash:`planctx_${hash(compact)}`};
   }
   function validatePlan(plan){
-    const errors=[],source=object(plan);if(Object.prototype.hasOwnProperty.call(source,'planMode')&&!PLAN_MODES.includes(source.planMode))errors.push('planMode 无效');if(source.schemaVersion!==SCHEMA_VERSION)errors.push('schemaVersion 必须是 plan.v2');if(!text(source.id))errors.push('计划缺少 id');if(!Number.isInteger(source.planVersion)||source.planVersion<1)errors.push('planVersion 必须是正整数');if(!PLAN_STATUSES.includes(source.status))errors.push('计划状态无效');if(!VALIDITY_STATUSES.includes(source.validityStatus))errors.push('计划有效性状态无效');if(!PRICE_TRIGGER_STATUSES.includes(source.priceTriggerStatus))errors.push('价格触发状态无效');if(!FULL_CONDITION_STATUSES.includes(source.fullConditionStatus))errors.push('完整条件状态无效');if(source.triggerPrice!==null&&positive(source.triggerPrice)===null)errors.push('触发价格必须为正数或空');if(source.triggerDirection!==null&&!['above','below'].includes(source.triggerDirection))errors.push('触发方向无效');if(source.createdAt!==null&&!dateValue(source.createdAt))errors.push('创建时间无效');if(source.updatedAt!==null&&!dateValue(source.updatedAt))errors.push('更新时间无效');if(!SOURCES.includes(source.source))errors.push('计划来源无效');return {ok:errors.length===0,errors};
+    const errors=[],source=object(plan);if(source.planMode==='state_watch')errors.push(...validateWatchCanonical(source).errors);if(Object.prototype.hasOwnProperty.call(source,'planMode')&&!PLAN_MODES.includes(source.planMode))errors.push('planMode 无效');if(source.schemaVersion!==SCHEMA_VERSION)errors.push('schemaVersion 必须是 plan.v2');if(!text(source.id))errors.push('计划缺少 id');if(!Number.isInteger(source.planVersion)||source.planVersion<1)errors.push('planVersion 必须是正整数');if(!PLAN_STATUSES.includes(source.status))errors.push('计划状态无效');if(!VALIDITY_STATUSES.includes(source.validityStatus))errors.push('计划有效性状态无效');if(!PRICE_TRIGGER_STATUSES.includes(source.priceTriggerStatus))errors.push('价格触发状态无效');if(!FULL_CONDITION_STATUSES.includes(source.fullConditionStatus))errors.push('完整条件状态无效');if(source.triggerPrice!==null&&positive(source.triggerPrice)===null)errors.push('触发价格必须为正数或空');if(source.triggerDirection!==null&&!['above','below'].includes(source.triggerDirection))errors.push('触发方向无效');if(source.createdAt!==null&&!dateValue(source.createdAt))errors.push('创建时间无效');if(source.updatedAt!==null&&!dateValue(source.updatedAt))errors.push('更新时间无效');if(!SOURCES.includes(source.source))errors.push('计划来源无效');return {ok:errors.length===0,errors};
   }
   function validatePlanCollection(plans){const errors=[];(Array.isArray(plans)?plans:[]).forEach((plan,index)=>{const result=validatePlan(plan);result.errors.forEach(error=>errors.push(`计划 ${index+1}：${error}`))});const ids=(Array.isArray(plans)?plans:[]).map(plan=>text(plan&&plan.id)).filter(Boolean);if(new Set(ids).size!==ids.length)errors.push('计划 ID 重复');return {ok:errors.length===0,errors}}
   async function commitCandidate(currentState,buildCandidate,deps={}){
@@ -152,5 +247,5 @@
     try{const saved=await deps.save(next,{critical:true});if(saved===false||(saved&&saved.ok===false))throw new Error('critical save 返回失败。');if(typeof deps.adopt==='function')deps.adopt(saved&&saved.state?saved.state:next);return {status:'completed',writes:1,state:saved&&saved.state?saved.state:next}}catch(error){if(typeof deps.rollback==='function')deps.rollback(currentState);return {status:'failed',writes:1,error}}
   }
 
-  return Object.freeze({SCHEMA_VERSION,PLAN_MODES,isLegacyPricePlan,assertLegacyPricePlan,PLAN_STATUSES,VALIDITY_STATUSES,PRICE_TRIGGER_STATUSES,FULL_CONDITION_STATUSES,CONDITION_CATEGORIES,SOURCES,defaultPlan,normalizeDirection,normalizeAction,normalizeConditions,normalizePlan,createPlan,applyAuthoritativeEdit,reconfirmPlan,terminatePlan,evaluatePriceTrigger,observePriceTrigger,freshness,compactForPortfolio,buildContextReference,hasAllocationPremise,validatePlan,validatePlanCollection,commitCandidate,stable,hash,clone});
+  return Object.freeze({SCHEMA_VERSION,PLAN_MODES,WATCH_FIELDS,WATCH_REQUIRED,WATCH_RULE_FIELDS,WATCH_LABELS,REVIEW_ACTION_LABELS,hasWatchDefinition,watchDefinition,validateWatchDefinition,validateWatchCanonical,createWatchPlan,editWatchPlan,terminateWatchPlan,isLegacyPricePlan,assertLegacyPricePlan,PLAN_STATUSES,VALIDITY_STATUSES,PRICE_TRIGGER_STATUSES,FULL_CONDITION_STATUSES,CONDITION_CATEGORIES,SOURCES,defaultPlan,normalizeDirection,normalizeAction,normalizeConditions,normalizePlan,createPlan,applyAuthoritativeEdit,reconfirmPlan,terminatePlan,evaluatePriceTrigger,observePriceTrigger,freshness,compactForPortfolio,buildContextReference,hasAllocationPremise,validatePlan,validatePlanCollection,commitCandidate,stable,hash,clone});
 });

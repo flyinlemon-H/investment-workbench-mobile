@@ -50,7 +50,7 @@
   }
   function planSnapshotHash(plan){return PlanReview.planSnapshotHash(PlanV2.normalizePlan(plan))}
   function planLabelBase(plan){
-    if(!PlanV2.isLegacyPricePlan(plan))return '状态观察计划（只读）';
+    if(!PlanV2.isLegacyPricePlan(plan))return plan.name||'状态观察计划（只读）';
     const action=PlanV2.normalizePlan(plan).action;return action==='buy'?'建仓计划':(action==='add'?'加仓计划':(['reduce','sell'].includes(action)?'减仓计划':'计划'));
   }
   function replacementRootId(plan,byId){
@@ -70,7 +70,7 @@
   function compactPlan(plan,displayLabel=''){
     const normalized=PlanV2.normalizePlan(plan),conditions={};
     CONDITION_FIELDS.forEach(category=>{conditions[category]=array(normalized.conditions&&normalized.conditions[category]).map(item=>item.text).filter(Boolean)});
-    if(!PlanV2.isLegacyPricePlan(normalized))return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),planMode:'state_watch',readOnly:true,action:'observe',triggerPrice:null,triggerDirection:null,quantity:null,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus,conditions:{},invalidationConditions:[],allocationConstraint:{},validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate};
+    if(!PlanV2.isLegacyPricePlan(normalized))return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),planMode:'state_watch',readOnly:true,...(PlanV2.hasWatchDefinition(normalized)?{definition:PlanV2.watchDefinition(normalized)}:{}),action:'observe',triggerPrice:null,triggerDirection:null,quantity:null,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus,conditions:{},invalidationConditions:[],allocationConstraint:{},validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate};
     return {displayLabel:text(displayLabel)||planLabelBase(normalized),id:normalized.id,planVersion:normalized.planVersion,snapshotHash:planSnapshotHash(normalized),action:normalized.action,triggerPrice:normalized.triggerPrice,triggerDirection:normalized.triggerDirection,quantity:normalized.quantity,conditions,invalidationConditions:array(normalized.conditions&&normalized.conditions.invalidation).map(item=>item.text).filter(Boolean),allocationConstraint:clone(normalized.allocationConstraint),validUntil:normalized.validUntil,nextReviewDate:normalized.nextReviewDate,note:normalized.note,status:normalized.status,validityStatus:normalized.validityStatus};
   }
   function compactCurrentState(current){
@@ -112,6 +112,7 @@
   }
   function sessionBinding(session){return {draftSessionId:session.id,draftSessionVersion:session.version,draftSessionHash:session.hash}}
   function promptPlanSummary(plan){
+    if(plan.planMode==='state_watch')return plan.definition?`${plan.definition.name}；复核方向：${PlanV2.REVIEW_ACTION_LABELS[plan.definition.reviewAction]}；进入观察：${plan.definition.entryConditions.join('；')}；请从观察计划专用入口编辑。`:'状态观察计划，仅供只读参考';
     const conditions=CONDITION_FIELDS.flatMap(key=>array(plan.conditions&&plan.conditions[key])).filter(Boolean),trigger=plan.triggerPrice===null?'无明确价格，仅按条件':`${plan.triggerDirection==='above'?'达到或高于':'达到或低于'} ${plan.triggerPrice}`,conditionText=conditions.length?conditions.slice(0,3).join('；'):'无额外条件';
     return `${trigger}；${conditionText}${plan.quantity!==null?`；数量 ${plan.quantity}`:''}`;
   }

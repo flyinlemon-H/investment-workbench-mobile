@@ -56,6 +56,7 @@ function validateRawImportShape(value){
 }
 function createValidatedCandidateSnapshot(value,options={}){
   const source=validateRawImportShape(value);
+  if(options.requireWatchDefinition===true)for(const stock of source.stocks)for(const plan of stock.plans||[]){if(plan&&plan.planMode==='state_watch'){const checked=PlanV2.validateWatchCanonical(plan,{requireDefinition:true});if(!checked.ok)throw new Error(checked.errors.join('；'));}}
   const candidate=normalize(importResetClone(source));
   const validation=importResetValidation();
   if(validation&&typeof validation.validateState==='function')validation.validateState(candidate);
@@ -73,7 +74,7 @@ async function persistCandidateSnapshot(candidate){
   return candidate;
 }
 function importData(){document.getElementById('importFile').click()}
-function handleImport(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=async ev=>{let candidate;try{candidate=createValidatedCandidateSnapshot(JSON.parse(ev.target.result));if(globalThis.UniverseHandoff)globalThis.UniverseHandoff.reconcileState(candidate,globalThis.MARKET_DATA_BRIDGE)}catch(err){alert('导入失败：'+(err&&err.message?err.message:'文件校验失败。'));return}if(!confirm(`导入会覆盖当前本地数据，确认继续？\n\n当前：${state.stocks.length} 只\n导入：${candidate.stocks.length} 只\n\n确认后会先自动下载一份当前数据备份。`))return;let backupOk=true;try{autoBackupBeforeImport()}catch(backupErr){console.warn('导入前自动备份失败，继续导入。');backupOk=false}try{await persistCandidateSnapshot(candidate)}catch(err){alert('导入失败：数据尚未确认保存，原数据仍保留，请重试。');return}state=candidate;if(typeof resumeApplicationAfterRecovery==='function'&&document.getElementById('main')&&document.getElementById('main').dataset.storageState==='error')resumeApplicationAfterRecovery();else render();alert(backupOk?'导入成功，已在导入前自动下载当前数据备份。':'导入成功。注意：手机浏览器可能拦截了导入前自动备份下载，请导入后手动点一次「导出」备份。')};r.onerror=()=>alert('导入失败：文件读取失败，请确认浏览器有权限读取该文件。');r.readAsText(file);e.target.value=''}
+function handleImport(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=async ev=>{let candidate;try{candidate=createValidatedCandidateSnapshot(JSON.parse(ev.target.result),{requireWatchDefinition:true});if(globalThis.UniverseHandoff)globalThis.UniverseHandoff.reconcileState(candidate,globalThis.MARKET_DATA_BRIDGE)}catch(err){alert('导入失败：'+(err&&err.message?err.message:'文件校验失败。'));return}if(!confirm(`导入会覆盖当前本地数据，确认继续？\n\n当前：${state.stocks.length} 只\n导入：${candidate.stocks.length} 只\n\n确认后会先自动下载一份当前数据备份。`))return;let backupOk=true;try{autoBackupBeforeImport()}catch(backupErr){console.warn('导入前自动备份失败，继续导入。');backupOk=false}try{await persistCandidateSnapshot(candidate)}catch(err){alert('导入失败：数据尚未确认保存，原数据仍保留，请重试。');return}state=candidate;if(typeof resumeApplicationAfterRecovery==='function'&&document.getElementById('main')&&document.getElementById('main').dataset.storageState==='error')resumeApplicationAfterRecovery();else render();alert(backupOk?'导入成功，已在导入前自动下载当前数据备份。':'导入成功。注意：手机浏览器可能拦截了导入前自动备份下载，请导入后手动点一次「导出」备份。')};r.onerror=()=>alert('导入失败：文件读取失败，请确认浏览器有权限读取该文件。');r.readAsText(file);e.target.value=''}
 async function resetSeed(){
   if(!confirm('确认清空当前浏览器里的本地数据？清空后需要重新导入 JSON。'))return;
   const candidate=createValidatedCandidateSnapshot({stocks:[],updatedAt:null});

@@ -1,0 +1,66 @@
+(function(root){
+  'use strict';
+  const Plan=root.PlanV2,Workflow=root.StateWatchWorkflow;
+  const esc=PlanReview.escapeHtml;
+  let prepared=null,preview=null,busy=false,returnFocus=null;
+  const byId=id=>document.getElementById(id),stock=()=>state.stocks.find(row=>row.id===prepared?.stockId);
+  function styles(){
+    if(byId('watchDefinitionStyles'))return;
+    const style=document.createElement('style');style.id='watchDefinitionStyles';
+    style.textContent='.watch-definition-card{min-width:0;overflow-wrap:anywhere;margin:10px 0}.watch-definition-card>.card-title{font-size:20px}.watch-definition-summary{margin:12px 0;line-height:1.6}.watch-definition-summary>div{margin:9px 0;min-width:0}.watch-definition-summary dt{font-size:12px;color:var(--ink3)}.watch-definition-summary dd{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.watch-definition-card .watch-definition-summary>div:has(dd:empty){display:none}.watch-definition-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.watch-definition-grid>*{min-width:0}.watch-diff-row{padding:12px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere;line-height:1.7}.watch-reference-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;padding:12px;border:1px solid var(--line)}.watch-reference-row .watch-wide{grid-column:1/-1}.watch-preview{overflow-wrap:anywhere}.watch-preview h3{margin:12px 0}.watch-dialog{max-width:720px;width:100%;max-height:92vh;overflow:auto;overscroll-behavior:contain}.watch-dialog textarea{min-height:85px;resize:vertical}.watch-dialog label{display:block;margin-bottom:5px}.watch-dialog input,.watch-dialog select,.watch-dialog textarea{font-size:16px;box-sizing:border-box;width:100%;min-width:0}.watch-dialog fieldset{min-width:0;border:0;padding:0;margin:0}.watch-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.watch-actions .btn{min-height:44px}.watch-dialog details{margin:16px 0}.watch-dialog summary{cursor:pointer;min-height:32px}.watch-dialog .form-row{margin:14px 0}.watch-dialog [hidden]{display:none!important}.watch-status{overflow-wrap:anywhere;white-space:pre-line}@media(max-width:520px){.watch-definition-grid{grid-template-columns:1fr}.watch-dialog{padding:16px;max-height:94dvh}.watch-definition-card>.card-title{font-size:19px}.watch-dialog .watch-actions>.btn{flex:1 1 auto}.watch-definition-summary dd{font-size:15px}}';
+    document.head.appendChild(style);
+  }
+  function field(key,value,textarea=false,options={}){
+    const id='watch-'+key,label=Plan.WATCH_LABELS[key],required=Plan.WATCH_REQUIRED.includes(key);
+    return `<div class="form-row"><label for="${id}">${esc(label)}${required?' *':''}</label>${textarea?`<textarea id="${id}" maxlength="${key==='note'?1000:2900}" placeholder="${key==='note'?'补充稳定的决策纪律':'每行一条条件规则'}">${esc(Array.isArray(value)?value.join('\n'):value||'')}</textarea>`:`<input id="${id}" type="${options.type||'text'}" ${key==='name'?'maxlength="80"':''} value="${esc(value||'')}">`}</div>`;
+  }
+  function ensureDialog(){
+    styles();if(byId('watchDefinitionDialog'))return byId('watchDefinitionDialog');
+    const modal=document.createElement('div');modal.id='watchDefinitionDialog';modal.className='modal-bg';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','watchDefinitionTitle');document.body.appendChild(modal);
+    modal.addEventListener('click',event=>{if(event.target===modal)close()});
+    modal.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();close()}if(event.key==='Tab'){const items=[...modal.querySelectorAll('input,select,textarea,button,summary')].filter(el=>!el.disabled&&el.getClientRects().length);if(event.shiftKey&&document.activeElement===items[0]){event.preventDefault();items.at(-1)?.focus()}else if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0]?.focus()}}});
+    return modal;
+  }
+  function referenceRow(ref={type:'reference',price:'',meaning:''}){
+    return `<div class="watch-reference-row"><div class="watch-wide"><label>参考类型<select data-ref-type><option value="reference"${ref.type==='reference'?' selected':''}>参考价格</option><option value="watch_zone"${ref.type==='watch_zone'?' selected':''}>观察区间</option></select></label></div><label>价格 / 区间起点<input type="number" inputmode="decimal" step="any" data-ref-from value="${esc(ref.type==='watch_zone'?ref.from:ref.price)}"></label><label data-ref-end-label${ref.type==='reference'?' hidden':''}>区间终点<input type="number" inputmode="decimal" step="any" data-ref-to value="${esc(ref.to||'')}"></label><label class="watch-wide">参考含义<input data-ref-meaning maxlength="120" value="${esc(ref.meaning)}"></label><button class="btn ghost small watch-wide" type="button" data-ref-remove>移除参考</button></div>`;
+  }
+  function open(stockId,targetPlanId){
+    if(busy)return;
+    const targetStock=state.stocks.find(row=>row.id===stockId);if(!targetStock)return;
+    try{
+      if(prepared)Workflow.release(prepared);
+      prepared=Workflow.prepare(targetStock,targetPlanId===undefined?{}:{targetPlanId});preview=null;returnFocus=document.activeElement;
+      const definition=prepared.current?Plan.watchDefinition(prepared.current):{planMode:'state_watch',name:'',applicableConditions:[],entryConditions:[],confirmationConditions:[],invalidationConditions:[],reviewAction:'hold_watch',priceReferences:[],allocationConstraint:{},note:''};
+      const modal=ensureDialog();
+      modal.innerHTML=`<div class="modal watch-dialog"><h2 id="watchDefinitionTitle">${prepared.current?'编辑观察计划':'新建观察计划'}</h2><p class="card-note">${esc(targetStock.name)} · 写下什么情况下观察、确认与复核。星号为必填。</p><p class="hint">这是观察纪律。价格只作参考；当前行情结论请留在讨论中。</p>${prepared.current?`<div class="form-row"><label for="watchOperation">本次操作</label><select id="watchOperation"><option value="update">编辑纪律</option><option value="no_change">保持不变</option><option value="invalidate">取消计划</option><option value="complete">完成计划</option></select></div>`:''}<fieldset id="watchDefinitionFields">${field('name',definition.name)}<div class="form-row"><label for="watch-reviewAction">复核方向 *</label><select id="watch-reviewAction">${Object.entries(Plan.REVIEW_ACTION_LABELS).map(([key,label])=>`<option value="${key}"${definition.reviewAction===key?' selected':''}>${label}</option>`).join('')}</select></div>${['entryConditions','confirmationConditions','invalidationConditions'].map(key=>field(key,definition[key],true)).join('')}<details id="watchOptional"><summary>背景、价格与补充纪律（可选）</summary>${field('applicableConditions',definition.applicableConditions,true)}<h3>价格参考</h3><p class="card-note">可留空。参考区间不触发交易或确认条件。</p><div id="watchReferences">${definition.priceReferences.map(referenceRow).join('')}</div><button class="btn ghost small" type="button" id="watchAddReference">添加参考</button><div class="watch-definition-grid"><div class="form-row"><label for="watchMaxPosition">仓位上限 %</label><input type="number" step="any" id="watchMaxPosition" value="${esc(definition.allocationConstraint.maxPositionPct??'')}"></div><div class="form-row"><label for="watchWeightRange">配置边界说明</label><input id="watchWeightRange" maxlength="80" value="${esc(definition.allocationConstraint.targetWeightRange||'')}"></div></div><p class="card-note">仅记录未来复核时的配置边界，不修改目标仓位。</p>${field('note',definition.note,true)}<div class="watch-definition-grid">${field('validUntil',definition.validUntil,false,{type:'date'})}${field('nextReviewDate',definition.nextReviewDate,false,{type:'date'})}</div></details></fieldset><div class="form-row"><label for="watchReason">变更说明 *</label><textarea id="watchReason" maxlength="300">${prepared.current?'复核并更新同一观察计划的纪律':'建立一条独立的观察纪律'}</textarea></div><div class="watch-actions"><button type="button" class="btn" id="watchPreviewBtn">预览计划</button><button type="button" class="btn ghost" id="watchCloseBtn">取消</button></div><details id="watchAiDetails"><summary>使用 AI 整理</summary><p class="card-note">复制请求到当前讨论，粘贴返回的 JSON 后预览。</p><textarea id="watchPromptText" readonly></textarea><div class="watch-actions"><button type="button" class="btn ghost" id="watchCopyPromptBtn">复制请求</button></div><label for="watchDraftText">AI 草案 JSON</label><textarea id="watchDraftText"></textarea><button type="button" class="btn ghost" id="watchAiPreviewBtn">预览草案</button></details><div id="watchStatus" class="card-note watch-status" role="status" aria-live="polite"></div><div id="watchPreview"></div><div class="watch-actions"><button type="button" class="btn" id="watchConfirmBtn" disabled>确认保存</button><button type="button" class="btn ghost" id="watchDoneBtn">返回</button></div></div>`;
+      byId('watchPromptText').value=Workflow.prompt(prepared);
+      byId('watchPreviewBtn').addEventListener('click',manualPreview);byId('watchAiPreviewBtn').addEventListener('click',()=>showPreview(byId('watchDraftText').value));
+      byId('watchConfirmBtn').addEventListener('click',confirmSave);byId('watchCloseBtn').addEventListener('click',close);byId('watchDoneBtn').addEventListener('click',close);
+      byId('watchCopyPromptBtn').addEventListener('click',async()=>{const result=await root.ClipboardUtils.copyTextWithFallback(byId('watchPromptText').value,{selectableElement:byId('watchPromptText'),detailsElement:byId('watchAiDetails')});byId('watchStatus').textContent=result.ok?'请求已复制。':'请长按请求文本手动复制。'});
+      byId('watchAddReference').addEventListener('click',()=>{if(byId('watchReferences').children.length>=8)return;byId('watchReferences').insertAdjacentHTML('beforeend',referenceRow());invalidatePreview()});
+      modal.oninput=invalidatePreview;
+      modal.onchange=event=>{if(event.target.matches('[data-ref-type]'))event.target.closest('.watch-reference-row').querySelector('[data-ref-end-label]').hidden=event.target.value==='reference';if(event.target.id==='watchOperation')byId('watchDefinitionFields').disabled=event.target.value!=='update';invalidatePreview()};
+      byId('watchReferences').onclick=event=>{if(event.target.matches('[data-ref-remove]')){event.target.closest('.watch-reference-row').remove();invalidatePreview()}};
+      modal.classList.add('show');byId('watch-name').focus();
+    }catch(error){alert(error.message)}
+  }
+  function invalidatePreview(){preview=null;byId('watchConfirmBtn').disabled=true;byId('watchPreview').innerHTML='';byId('watchStatus').textContent='编辑后请重新预览。'}
+  function collect(){
+    const lines=key=>byId('watch-'+key).value.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+    return {planMode:'state_watch',name:byId('watch-name').value,reviewAction:byId('watch-reviewAction').value,...Object.fromEntries(Plan.WATCH_RULE_FIELDS.map(key=>[key,lines(key)])),priceReferences:[...byId('watchReferences').children].map(row=>{const type=row.querySelector('[data-ref-type]').value,from=Number(row.querySelector('[data-ref-from]').value),meaning=row.querySelector('[data-ref-meaning]').value;return type==='reference'?{type,price:from,meaning}:{type,from,to:Number(row.querySelector('[data-ref-to]').value),meaning}}),allocationConstraint:{maxPositionPct:byId('watchMaxPosition').value===''?null:Number(byId('watchMaxPosition').value),targetWeightRange:byId('watchWeightRange').value||null},note:byId('watch-note').value,validUntil:byId('watch-validUntil').value||null,nextReviewDate:byId('watch-nextReviewDate').value||null};
+  }
+  function manualPreview(){const operation=byId('watchOperation')?.value||'create';showPreview(JSON.stringify(Workflow.envelope(prepared,operation,['create','update'].includes(operation)?collect():null,byId('watchReason').value)))}
+  function showPreview(raw){if(busy)return;preview=Workflow.process(raw,{stock:stock(),prepared});byId('watchStatus').textContent=preview.message;byId('watchPreview').innerHTML=Workflow.renderPreview(preview);byId('watchConfirmBtn').disabled=!preview.confirmReady;byId('watchConfirmBtn').textContent=preview.operation==='invalidate'?'确认取消计划':preview.operation==='complete'?'确认完成计划':'确认保存';byId('watchPreview').scrollIntoView({block:'start',behavior:'auto'})}
+  async function confirmSave(){
+    if(busy||!preview?.confirmReady)return;busy=true;byId('watchConfirmBtn').disabled=true;
+    // persistCandidateSnapshot uses the critical storage and multi-tab guards without adopting early.
+    const result=await Workflow.commit(preview,state,{saveCandidate:async candidate=>{const validated=createValidatedCandidateSnapshot(candidate,{touchUpdatedAt:false});await persistCandidateSnapshot(validated);return {state:validated}},adoptCandidate:candidate=>{state=candidate}},{confirmed:true});
+    busy=false;
+    if(result.status==='completed'){close();render()}
+    else{byId('watchStatus').textContent=`未保存：${result.error?.message||'请重新预览'}。原计划保持不变。`;preview=null;byId('watchConfirmBtn').disabled=true}
+  }
+  function close(){if(busy)return;Workflow.release(prepared);prepared=null;preview=null;byId('watchDefinitionDialog')?.classList.remove('show');returnFocus?.focus?.()}
+  styles();
+  document.addEventListener('click',event=>{const button=event.target.closest('[data-watch-new],[data-watch-edit]');if(button){const target=button.dataset.watchEdit;open(button.dataset.watchStock,target)}});
+  root.StateWatchUI=Object.freeze({open,close});
+})(typeof globalThis!=='undefined'?globalThis:this);

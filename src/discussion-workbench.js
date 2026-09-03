@@ -257,6 +257,7 @@
   }
   function compactPlan(plan){
     const source=PlanV2&&typeof PlanV2.normalizePlan==='function'?PlanV2.normalizePlan(plan):object(plan);
+    if(PlanV2&&!PlanV2.isLegacyPricePlan(source))return {...PlanV2.compactForPortfolio(source,null),quantity:null,status:source.status};
     return {id:text(source.id),planVersion:Number(source.planVersion)||1,action:text(source.action),triggerPrice:number(source.triggerPrice??source.price),triggerDirection:text(source.triggerDirection),status:text(source.status),validityStatus:text(source.validityStatus),note:text(source.note),nextReviewDate:validDate(source.nextReviewDate),validUntil:validDate(source.validUntil)};
   }
   function compactCurrentState(current,freshness){

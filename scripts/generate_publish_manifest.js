@@ -30,6 +30,8 @@ roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 local
 roleByPath.set('src/decision-compression-context.js','Decision Compression compact context with program-owned blocker facts and audit references');
 roleByPath.set('src/decision-compression-contract.js','Decision Compression AI emphasis-only contract and atomic snapshot runtime');
 roleByPath.set('src/portfolio-review-ui.js','Decision Compression scope, freshness, first layer, and preserved Portfolio Review drill-down workflow');
+roleByPath.set('src/state-watch-workflow.js','State-watch Definition strict session and target binding, readable preview/diff and confirmed same-ID candidate commit');
+roleByPath.set('src/state-watch-ui.js','Dedicated mobile state-watch Definition editor, manual and AI Draft preview/confirm and non-executable cards');
 roleByPath.set('src/plan-v2.js','Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime');
 roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime');
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
@@ -63,6 +65,8 @@ const paths=[...new Set([
   'src/decision-compression-contract.js',
   'src/portfolio-review-ui.js',
   'src/plan-v2.js',
+  'src/state-watch-workflow.js',
+  'src/state-watch-ui.js',
   'src/plan-review.js',
   'src/plan-review-ui.js',
   'src/clipboard.js',

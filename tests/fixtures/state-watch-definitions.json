@@ -1,0 +1,5 @@
+[
+  {"planMode":"state_watch","name":"高位风险观察","entryConditions":["高位压力后出现明显回撤"],"confirmationConditions":["关键支撑有效失守"],"invalidationConditions":["重新恢复稳定上升结构"],"reviewAction":"reduce_review","priceReferences":[{"type":"watch_zone","from":37,"to":40,"meaning":"前高及高位压力观察区域"}]},
+  {"planMode":"state_watch","name":"回撤支撑观察","entryConditions":["上升趋势回踩关键支撑"],"confirmationConditions":["支撑测试后重新恢复"],"invalidationConditions":["中期结构有效破坏"],"reviewAction":"hold_watch"},
+  {"planMode":"state_watch","name":"右侧确认观察","entryConditions":["初步止跌"],"confirmationConditions":["趋势重新恢复"],"invalidationConditions":["修复失败并重新转弱"],"reviewAction":"add_review"}
+]

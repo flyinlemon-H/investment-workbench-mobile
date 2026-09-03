@@ -45,7 +45,7 @@
       if(stock.plans!==undefined&&!Array.isArray(stock.plans))fail('validation.state.plans');
       array(stock.plans).forEach(plan=>{
         if(!isPlainObject(plan))fail('validation.state.plan');
-        if(plan.schemaVersion==='plan.v2'&&global.PlanV2&&typeof global.PlanV2.validatePlan==='function'&&!global.PlanV2.validatePlan(plan).ok)fail('validation.state.planV2');
+        if((plan.schemaVersion==='plan.v2'||plan.planMode==='state_watch')&&global.PlanV2&&typeof global.PlanV2.validatePlan==='function'&&!global.PlanV2.validatePlan(plan).ok)fail('validation.state.planV2');
       });
       if(stock.discussionState!==undefined){
         if(!isPlainObject(stock.discussionState))fail('validation.state.discussionState');
