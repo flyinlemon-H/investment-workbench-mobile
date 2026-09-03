@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "1577e2cd033fea4d1c0d0c6476a3f4f3fce4954b",
-  "assetVersion": "discussion-anchor-guard-20260903",
-  "dataMode": "Discussion Current State technical-anchor readiness guards and visible localized save failure feedback; strict program-owned archive contract, protected-context rejection, history and critical storage unchanged; Plan V2 Phase 1B preserved, no Runtime or market-universe changes; only manifest-allowlisted browser assets are delivered",
+  "sourceCommit": "018d5dfcd75c6adf00e382aa04fdf265a8edf1cf",
+  "assetVersion": "stock-universe-auto-add-v1a-20260903",
+  "dataMode": "Stock Universe V1A local-first automatic additions through Supabase Auth with scoped PC read access; membership only, no removals or full-state sync; existing Current State anchor guards, Plan V2 Phase 1B and market calculations preserved; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1794023,
-      "sha256": "73b8104b9c4fe2141be6f0ada19a73077db91d8439acf553d70fffef35c69d0b"
+      "bytes": 1800261,
+      "sha256": "ba7cb312870d22e1be64d1ef8d4d0d5031f157b5b94c61c2ab0be8b9fadbeead"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1282,
-      "sha256": "5afa374e5ad70aaaeff95f15e0b1f736a9c0f1b733ecfaaae12bef8cd78c94f3"
+      "sha256": "8dc09980dc8447ba99dfec0502b4d2dbd30d5da54dbbe8ddce52cb0af442768b"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -41,6 +41,12 @@
       "sha256": "15516cca7a55876b43b5ee5443aa94042eccd6d2626929afaaf64e10f297c142"
     },
     {
+      "path": "data/supabase_config.js",
+      "role": "public Supabase URL and publishable key only",
+      "bytes": 298,
+      "sha256": "2fecf14c164e14f315146e4d2d64eb6c163e4f156a83e7fd0362290140f3670a"
+    },
+    {
       "path": "favicon.svg",
       "role": "local icon",
       "bytes": 270,
@@ -49,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 56418,
-      "sha256": "9ed6e7e243275df4d85d0a2a3be137975fef4bdcd2a5e7431293be601a8bf02c"
+      "bytes": 57899,
+      "sha256": "4217b678e4a8dd3d3699babb8199bef024d13536634449a8795a37866662cd65"
     },
     {
       "path": "social_posts.json",
@@ -97,8 +103,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33276,
-      "sha256": "5aa061865f008d002ba19cc1fc6bd1c604c023df664d00a158ecfadeac6a4368"
+      "bytes": 33455,
+      "sha256": "2ace8efd317e85a6bf3ec36902081290a1a188f67f7b4087ee065fddb2fd04e7"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -319,8 +325,8 @@
     {
       "path": "src/storage/storage-manager.js",
       "role": "browser runtime dependency",
-      "bytes": 14379,
-      "sha256": "bf277c2108be4b0779102efd689af06baced2227f230459ea1ef3fd0257601ac"
+      "bytes": 14973,
+      "sha256": "4a5142ef1c5313a078101d96c0ea28d32b231545ec5bba382c2a5e9eff91b5bf"
     },
     {
       "path": "src/storage/storage-validation.js",
@@ -353,10 +359,22 @@
       "sha256": "8fa5711f1cbadc069c9ace86dd07dc99686c16b93a5f3c6e928aafc78ce99dec"
     },
     {
+      "path": "src/universe-auto-add.js",
+      "role": "durable local-first canonical stock addition queue and standard Auth",
+      "bytes": 10838,
+      "sha256": "03136780eb938157944ea0f587d2577c49f8bdc31166f8a27e4c22951ee3272d"
+    },
+    {
       "path": "src/universe-handoff.js",
       "role": "REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime",
       "bytes": 9406,
       "sha256": "d70fff19b7e4a16fa9bfeb24c2507a3423d7371f5d69b8fa92d4e4493d6dde2f"
+    },
+    {
+      "path": "src/universe-sync-ui.js",
+      "role": "local/cloud/market status, login and scoped PC reader setup",
+      "bytes": 6979,
+      "sha256": "dd0b030d895643d54eb6e60b1a3344541c9865ebe05a0853d1ca28d283d63558"
     },
     {
       "path": "src/v13-alpha3-services.js",
@@ -393,6 +411,12 @@
       "role": "browser runtime dependency",
       "bytes": 5571,
       "sha256": "2a197b686f4e42dba6deac14ac1a4d7b49d5766d57bbaef59f19cd7a684f28e1"
+    },
+    {
+      "path": "src/vendor/supabase-client.js",
+      "role": "pinned Supabase SDK with MIT license; browser Auth and add-only inserts",
+      "bytes": 227644,
+      "sha256": "4bba3c365fc363f8fadf50396d6536ccbcf1a5ee18709c7ea199a1e322a05584"
     }
   ]
 }
