@@ -90,8 +90,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'state-watch-definition-phase1b-20260903',
-  dataMode:'Plan V2 Phase 1B: state-watch Definition schema, nullable non-executable observation Plans, strict session-bound manual and AI Draft Preview/Diff/Confirm, same-ID versioned edits and fail-closed roundtrip; legacy behavior and snapshotHash unchanged; no Runtime, Current State output change, automatic migration, execution or Allocation mutation; only manifest-allowlisted browser assets are delivered',
+  assetVersion:'discussion-anchor-guard-20260903',
+  dataMode:'Discussion Current State technical-anchor readiness guards and visible localized save failure feedback; strict program-owned archive contract, protected-context rejection, history and critical storage unchanged; Plan V2 Phase 1B preserved, no Runtime or market-universe changes; only manifest-allowlisted browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

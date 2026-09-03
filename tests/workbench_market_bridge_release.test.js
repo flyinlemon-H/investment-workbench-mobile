@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('State-watch Definition release cache-busts the transport and Workbench modules',()=>{
+test('Discussion anchor guard release cache-busts the transport and Workbench modules',()=>{
   const html=read('index.html');
-  const version='state-watch-definition-phase1b-20260903';
+  const version='discussion-anchor-guard-20260903';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
