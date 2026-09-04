@@ -12,8 +12,8 @@ const day=index=>new Date(Date.UTC(2026,7,1+index)).toISOString().slice(0,10);
 const bars=Array.from({length:30},(_,index)=>({date:day(index),close:50+index,adjustment:'qfq',price_basis:'adjusted',provider:'fixture',is_complete_bar:true}));
 function stock(overrides={}){return {id:'fixture-stock',code:'601138.SS',name:'工业富联',type:'holding',role:'核心仓',shares:100,avgCost:42,currentPrice:79,priceHistory:bars,technicalData:{technicalDataStatus:'fresh',technicalAsOf:day(29)},technicalReview:{updatedAt:'2026-08-31T08:00:00Z',shortTermTechnical:{trendStatus:'recovery',cyclePosition:'high',technicalSummary:'中周期修复，短周期转弱。',confidence:'medium'}},plans:[],longTermLogic:{updatedAt:'2026-08-20T08:00:00Z',logicStatus:'valid',investmentThesis:'长期逻辑保持。'},...overrides}}
 function decision(prepared,overrides={}){
-  const base={symbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,actionAssessment:{category:'hold_watch',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势稳定且没有已确认的风险或机会结构。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向稳定，尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认；确认后再提高复核级别。'],summary:'整体状态稳定，先前判断没有明显强化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:['继续观察量价与关键位置的配合。'],planRelation:{status:'neutral',summary:'当前判断与计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'};
-  return {currentState:{...base,...overrides,actionAssessment:{...base.actionAssessment,...(overrides.actionAssessment||{})},trendAssessment:{...base.trendAssessment,...(overrides.trendAssessment||{})},planRelation:{...base.planRelation,...(overrides.planRelation||{})}}};
+  const base={symbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,userDecision:{headline:'可以继续持有，暂时没有明显减仓风险。',holding:{status:'safe',summary:'当前持有判断仍然稳定。'},positionDirection:{status:'hold_no_add',summary:'持有为主，暂不增加仓位。'},addAssessment:{status:'wait',summary:'等待更合适的机会，不追当前位置。'},warning:{summary:'若关键风险明显增强，需要重新复核当前判断。',items:[]},takeProfit:{status:'none',summary:'暂时没有明显止盈压力。'},stopLoss:{status:'none',summary:'关键支撑仍有效，暂时没有明显止损风险。'},riskSource:'none'},actionAssessment:{category:'hold_watch',priority:'low',headline:'当前没有临近的仓位决策窗口，维持常规观察。',reasons:['趋势稳定且没有已确认的风险或机会结构。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向稳定，尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认；确认后再提高复核级别。'],summary:'整体状态稳定，先前判断没有明显强化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:['继续观察量价与关键位置的配合。'],planRelation:{status:'neutral',summary:'当前判断与计划没有需要立即处理的冲突；价格触发不等于完整条件满足。'},confidence:'medium'};
+  return {currentState:{...base,...overrides,userDecision:{...base.userDecision,...(overrides.userDecision||{})},actionAssessment:{...base.actionAssessment,...(overrides.actionAssessment||{})},trendAssessment:{...base.trendAssessment,...(overrides.trendAssessment||{})},planRelation:{...base.planRelation,...(overrides.planRelation||{})}}};
 }
 function options(prepared,sourceStock,extra={}){return {expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:sourceStock.shares,hasActivePlan:prepared.context.currentFacts.plans.length>0,technicalDataStatus:prepared.context.currentFacts.technical.dataStatus,programProvesFullPlanConditions:false,...extra}}
 function process(sourceStock,overrides={},extra={}){const prepared=Workbench.buildDiscussionRequest(sourceStock),result=Contract.process(JSON.stringify(decision(prepared,overrides)),options(prepared,sourceStock,extra));return {prepared,result}}
@@ -65,7 +65,7 @@ test('scenario F forming bottom waits for confirmation',()=>{
 
 test('scenario G confirmed bottom uses add review for held and entry review for zero position',()=>{
   const held=process(stock(),{actionAssessment:{category:'add_review',priority:'high',headline:'底部结构确认且趋势修复，进入加仓复核窗口。',reasons:['60分钟底部结构已确认。'],upgradeConditions:['趋势继续恢复后复核完整计划条件。'],downgradeConditions:['底部结构破坏后取消机会复核。']},attentionLevel:'window',structureAssessment:[{timeframe:'60分钟',type:'bottom',status:'confirmed',source:'external_software',sourceAsOf:'2026-09-01',shortReason:'底部结构已确认。'}]});assert.equal(held.result.ok,true,held.result.message);
-  const zeroStock=stock({type:'candidate',shares:0,avgCost:0}),zero=process(zeroStock,{actionAssessment:{category:'entry_review',priority:'high',headline:'底部结构确认且趋势修复，进入建仓复核窗口。',reasons:['60分钟底部结构已确认。'],upgradeConditions:['趋势延续后复核完整建仓条件。'],downgradeConditions:['底部结构破坏后取消机会复核。']},attentionLevel:'window',structureAssessment:[{timeframe:'60分钟',type:'bottom',status:'confirmed',source:'external_software',sourceAsOf:'2026-09-01',shortReason:'底部结构已确认。'}],planRelation:{status:'no_matching_plan',summary:'当前没有对应的有效建仓计划，需要单独复核，不自动创建计划。'}});assert.equal(zero.result.ok,true,zero.result.message);
+  const zeroStock=stock({type:'candidate',shares:0,avgCost:0}),zeroDecision={headline:'已经进入值得关注的建仓区域。',holding:{status:'not_applicable',summary:'当前没有持仓。'},positionDirection:{status:'add_review',summary:'保持观察，可以进入建仓复核。'},addAssessment:{status:'add_review',summary:'条件已经成熟，可以复核建仓机会。'},warning:{summary:'若重新走弱，应继续等待。',items:[]},takeProfit:{status:'not_applicable',summary:'当前无持仓，不适用。'},stopLoss:{status:'not_applicable',summary:'尚未持有，不适用。'},riskSource:'none'},zero=process(zeroStock,{userDecision:zeroDecision,actionAssessment:{category:'entry_review',priority:'high',headline:'底部结构确认且趋势修复，进入建仓复核窗口。',reasons:['60分钟底部结构已确认。'],upgradeConditions:['趋势延续后复核完整建仓条件。'],downgradeConditions:['底部结构破坏后取消机会复核。']},attentionLevel:'window',structureAssessment:[{timeframe:'60分钟',type:'bottom',status:'confirmed',source:'external_software',sourceAsOf:'2026-09-01',shortReason:'底部结构已确认。'}],planRelation:{status:'no_matching_plan',summary:'当前没有对应的有效建仓计划，需要单独复核，不自动创建计划。'}});assert.equal(zero.result.ok,true,zero.result.message);
   const contradiction=process(zeroStock,{actionAssessment:{category:'hold_watch'}});assert.equal(contradiction.result.ok,false);assert.equal(contradiction.result.writes,0);
 });
 
@@ -114,14 +114,14 @@ test('full-condition semantic guard allows local negation but rejects every affi
 
 test('legacy v1 state and history remain readable without fabricated decision fields',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),result=Contract.process(JSON.stringify(decision(prepared)),options(prepared,source)),built=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-01T08:00:00Z'}),saved=built.currentState;
-  const legacy={...saved,schemaVersion:Workbench.LEGACY_STATE_SCHEMA_VERSION,planRelation:'保持观察。'};for(const key of ['actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints'])delete legacy[key];
+  const legacy={...saved,schemaVersion:Workbench.LEGACY_STATE_SCHEMA_VERSION,planRelation:'保持观察。'};for(const key of ['userDecision','actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints'])delete legacy[key];
   const store=Workbench.normalizeStore({schemaVersion:Workbench.STORE_SCHEMA_VERSION,current:legacy,history:[legacy,saved]});assert.equal(store.current.schemaVersion,Workbench.LEGACY_STATE_SCHEMA_VERSION);assert.equal('actionAssessment' in store.current,false);assert.equal(store.history.length,2);assert.equal(Workbench.validateStore(store).ok,true);
 });
 
 test('next Discussion context carries the compact decision layer and asks lifecycle upgrade questions',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),result=Contract.process(JSON.stringify(decision(prepared)),options(prepared,source)),built=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-01T08:00:00Z'}),next=Workbench.buildDiscussionRequest(built.candidate.stocks[0]);
-  for(const key of ['actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints','planRelation'])assert.ok(Object.prototype.hasOwnProperty.call(next.context.currentState,key),key);
-  assert.match(next.request,/结构是确认、仍有效还是已破坏/);assert.match(next.request,/关注级别应升级还是降级/);assert.doesNotMatch(next.request,/stateId|reviewHash|snapshotHash/);assert.equal('technicalSnapshot' in next.context.currentState,false);
+  for(const key of ['userDecision','actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints','planRelation'])assert.ok(Object.prototype.hasOwnProperty.call(next.context.currentState,key),key);
+  assert.match(next.request,/能否继续持有/);assert.match(next.request,/专业技术概念只作为判断依据/);assert.doesNotMatch(next.request,/stateId|reviewHash|snapshotHash/);assert.equal('technicalSnapshot' in next.context.currentState,false);
 });
 
 test('candidate save mutates only cloned discussion state and preserves all protected domains',()=>{
@@ -131,11 +131,65 @@ test('candidate save mutates only cloned discussion state and preserves all prot
 
 test('import preview and Current State UI put decision, urgency, trend, structure and focus before details',()=>{
   const source=stock(),{prepared,result}=process(source,{structureAssessment:[{timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'顶部结构形成中。'}]}),preview=Contract.renderPreview(result,{technicalAsOf:prepared.technicalSnapshot.anchorBar.date,confirmedDate:'2026-09-01'}),ui=fs.readFileSync(path.join(root,'src','ui-render.js'),'utf8'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  for(const label of ['当前关注','操作倾向','趋势','结构','当前重点','与计划关系'])assert.match(preview,new RegExp(label));assert.ok(preview.indexOf('操作倾向')<preview.indexOf('核心结论'));
-  const card=ui.slice(ui.indexOf('function discussionStateCard'),ui.indexOf('function discussionHistoryPanel'));for(const label of ['操作倾向','趋势','结构','当前重点','与计划关系','查看完整结论'])assert.match(card,new RegExp(label));assert.ok(card.indexOf('操作倾向')<card.indexOf('查看完整结论'));assert.match(html,/discussion-decision-card/);assert.match(html,/max-width:100%;overflow-wrap:anywhere/);
+  for(const label of ['当前结论','仓位方向','如果想加仓','需要警惕','判断依据','趋势','结构','当前重点','与计划关系'])assert.match(preview,new RegExp(label));assert.ok(preview.indexOf('当前结论')<preview.indexOf('判断依据'));
+  const card=ui.slice(ui.indexOf('function discussionStateCard'),ui.indexOf('function discussionHistoryPanel'));for(const label of ['当前结论','仓位方向','如果想建仓','如果想加仓','需要警惕','止盈','止损','判断依据','趋势','结构','与计划关系'])assert.match(card,new RegExp(label));assert.ok(card.lastIndexOf('当前结论')<card.lastIndexOf('判断依据'));assert.match(html,/discussion-user-decision-card/);assert.match(html,/max-width:100%;overflow-wrap:anywhere/);
 });
 
 test('normal UI mappings contain Chinese labels and prose rejects internal English leakage',()=>{
   const ui=fs.readFileSync(path.join(root,'src','ui-render.js'),'utf8'),source=stock(),prepared=Workbench.buildDiscussionRequest(source);for(const label of ['风险控制','减仓复核','持有观察','等待确认','加仓复核','建仓复核','暂不操作','普通观察','重点观察','临近窗口'])assert.match(ui,new RegExp(label));
   const leaked=Contract.process(JSON.stringify(decision(prepared,{summary:'当前 actionAssessment 显示 recovery。'})),options(prepared,source));assert.equal(leaked.ok,false);assert.equal(leaked.writes,0);
+});
+
+test('User Decision V3 keeps independent position, add, take-profit and stop-loss dimensions',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source),cases=[
+    {headline:'可以继续持有，但高位风险正在增加。',holding:{status:'caution',summary:'仍可持有，但需要提高警惕。'},positionDirection:{status:'hold_no_add',summary:'维持现有仓位，暂不增加。'},addAssessment:{status:'avoid',summary:'当前位置不适合增加仓位。'},warning:{summary:'若高位继续转弱，应复核减仓方向。',items:['关注承接是否进一步减弱。']},takeProfit:{status:'watch',summary:'高位压力增加，开始关注止盈。'},stopLoss:{status:'none',summary:'暂时没有明显止损风险。'},riskSource:'stock'},
+    {headline:'当前位置风险较高，需要进入减仓复核。',holding:{status:'reduce_review',summary:'持有风险已经明显增加。'},positionDirection:{status:'reduce_review',summary:'优先复核降低仓位风险。'},addAssessment:{status:'avoid',summary:'当前不适合增加仓位。'},warning:{summary:'若继续走弱，需要升级风险控制。',items:[]},takeProfit:{status:'review',summary:'进入止盈复核，保护已有利润。'},stopLoss:{status:'watch',summary:'关键支撑转弱，关注止损风险。'},riskSource:'stock'},
+    {headline:'条件已经成熟，可以复核增加仓位。',holding:{status:'safe',summary:'当前持有判断仍然稳定。'},positionDirection:{status:'add_review',summary:'仓位仍有空间，可以进入增加仓位复核。'},addAssessment:{status:'add_review',summary:'机会已经成熟，可以开始复核。'},warning:{summary:'若重新走弱，应取消本次机会复核。',items:[]},takeProfit:{status:'none',summary:'暂时没有明显止盈压力。'},stopLoss:{status:'none',summary:'当前没有明显本金保护风险。'},riskSource:'none'},
+    {headline:'关键风险已经出现，需要优先控制仓位风险。',holding:{status:'risk_control',summary:'继续持有的风险已经明显升高。'},positionDirection:{status:'risk_control',summary:'优先进入风险控制复核。'},addAssessment:{status:'avoid',summary:'当前不应增加仓位。'},warning:{summary:'关键支撑已经失效，风险可能继续扩大。',items:[]},takeProfit:{status:'review',summary:'优先保护已有利润。'},stopLoss:{status:'risk_control',summary:'进入本金风险控制复核。'},riskSource:'stock'}
+  ];
+  for(const [index,userDecision] of cases.entries()){
+    const actionAssessment=index===1?{category:'reduce_review',priority:'high'}:(index===2?{category:'add_review',priority:'high'}:(index===3?{category:'risk_control',priority:'high'}:{})),result=Contract.process(JSON.stringify(decision(prepared,{userDecision,actionAssessment})),options(prepared,source));
+    assert.equal(result.ok,true,result.message);assert.deepEqual(result.currentState.userDecision,userDecision);assert.doesNotMatch(JSON.stringify(result.currentState.userDecision),/自动卖出|自动买入/);
+  }
+});
+
+test('market-risk override is allowed only with explicit supplied market context',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source),userDecision={headline:'个股本身仍然稳定，但大盘风险偏高，当前不宜继续增加仓位。',holding:{status:'safe',summary:'个股持有判断仍然稳定。'},positionDirection:{status:'hold_no_add',summary:'大盘风险偏高，暂不增加仓位。'},addAssessment:{status:'avoid',summary:'等待市场风险下降后再复核。'},warning:{summary:'若市场风险继续增强，应提高仓位防御。',items:[]},takeProfit:{status:'watch',summary:'开始关注利润保护。'},stopLoss:{status:'none',summary:'个股暂时没有明显止损风险。'},riskSource:'market'};
+  const absent=Contract.process(JSON.stringify(decision(prepared,{userDecision})),options(prepared,source));assert.equal(absent.ok,false);assert.match(absent.message,/不得归因于大盘/);
+  const explicit=Contract.process(JSON.stringify(decision(prepared,{userDecision})),options(prepared,source,{marketRiskAvailable:true}));assert.equal(explicit.ok,true,explicit.message);
+  const context=Workbench.buildContext(source,{marketRiskContext:{status:'elevated',summary:'用户明确提供大盘风险偏高。',source:'user_provided'}});assert.equal(context.context.currentFacts.marketRisk.status,'elevated');assert.equal(Workbench.buildContext(source).context.currentFacts.marketRisk.status,'unavailable');
+});
+
+test('zero-position perspective, price ownership and concise-language guards fail closed',()=>{
+  const source=stock({type:'candidate',shares:0,avgCost:0}),prepared=Workbench.buildDiscussionRequest(source),base=decision(prepared,{userDecision:{headline:'当前位置不适合建仓，继续等待。',holding:{status:'not_applicable',summary:'当前没有持仓。'},positionDirection:{status:'not_applicable',summary:'保持空仓观察。'},addAssessment:{status:'wait',summary:'等待更合适的建仓机会。'},warning:{summary:'若风险继续增强，应延后建仓复核。',items:[]},takeProfit:{status:'not_applicable',summary:'当前无持仓，不适用。'},stopLoss:{status:'not_applicable',summary:'尚未持有，不适用。'},riskSource:'none'},actionAssessment:{category:'no_action'},planRelation:{status:'no_matching_plan'}});
+  const valid=Contract.process(JSON.stringify(base),options(prepared,source));assert.equal(valid.ok,true,valid.message);
+  for(const mutate of [
+    value=>value.currentState.userDecision.headline='可以继续持有。',
+    value=>value.currentState.userDecision.addAssessment.summary='等待回到六十元再建仓。',
+    value=>value.currentState.userDecision.addAssessment.summary='等待回到 60 元再建仓。',
+    value=>value.currentState.userDecision.headline='日线修复仍然有效。',
+    value=>value.currentState.userDecision.warning.summary=value.currentState.userDecision.headline
+  ]){const candidate=structuredClone(base);mutate(candidate);const result=Contract.process(JSON.stringify(candidate),options(prepared,source));assert.equal(result.ok,false);assert.equal(result.writes,0)}
+});
+
+test('semantic guard accepts negated legacy wording and rejects direct-execution implications',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source);
+  for(const summary of ['已经到达观察区间，但条件还未成熟。','关键条件尚未确立。','价格进入计划范围不等于完整条件满足。']){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,result.message)}
+  for(const summary of ['价格进入计划区，因此完整条件已经满足。','价格达到计划价，可以直接执行。','既然价格触发，所有确认条件都已完成。']){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,false,summary);assert.equal(result.writes,0)}
+});
+
+test('v2 records remain canonical without synthetic userDecision while v3 requires it',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source),v3=decision(prepared),result=Contract.process(JSON.stringify(v3),options(prepared,source)),saved=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-04T08:00:00Z'}).currentState,v2={...saved,schemaVersion:Workbench.V2_STATE_SCHEMA_VERSION};delete v2.userDecision;
+  const normalized=Workbench.normalizeStore({schemaVersion:Workbench.STORE_SCHEMA_VERSION,current:v2,history:[v2]});assert.equal(normalized.current.schemaVersion,Workbench.V2_STATE_SCHEMA_VERSION);assert.equal('userDecision' in normalized.current,false);assert.equal(Workbench.validateStore(normalized).ok,true);
+  const missing=structuredClone(v3);delete missing.currentState.userDecision;const rejected=Contract.process(JSON.stringify(missing),options(prepared,source));assert.equal(rejected.ok,false);assert.match(rejected.message,/userDecision/);
+});
+
+test('accepted pre-V3 allowlist strips userDecision on resave but preserves legacy Current State evidence',()=>{
+  const source=stock(),prepared=Workbench.buildDiscussionRequest(source),result=Contract.process(JSON.stringify(decision(prepared)),options(prepared,source)),saved=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-04T08:00:00Z'}).currentState;
+  // This is the exact non-V1 field projection used by accepted baseline f14821e.
+  const baselineFields=['stateId','symbol','sourceDiscussionVersion','actionAssessment','attentionLevel','trendAssessment','structureAssessment','stage','focusPoints','summary','keyChanges','risks','watchPoints','planRelation','confidence','technicalAsOf','confirmedAt','confirmedDate','technicalSnapshot','references'];
+  const oldClientResave={schemaVersion:Workbench.V2_STATE_SCHEMA_VERSION};for(const key of baselineFields)oldClientResave[key]=structuredClone(saved[key]);
+  assert.equal('userDecision' in oldClientResave,false);
+  assert.equal(Workbench.validateState(oldClientResave).ok,true);
+  for(const key of baselineFields)assert.deepEqual(oldClientResave[key],saved[key],key);
 });

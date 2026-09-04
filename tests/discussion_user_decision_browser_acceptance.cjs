@@ -1,0 +1,46 @@
+'use strict';
+// Real application rendering and handlers in isolated browser storage; all external requests blocked.
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const output=path.resolve(process.argv[2]||path.join('test-results','discussion-user-decision-v3')),url='http://127.0.0.1:8768/';
+
+(async()=>{
+  fs.mkdirSync(output,{recursive:true});
+  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined}),results=[];
+  try{
+    for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+      const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[],dialogs=[];
+      page.on('pageerror',error=>errors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.dismiss()});
+      await context.route('**/*',route=>new URL(route.request().url()).origin===new URL(url).origin?route.continue():route.abort());
+      await page.goto(url);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');
+      await page.evaluate(async()=>{
+        const source={id:'decision-v3-acceptance',code:'601138.SS',name:'隔离决策层验收',type:'holding',role:'核心仓',shares:100,avgCost:52,currentPrice:68,capPct:20,priceHistory:Array.from({length:30},(_,index)=>({date:new Date(Date.UTC(2026,7,1+index)).toISOString().slice(0,10),close:50+index,is_complete_bar:true,adjustment:'qfq',price_basis:'adjusted',provider:'fixture'})),technicalData:{technicalDataStatus:'fresh'},plans:[PlanV2.createPlan({id:'accept-add',action:'add',triggerPrice:60,triggerDirection:'below',quantity:100,conditions:{technical:['重新稳定。'],invalidation:['继续走弱。']},note:'增加仓位观察。'},{source:'manual'}),PlanV2.createPlan({id:'accept-reduce',action:'reduce',triggerPrice:75,triggerDirection:'above',quantity:100,conditions:{technical:['高位转弱。'],invalidation:['重新走强。']},note:'利润保护观察。'},{source:'manual'})]};
+        let candidate=createValidatedCandidateSnapshot({stocks:[source],updatedAt:null}),stock=candidate.stocks[0],prepared=DiscussionWorkbench.buildDiscussionRequest(stock,{state:candidate,allStocks:candidate.stocks,planReviewStore:candidate.planReviews,planReviewApi:PlanReview,timeZone:'Asia/Shanghai'}),payload={currentState:{symbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,userDecision:{headline:'可以继续持有，但需要留意高位风险。',holding:{status:'caution',summary:'仍可持有，但需要提高警惕。'},positionDirection:{status:'hold_no_add',summary:'维持现有仓位，暂不增加。'},addAssessment:{status:'wait',summary:'等待回落后重新稳定，不追当前位置。'},warning:{summary:'若高位继续转弱，需要进入减仓复核。',items:['若关键支撑失效，需要提高风险控制级别。']},takeProfit:{status:'watch',summary:'高位压力增加，开始关注利润保护。'},stopLoss:{status:'none',summary:'关键支撑仍有效，暂时没有明显止损风险。'},riskSource:'stock'},actionAssessment:{category:'hold_watch',priority:'medium',headline:'高位压力增加，仓位方向以持有观察为主。',reasons:['中期方向仍然稳定，但短线压力增加。'],upgradeConditions:['关键支撑失效后提高风险控制级别。'],downgradeConditions:['重新走强后降低警惕。']},attentionLevel:'focused',trendAssessment:{overall:'uptrend',timeframes:[{timeframe:'日线',status:'uptrend',explanation:'中期方向仍然稳定。'}]},structureAssessment:[{timeframe:'日线',type:'pullback',status:'forming',source:'program',sourceAsOf:'',shortReason:'短线回落正在发展，需要观察承接。'}],stage:'高位风险观察',focusPoints:['观察高位压力是否继续增强。'],summary:'中期方向仍然稳定，短线压力有所增加。',keyChanges:['高位压力较此前增加。'],risks:['若关键支撑失效，持有风险将上升。'],watchPoints:['观察回落后的承接强度。'],planRelation:{status:'aligned',summary:'已经接近计划观察范围，继续等待关键条件。'},confidence:'medium'}};
+        const result=DiscussionStateContract.process(JSON.stringify(payload),{expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:stock.shares,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false,prepared});
+        if(!result.ok||!result.previewReady)throw new Error(result.message);
+        candidate=DiscussionStateContract.buildCandidate(candidate,result,{prepared,now:'2026-09-04T08:00:00Z',timeZone:'Asia/Shanghai'}).candidate;
+        await persistCandidateSnapshot(candidate);state=candidate;render();openStockDetail('decision-v3-acceptance','ai');
+        globalThis.decisionV3Original=structuredClone(state);
+      });
+      const workspace=page.locator('.discussion-workbench'),buttons=workspace.locator('.discussion-actions button'),labels=await buttons.allTextContents();
+      assert.deepEqual(labels,['开始讨论','整理结论','导入结论','整理计划','导入计划','查看历史']);assert.equal(new Set(labels).size,6);
+      const order=await workspace.locator(':scope > *').evaluateAll(nodes=>nodes.map(node=>node.className));assert.match(order[0],/discussion-control-card/);assert.match(order[1],/discussion-user-decision-card/);assert.match(order[2],/discussion-history/);
+      assert.equal(await page.locator('.discussion-evidence').evaluate(node=>node.open),false);assert.match(await page.locator('.discussion-user-decision-card').innerText(),/当前结论[\s\S]*仓位方向[\s\S]*如果想加仓[\s\S]*需要警惕[\s\S]*止盈[\s\S]*止损[\s\S]*判断依据/);
+      assert.match(await page.locator('.discussion-program-references').innerText(),/计划增加仓位参考[\s\S]*60[\s\S]*计划减仓参考[\s\S]*75/);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      const workspaceBox=await workspace.boundingBox(),firstRow=await buttons.nth(0).boundingBox(),second=await buttons.nth(1).boundingBox(),decisionBox=await page.locator('.discussion-user-decision-card').boundingBox();assert.ok(workspaceBox&&firstRow&&second&&decisionBox);assert.equal(Math.round(firstRow.y),Math.round(second.y));assert.ok(firstRow.y<decisionBox.y);assert.ok(firstRow.y-workspaceBox.y<260,`${viewport.width}px action offset=${firstRow.y-workspaceBox.y}`);await workspace.evaluate(node=>node.scrollIntoView({block:'start'}));const visibleAction=await buttons.nth(0).boundingBox();assert.ok(visibleAction&&visibleAction.y>=0&&visibleAction.y<viewport.height);
+      await buttons.nth(0).click();assert.equal(await page.locator('#discussionPromptDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionPromptCloseBtn').click();
+      await buttons.nth(1).click();assert.match(await page.locator('#discussionPromptTitle').innerText(),/整理结论已准备/);await page.locator('#discussionPromptCloseBtn').click();
+      await buttons.nth(2).click();assert.equal(await page.locator('#discussionImportDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionImportCancelBtn').click();
+      await buttons.nth(3).click();assert.match(await page.locator('#discussionPromptTitle').innerText(),/计划整理已准备/);await page.locator('#discussionPromptCloseBtn').click();
+      await buttons.nth(4).click();assert.equal(await page.locator('#discussionPlanImportDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionPlanImportCancelBtn').click();
+      await buttons.nth(5).click();assert.equal(await page.locator('#discussionHistoryPanel').evaluate(node=>node.open),true);
+      await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0];stock.priceHistory=[];renderStockDetail()});assert.match(await page.locator('.discussion-status-warning').innerText(),/当前无法保存连续结论[\s\S]*完整日K技术锚点/);assert.equal(await page.locator('.discussion-actions button').count(),6);
+      await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0],current=stock.discussionState.current;current.schemaVersion=DiscussionWorkbench.V2_STATE_SCHEMA_VERSION;delete current.userDecision;renderStockDetail()});assert.equal(await page.locator('.discussion-state-v2').count(),1);assert.equal(await page.locator('.discussion-user-decision-card').count(),0);assert.match(await page.locator('.discussion-state-v2').innerText(),/操作倾向[\s\S]*查看完整结论/);
+      await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0],decision=stock.discussionState.current.userDecision;stock.shares=0;decision.headline='当前位置不适合建仓，继续等待。';decision.holding={status:'not_applicable',summary:'当前没有持仓。'};decision.positionDirection={status:'not_applicable',summary:'保持空仓观察。'};decision.addAssessment={status:'wait',summary:'等待更合适的建仓机会。'};decision.takeProfit={status:'not_applicable',summary:'当前无持仓，不适用。'};decision.stopLoss={status:'not_applicable',summary:'尚未持有，不适用。'};renderStockDetail()});assert.match(await page.locator('.discussion-user-decision-card').innerText(),/如果想建仓/);assert.doesNotMatch(await page.locator('.discussion-user-decision-card').innerText(),/如果想加仓/);
+      await page.screenshot({path:path.join(output,`discussion-user-decision-${viewport.width}.png`),fullPage:true});
+      assert.deepEqual(errors,[]);results.push({viewport,controlOrder:true,sixActions:true,allActionsOpened:true,decisionBeforeEvidence:true,legacyFallback:true,blockingVisible:true,zeroPositionLabel:true,noOverflow:true,pageErrors:errors,dialogs});await context.close();
+    }
+  }finally{await browser.close()}
+  fs.writeFileSync(path.join(output,'discussion-user-decision-browser-results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
+})().catch(error=>{console.error(error);process.exitCode=1});

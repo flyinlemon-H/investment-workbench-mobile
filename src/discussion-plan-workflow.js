@@ -84,7 +84,7 @@
   }
   function currentStateContext(stock){
     const store=DiscussionWorkbench.normalizeStore(stock&&stock.discussionState),current=store.current;
-    if(!current||current.schemaVersion!==DiscussionWorkbench.STATE_SCHEMA_VERSION||!text(current.stateId)||!text(current.sourceDiscussionVersion))return {current:null,context:null,provenance:null};
+    if(!current||![DiscussionWorkbench.V2_STATE_SCHEMA_VERSION,DiscussionWorkbench.STATE_SCHEMA_VERSION].includes(current.schemaVersion)||!text(current.stateId)||!text(current.sourceDiscussionVersion))return {current:null,context:null,provenance:null};
     const legacy=discussionBinding(current);
     return {current,context:compactCurrentState(current),provenance:{sourceDiscussionVersion:legacy.sourceDiscussionVersion,currentStateId:legacy.sourceStateId,currentStateHash:legacy.sourceStateHash}};
   }

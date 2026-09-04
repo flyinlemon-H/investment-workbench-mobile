@@ -3,6 +3,16 @@
   "currentState": {
     "symbol": "600487.SS",
     "sourceDiscussionVersion": "__SOURCE_DISCUSSION_VERSION__",
+    "userDecision": {
+      "headline": "当前资料不足，持有判断需要谨慎复核。",
+      "holding": {"status": "caution", "summary": "可以继续观察，但判断把握有限。"},
+      "positionDirection": {"status": "hold_no_add", "summary": "维持现有仓位，暂不增加。"},
+      "addAssessment": {"status": "avoid", "summary": "资料补齐前不适合增加仓位。"},
+      "warning": {"summary": "资料缺口可能掩盖最新风险。", "items": []},
+      "takeProfit": {"status": "watch", "summary": "现有资料不足，需要留意利润保护。"},
+      "stopLoss": {"status": "watch", "summary": "关键风险尚不清楚，需要提高警惕。"},
+      "riskSource": "unclear"
+    },
     "actionAssessment": {
       "category": "hold_watch",
       "priority": "low",
