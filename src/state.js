@@ -499,35 +499,39 @@ function nullableNumberValue(value){
 }
 function defaultLongTermLogic(){
   return {
-    updatedAt:'',
-    validUntil:'',
+    schemaVersion:'long-term-logic.v2',
     investmentThesis:'',
     coreDrivers:[],
-    industryDrivers:[],
-    companyDrivers:[],
-    portfolioDrivers:[],
-    fundamentalSupport:'',
-    longTermRisks:[],
+    keyRisks:[],
+    reviewTriggers:[],
     logicStatus:'unclear',
     confidence:'low',
-    nextReviewDate:'',
-    sourceSummary:''
+    nextReviewDate:''
   };
 }
 function normalizeLongTermLogic(v,stock={}){
   const src=(v&&typeof v==='object')?v:{};
+  if(src.schemaVersion==='long-term-logic.v2'||Object.prototype.hasOwnProperty.call(src,'keyRisks')||Object.prototype.hasOwnProperty.call(src,'reviewTriggers'))return {
+    schemaVersion:'long-term-logic.v2',
+    investmentThesis:String(src.investmentThesis||''),
+    coreDrivers:normalizeStringArray(src.coreDrivers),
+    keyRisks:normalizeStringArray(src.keyRisks),
+    reviewTriggers:normalizeStringArray(src.reviewTriggers),
+    logicStatus:enumOr(src.logicStatus,['valid','weakening','broken','unclear'],'unclear'),
+    confidence:enumOr(src.confidence,['high','medium','low'],'low'),
+    nextReviewDate:normalizeDateOnly(src.nextReviewDate)||String(src.nextReviewDate||'')
+  };
   const framework=(stock.analysisFramework&&typeof stock.analysisFramework==='object')?stock.analysisFramework:{};
   const conclusion=(framework.conclusion&&typeof framework.conclusion==='object')?framework.conclusion:{};
   const industryDrivers=normalizeStringArray(src.industryDrivers);
   const companyDrivers=normalizeStringArray(src.companyDrivers);
   const portfolioDrivers=normalizeStringArray(src.portfolioDrivers);
   const legacyCoreDrivers=normalizeStringArray(src.coreDrivers||conclusion.buyRules);
-  const mergedCoreDrivers=normalizeStringArray(src.coreDrivers||[...industryDrivers,...companyDrivers,...portfolioDrivers]);
   return {
     updatedAt:normalizeDateOnly(src.updatedAt)||String(src.updatedAt||''),
     validUntil:normalizeDateOnly(src.validUntil)||String(src.validUntil||''),
     investmentThesis:String(src.investmentThesis||stock.thesis||stock.notes||conclusion.summary||''),
-    coreDrivers:mergedCoreDrivers.length?mergedCoreDrivers:legacyCoreDrivers,
+    coreDrivers:legacyCoreDrivers,
     industryDrivers:industryDrivers.length?industryDrivers:(companyDrivers.length||portfolioDrivers.length?[]:legacyCoreDrivers),
     companyDrivers,
     portfolioDrivers,

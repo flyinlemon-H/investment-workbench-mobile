@@ -477,6 +477,7 @@ async function activateLoadedApplication(){
   if(main)main.dataset.storageState='ready';
   render();
   if(window.renderUniverseCloudStatus)window.renderUniverseCloudStatus();
+  if(window.initializeManualAnalysisSyncUi)window.initializeManualAnalysisSyncUi();
   if(applicationServicesStarted)return Object.freeze({status:'ready'});
   applicationServicesStarted=true;
   void refreshShadowMigrationPanel();

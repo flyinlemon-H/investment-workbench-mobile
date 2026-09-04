@@ -5111,7 +5111,10 @@ async function commitProcessedLongTermLogic(stock,result,prepared,transport){
   if(!contract||typeof contract.commit!=='function')return {status:'failed',writes:0,error:new Error('长期逻辑安全保存模块不可用。')};
   const committed=await contract.commit(result,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:previous=>{state=previous},render:()=>render()},{context:prepared.context,transport});
   if(committed.status!=='completed')state=original;
-  else refreshLongLogicModalIfOpen();
+  else{
+    if(window.ManualAnalysisSyncCloud)window.ManualAnalysisSyncCloud.markLocalChanged(prepared.context.symbol);
+    refreshLongLogicModalIfOpen();
+  }
   return committed;
 }
 async function callLongTermLogicAi(stock){
@@ -5230,7 +5233,8 @@ function longTermWorkspacePanel(stock){
   const reviewRows=window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.recordsForStock==='function'?window.AiDecisionReviewReader.recordsForStock(stock).filter(record=>record.taskType==='long_term_logic_review'):[];
   const review=reviewRows.find(record=>record.isCurrent)||reviewRows[0];
   const body=`${v13LongTermReviewSummary(stock)}${longTermLogicPanel(stock)}${longTermMemoPanel(stock)}`;
-  return `${longTermAiStatusPanel(stock)}${workspaceSummaryCard('长期逻辑摘要',[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`有效期 ${l.validUntil||'—'}`,`长期风险 ${l.longTermRisks.length} 项`],'查看长期逻辑详情 / Prompt / JSON 导入',body,'var(--purple)','copy-long-term-logic-prompt','import-long-term-logic-json','call-long-term-logic-ai','调用AI','复制给AI')}`;
+  const risks=normalizeStringArray(l.keyRisks||l.longTermRisks);
+  return `${longTermAiStatusPanel(stock)}${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${workspaceSummaryCard('长期逻辑摘要',[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`下次复核 ${l.nextReviewDate||'—'}`,`关键风险 ${risks.length} 项`],'查看长期逻辑详情 / Prompt / JSON 导入',body,'var(--purple)','copy-long-term-logic-prompt','import-long-term-logic-json','call-long-term-logic-ai','API更新','复制给AI')}`;
 }
 function operationChangeLabel(value){return {increased:'持仓数量增加',decreased:'持仓数量减少',cleared:'持仓数量归零',unchanged:'持仓数量未变化',unknown:'变化待校验'}[value]||'变化待校验'}
 function operationWorkspacePanel(stock){
@@ -7486,7 +7490,8 @@ function longLogicDriverSection(title,drivers,emptyText){
   return `<section class="long-logic-section"><div class="card-title">${esc(title)}</div>${arr.length?`<div class="long-logic-driver-grid">${arr.map(x=>`<div class="long-logic-driver">✓ ${esc(x)}</div>`).join('')}</div>`:`<div class="alert">${esc(emptyText||'待补充。')}</div>`}</section>`;
 }
 function longLogicChangeText(l,stock){
-  if(!l||!(l.investmentThesis||l.coreDrivers.length||l.industryDrivers.length||l.companyDrivers.length||l.portfolioDrivers.length||l.fundamentalSupport||l.longTermRisks.length))return '待补充长期逻辑档案。';
+  const risks=normalizeStringArray(l&&(l.keyRisks||l.longTermRisks)),triggers=normalizeStringArray(l&&l.reviewTriggers),legacyDrivers=normalizeStringArray(l&&l.industryDrivers).length+normalizeStringArray(l&&l.companyDrivers).length+normalizeStringArray(l&&l.portfolioDrivers).length;
+  if(!l||!(l.investmentThesis||normalizeStringArray(l.coreDrivers).length||legacyDrivers||l.fundamentalSupport||risks.length||triggers.length))return '待补充长期逻辑档案。';
   const history=stock&&stock.longTermLogicAudit&&Array.isArray(stock.longTermLogicAudit.history)?stock.longTermLogicAudit.history:[];
   if(l.logicStatus==='valid')return history.length?`当前逻辑有效；保留 ${history.length} 份被替换记录。`:'当前逻辑有效。';
   if(l.logicStatus==='weakening')return '逻辑减弱，需要提前复核。';
@@ -7505,33 +7510,30 @@ function longLogicDetailsBlock(title,body,open=false){
 }
 function longTermLogicPanel(stock){
   const l=normalizeLongTermLogic(stock.longTermLogic,stock);
-  const has=Boolean(l.investmentThesis||l.coreDrivers.length||l.industryDrivers.length||l.companyDrivers.length||l.portfolioDrivers.length||l.fundamentalSupport||l.longTermRisks.length);
+  const slim=l.schemaVersion==='long-term-logic.v2',coreDrivers=normalizeStringArray(l.coreDrivers),legacyIndustry=normalizeStringArray(l.industryDrivers),legacyCompany=normalizeStringArray(l.companyDrivers),legacyPortfolio=normalizeStringArray(l.portfolioDrivers),risks=normalizeStringArray(l.keyRisks||l.longTermRisks).map(formatChineseText).filter(Boolean),triggers=normalizeStringArray(l.reviewTriggers).map(formatChineseText).filter(Boolean);
+  const has=Boolean(l.investmentThesis||coreDrivers.length||legacyIndustry.length||legacyCompany.length||legacyPortfolio.length||l.fundamentalSupport||risks.length||triggers.length);
   const status=longLogicStatusText(l.logicStatus);
   const confidence=zhConfidence(l.confidence)||'—';
-  const risks=normalizeStringArray(l.longTermRisks).map(formatChineseText).filter(Boolean);
-  const industryDrivers=l.industryDrivers.length?l.industryDrivers:l.coreDrivers;
-  const companyDrivers=l.companyDrivers;
-  const portfolioDrivers=l.portfolioDrivers;
-  const detailedLogic=`<div class="text" style="max-width:none"><b>投资主线：</b><br>${esc(formatChineseText(l.investmentThesis||'—'))}<br><br><b>来源摘要：</b><br>${esc(formatChineseText(l.sourceSummary||'—'))}${l.fundamentalSupport?`<br><br><b>补充证据：</b><br>${esc(formatChineseText(l.fundamentalSupport))}`:''}</div>`;
+  const industryDrivers=legacyIndustry.length?legacyIndustry:coreDrivers,companyDrivers=legacyCompany,portfolioDrivers=legacyPortfolio;
+  const legacyDetails=`${longLogicDriverSection('行业驱动',industryDrivers,'行业长期逻辑待补充。')}${longLogicDriverSection('公司护城河',companyDrivers,'公司专属护城河待补充。')}${longLogicDriverSection('组合价值',portfolioDrivers,'组合角色价值待补充。')}${longLogicDetailsBlock('旧版补充资料',`<div class="text" style="max-width:none"><b>来源摘要：</b><br>${esc(formatChineseText(l.sourceSummary||'—'))}${l.fundamentalSupport?`<br><br><b>基本面支持：</b><br>${esc(formatChineseText(l.fundamentalSupport))}`:''}</div>`)}`;
   const details=has
     ?`<div class="long-logic-memo">
-      <section class="long-logic-section"><div class="card-title">长期投资主线</div><div class="long-logic-thesis">${esc(longLogicThesisExcerpt(l.investmentThesis))}</div></section>
-      ${longLogicDriverSection('行业驱动',industryDrivers,'行业长期逻辑待补充。')}
-      ${longLogicDriverSection('公司护城河',companyDrivers,'公司专属护城河待补充。')}
-      ${longLogicDriverSection('组合价值',portfolioDrivers,'组合角色价值待补充。')}
-      ${longLogicDetailsBlock(`长期风险（${risks.length}项）`,risks.length?`<ul>${risks.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<div class="text">暂无长期风险记录。</div>')}
-      ${longLogicDetailsBlock('完整主线',detailedLogic)}
+      <section class="long-logic-section"><div class="card-title">投资逻辑</div><div class="long-logic-thesis">${esc(longLogicThesisExcerpt(l.investmentThesis))}</div></section>
+      ${slim?longLogicDriverSection('核心驱动',coreDrivers,'核心驱动待补充。'):legacyDetails}
+      ${longLogicDriverSection('关键风险',risks,'关键风险待补充。')}
+      ${slim?longLogicDriverSection('复核条件',triggers,'复核条件待补充。'):''}
       ${longLogicDetailsBlock('更新审计',longTermLogicAuditPanel(stock))}
     </div>`
     :'<div class="alert">待补充长期逻辑。</div>';
+  const auditDate=stock&&stock.longTermLogicAudit&&stock.longTermLogicAudit.current&&stock.longTermLogicAudit.current.updatedAt;
   return highFrequencyAnalysisCard({
     title:'长期逻辑',
     conclusion:has?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑',
-    meta:`更新 ${l.updatedAt||'—'} · 置信度 ${confidence}`,
-    focus:[`${longLogicStatusIcon(l.logicStatus)} ${status}`,`有效期 ${l.validUntil||'—'}`,`下次复核 ${l.nextReviewDate||'—'}`],
+    meta:`更新 ${l.updatedAt||auditDate||'—'} · 判断把握 ${confidence}${slim?'':' · 旧版可读'}`,
+    focus:[`${longLogicStatusIcon(l.logicStatus)} ${status}`,`下次复核 ${l.nextReviewDate||'—'}`],
     changes:[longLogicChangeText(l,stock)],
     risks:risks.length?risks:['暂无长期风险记录'],
-    opportunities:[...industryDrivers.slice(0,2),...companyDrivers.slice(0,2),...portfolioDrivers.slice(0,2)],
+    opportunities:slim?coreDrivers:[...industryDrivers.slice(0,2),...companyDrivers.slice(0,2),...portfolioDrivers.slice(0,2)],
     actionHint:l.logicStatus==='broken'?'长期逻辑失效，需要重新评估持仓理由。':(l.logicStatus==='weakening'?'长期逻辑减弱，需要提前复核。':'长期逻辑继续作为持有依据，今日处理仍看技术、计划和仓位。'),
     details,
     copyAction:'copy-long-term-logic-prompt',
@@ -7750,7 +7752,7 @@ function openLongLogicModal(){
   const el=ensureLongLogicModal();
   const title=document.getElementById('longLogicTitle');
   if(title)title.textContent=`${stock.name||'标的'} · 长期逻辑`;
-  document.getElementById('longLogicBody').innerHTML=`${longTermLogicPanel(stock)}${stock.type==='etf'?etfIndexAnalysisPanel(stock):fundamentalAnalysisPanel(stock)}${allocationDecisionPanel(stock)}${valuationAnalysisPanel(stock)}${positionManagementReviewPanel(stock)}`;
+  document.getElementById('longLogicBody').innerHTML=`${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${longTermLogicPanel(stock)}${stock.type==='etf'?etfIndexAnalysisPanel(stock):fundamentalAnalysisPanel(stock)}${allocationDecisionPanel(stock)}${valuationAnalysisPanel(stock)}${positionManagementReviewPanel(stock)}`;
   el.classList.add('show');
 }
 function refreshLongLogicModalIfOpen(){
@@ -7762,7 +7764,7 @@ function refreshLongLogicModalIfOpen(){
   const title=document.getElementById('longLogicTitle');
   if(title)title.textContent=`${stock.name||'标的'} · 长期逻辑`;
   const body=document.getElementById('longLogicBody');
-  if(body)body.innerHTML=`${longTermLogicPanel(stock)}${stock.type==='etf'?etfIndexAnalysisPanel(stock):fundamentalAnalysisPanel(stock)}${allocationDecisionPanel(stock)}${valuationAnalysisPanel(stock)}${positionManagementReviewPanel(stock)}`;
+  if(body)body.innerHTML=`${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${longTermLogicPanel(stock)}${stock.type==='etf'?etfIndexAnalysisPanel(stock):fundamentalAnalysisPanel(stock)}${allocationDecisionPanel(stock)}${valuationAnalysisPanel(stock)}${positionManagementReviewPanel(stock)}`;
 }
 function closeLongLogicModal(){
   const modal=document.getElementById('longLogicModal');

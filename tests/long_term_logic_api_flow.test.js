@@ -18,7 +18,7 @@ function runtime(mode='valid'){
     this.saves=[];this.renders=0;render=()=>{renders++};refreshLongLogicModalIfOpen=()=>{};
     saveState=async candidate=>{saves.push(structuredClone(candidate));return {ok:true,state:candidate}};
     BackendHealth={state:{status:'unknown',capabilities:{aiRequest:false},errorType:''},check:async()=>{BackendHealth.state.status='available';BackendHealth.state.capabilities.aiRequest=true;return 'available'}};
-    function responseFromPrompt(prompt){const marker='【受保护绑定】',binding=JSON.parse(prompt.split(marker)[1].split('\\n\\n')[0].trim()),start=new Date(binding.promptDate+'T00:00:00Z'),date=days=>{const value=new Date(start);value.setUTCDate(value.getUTCDate()+days);return value.toISOString().slice(0,10)};return JSON.stringify({binding:{symbol:binding.symbol,contextHash:binding.contextHash},longTermLogic:{updatedAt:binding.promptDate,validUntil:date(180),investmentThesis:'行业长期需求、公司交付护城河和组合成长角色共同支持继续跟踪。',coreDrivers:['行业长期需求','公司交付能力','组合成长角色'],industryDrivers:['行业未来多年仍有结构性需求'],companyDrivers:['公司交付与供应链能力形成护城河'],portfolioDrivers:['在组合中承担长期成长观察角色'],fundamentalSupport:'现有基本面资料对长期逻辑提供辅助验证。',longTermRisks:['行业需求不及预期','公司竞争优势减弱'],logicStatus:'valid',confidence:'medium',nextReviewDate:date(90),sourceSummary:'基于受保护上下文中的长期逻辑、基本面和估值资料。'}})}
+    function responseFromPrompt(prompt){const marker='【受保护绑定】',binding=JSON.parse(prompt.split(marker)[1].split('\\n\\n')[0].trim()),start=new Date(binding.promptDate+'T00:00:00Z'),date=days=>{const value=new Date(start);value.setUTCDate(value.getUTCDate()+days);return value.toISOString().slice(0,10)};return JSON.stringify({binding:{symbol:binding.symbol,contextHash:binding.contextHash},longTermLogic:{investmentThesis:'行业长期需求、公司交付护城河和组合成长角色共同支持继续跟踪。',coreDrivers:['行业长期需求','公司交付能力','组合成长角色'],keyRisks:['行业需求不及预期','公司竞争优势减弱'],reviewTriggers:['连续两个报告期需求下滑','交付优势不再成立'],logicStatus:'valid',confidence:'medium',nextReviewDate:date(90)}})}
     InvestmentApi={ai:{request:async input=>{
       if(${JSON.stringify(mode)}==='network')throw Object.assign(new Error('offline'),{type:'network_error'});
       return {response:{requestId:'request-1',provider:'mock',model:'deterministic-long-term-v1',content:${JSON.stringify(mode)}==='invalid'?'{"bad":true}':responseFromPrompt(input.prompt),elapsedMs:2}};
@@ -34,6 +34,7 @@ test('user-triggered API response reaches the shared processor and one automatic
   assert.equal(app.saveCount(),1);
   const stock=app.stock();
   assert.equal(stock.longTermLogic.logicStatus,'valid');
+  assert.equal(stock.longTermLogic.schemaVersion,'long-term-logic.v2');
   assert.equal(stock.longTermLogicAudit.current.responseHash.startsWith('ltresp_'),true);
   assert.equal(stock.longTermLogicAudit.history.length,1);
   assert.match(app.status(),/已更新/);
@@ -49,9 +50,9 @@ test('invalid provider content and unavailable Bridge keep canonical state with 
   }
 });
 
-test('Long-Term UI keeps manual fallback, adds one API action, and does not add device modes',()=>{
+test('Long-Term UI keeps manual fallback, names the API update, and does not add security device modes',()=>{
   const ui=read('src/ui-render.js'),html=read('index.html');
   assert.match(ui,/call-long-term-logic-ai/);assert.match(ui,/调用AI/);assert.match(ui,/copy-long-term-logic-prompt/);assert.match(ui,/复制给AI/);
-  assert.doesNotMatch(ui,/API更新|run_ai_task\.py/);assert.doesNotMatch(ui+html,/PC模式|手机模式/);
+  assert.match(ui,/API更新/);assert.doesNotMatch(ui,/run_ai_task\.py/);assert.doesNotMatch(ui+html,/PC模式|手机模式|设备认证/);
   assert.match(ui,/LongTermLogicWorkflow\.processPrepared/);assert.match(ui,/commitProcessedLongTermLogic/);
 });

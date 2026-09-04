@@ -8,16 +8,20 @@
   'use strict';
 
   if(!SymbolIdentity||!StrictAiJson)throw new Error('Long-Term Logic contract dependencies are unavailable.');
-  const CONTEXT_SCHEMA_VERSION='long-term-logic.context.v1';
+  const CONTEXT_SCHEMA_VERSION='long-term-logic.context.v2';
+  const MODULE_SCHEMA_VERSION='long-term-logic.v2';
   const SNAPSHOT_SCHEMA_VERSION='long-term-logic.snapshot.v1';
   const STORE_SCHEMA_VERSION='long-term-logic.store.v1';
   const HISTORY_LIMIT=20;
   const ROOT_FIELDS=Object.freeze(['binding','longTermLogic']);
   const BINDING_FIELDS=Object.freeze(['symbol','contextHash']);
-  const LOGIC_FIELDS=Object.freeze(['updatedAt','validUntil','investmentThesis','coreDrivers','industryDrivers','companyDrivers','portfolioDrivers','fundamentalSupport','longTermRisks','logicStatus','confidence','nextReviewDate','sourceSummary']);
+  const AI_LOGIC_FIELDS=Object.freeze(['investmentThesis','coreDrivers','keyRisks','reviewTriggers','logicStatus','confidence','nextReviewDate']);
+  const STORED_LOGIC_FIELDS=Object.freeze(['schemaVersion',...AI_LOGIC_FIELDS]);
+  const LOGIC_FIELDS=AI_LOGIC_FIELDS;
+  // Keep the accepted production enum. The UI renders `broken` as “逻辑失效”.
   const LOGIC_STATUSES=Object.freeze(['valid','weakening','broken','unclear']);
   const CONFIDENCE_LEVELS=Object.freeze(['high','medium','low']);
-  const ARRAY_LIMITS=Object.freeze({coreDrivers:[1,8],industryDrivers:[1,6],companyDrivers:[1,6],portfolioDrivers:[1,6],longTermRisks:[1,8]});
+  const ARRAY_LIMITS=Object.freeze({coreDrivers:[1,5],keyRisks:[1,5],reviewTriggers:[1,5]});
   const SHORT_TERM_PATTERN=/(?:MA(?:5|10|20|60|120)|MACD|RSI|KDJ|分时|盘口|今日涨跌|主力资金|短线追涨)/i;
 
   function object(value){return Boolean(value&&typeof value==='object'&&!Array.isArray(value))}
@@ -66,34 +70,40 @@
   }
   function validateString(value,path,maxLength,minLength=1){
     if(typeof value!=='string'||text(value).length<minLength)return `${path} 必须是非空字符串。`;
-    if(value.length>maxLength)return `${path} 超过长度限制。`;
+    if([...value].length>maxLength)return `${path} 超过长度限制。`;
     if(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value))return `${path} 包含无效控制字符。`;
     return '';
   }
   function validateStringArray(value,path,min,max){
     if(!Array.isArray(value)||value.length<min||value.length>max)return `${path} 必须包含 ${min}-${max} 项。`;
-    for(let index=0;index<value.length;index+=1){const error=validateString(value[index],`${path}[${index}]`,240);if(error)return error}
+    for(let index=0;index<value.length;index+=1){const error=validateString(value[index],`${path}[${index}]`,180);if(error)return error}
+    if(new Set(value.map(item=>text(item))).size!==value.length)return `${path} 不得包含重复项。`;
     return '';
   }
-  function validateLogic(logic,options={}){
+  function validateJudgment(logic){
     if(!object(logic))return {ok:false,code:'invalid_logic',message:'longTermLogic 必须是对象。'};
-    const shape=exactFields(logic,LOGIC_FIELDS,'longTermLogic');if(shape)return {ok:false,code:'invalid_logic_shape',message:shape};
-    for(const field of ['updatedAt','validUntil','nextReviewDate'])if(!validDate(logic[field]))return {ok:false,code:'invalid_date',message:`longTermLogic.${field} 必须是有效的 YYYY-MM-DD 日期。`};
-    if(options.promptDate&&logic.updatedAt!==options.promptDate)return {ok:false,code:'updated_at_mismatch',message:`updatedAt 必须为本次请求日期 ${options.promptDate}。`};
-    if(logic.nextReviewDate<logic.updatedAt)return {ok:false,code:'invalid_review_date',message:'nextReviewDate 不能早于 updatedAt。'};
-    if(logic.validUntil<logic.nextReviewDate)return {ok:false,code:'invalid_validity_date',message:'validUntil 不能早于 nextReviewDate。'};
-    for(const [field,max,min] of [['investmentThesis',1200,20],['fundamentalSupport',500,10],['sourceSummary',500,5]]){
-      const error=validateString(logic[field],`longTermLogic.${field}`,max,min);if(error)return {ok:false,code:'invalid_text',message:error};
-    }
+    const shape=exactFields(logic,AI_LOGIC_FIELDS,'longTermLogic');if(shape)return {ok:false,code:'invalid_logic_shape',message:shape};
+    const thesisError=validateString(logic.investmentThesis,'longTermLogic.investmentThesis',400,10);if(thesisError)return {ok:false,code:'invalid_text',message:thesisError};
     for(const [field,[min,max]] of Object.entries(ARRAY_LIMITS)){
       const error=validateStringArray(logic[field],`longTermLogic.${field}`,min,max);if(error)return {ok:false,code:'invalid_array',message:error};
     }
     if(!LOGIC_STATUSES.includes(logic.logicStatus))return {ok:false,code:'invalid_logic_status',message:`logicStatus 必须是 ${LOGIC_STATUSES.join(' / ')}。`};
     if(!CONFIDENCE_LEVELS.includes(logic.confidence))return {ok:false,code:'invalid_confidence',message:`confidence 必须是 ${CONFIDENCE_LEVELS.join(' / ')}。`};
-    const longHorizonText=[logic.investmentThesis,...logic.coreDrivers,...logic.industryDrivers,...logic.companyDrivers,...logic.portfolioDrivers,...logic.longTermRisks].join('\n');
+    if(!validDate(logic.nextReviewDate))return {ok:false,code:'invalid_date',message:'longTermLogic.nextReviewDate 必须是有效的 YYYY-MM-DD 日期。'};
+    const longHorizonText=[logic.investmentThesis,...logic.coreDrivers,...logic.keyRisks,...logic.reviewTriggers].join('\n');
     if(SHORT_TERM_PATTERN.test(longHorizonText))return {ok:false,code:'short_term_content',message:'长期逻辑包含短线技术或资金表述。'};
     return {ok:true,logic:clone(logic)};
   }
+  function storedLogic(judgment){return {schemaVersion:MODULE_SCHEMA_VERSION,...clone(judgment)}}
+  function validateStoredLogic(logic){
+    if(!object(logic))return {ok:false,code:'invalid_logic',message:'长期逻辑必须是对象。'};
+    const shape=exactFields(logic,STORED_LOGIC_FIELDS,'长期逻辑');if(shape)return {ok:false,code:'invalid_logic_shape',message:shape};
+    if(logic.schemaVersion!==MODULE_SCHEMA_VERSION)return {ok:false,code:'unsupported_schema',message:'长期逻辑版本不受支持。'};
+    const judgment={};for(const field of AI_LOGIC_FIELDS)judgment[field]=logic[field];
+    const checked=validateJudgment(judgment);return checked.ok?{ok:true,logic:storedLogic(checked.logic)}:checked;
+  }
+  function isSlimLogic(value){return object(value)&&value.schemaVersion===MODULE_SCHEMA_VERSION}
+  function validateLogic(logic){return isSlimLogic(logic)?validateStoredLogic(logic):validateJudgment(logic)}
   function validate(value,options={}){
     if(!object(value))return invalid('invalid_top_level','顶层必须是对象。');
     const rootShape=exactFields(value,ROOT_FIELDS,'顶层');if(rootShape)return invalid('invalid_top_level',rootShape);
@@ -104,8 +114,9 @@
     const symbol=canonical(value.binding.symbol);
     if(!symbol||symbol!==context.symbol)return invalid('symbol_mismatch',`binding.symbol 必须为 ${context.symbol}。`);
     if(value.binding.contextHash!==context.contextHash)return invalid('context_mismatch','长期逻辑响应不属于当前标的或当前上下文，请重新生成 Prompt。');
-    const logicResult=validateLogic(value.longTermLogic,{promptDate:context.promptDate});
+    const logicResult=validateJudgment(value.longTermLogic);
     if(!logicResult.ok)return invalid(logicResult.code,logicResult.message);
+    if(logicResult.logic.nextReviewDate<context.promptDate)return invalid('invalid_review_date','nextReviewDate 不能早于本次判断日期。');
     const canonicalValue={binding:{symbol,contextHash:context.contextHash},longTermLogic:logicResult.logic};
     return {ok:true,previewReady:true,writes:0,code:'valid',message:'长期逻辑已通过严格校验，尚未写入。',input:null,value:canonicalValue,logic:clone(logicResult.logic),context};
   }
@@ -117,21 +128,22 @@
   function responseHash(result){return `ltresp_${hash(result&&result.value||{})}`}
   function snapshot(result,context,_metadata={},options={}){
     const savedAt=text(options.savedAt)||new Date().toISOString(),digest=responseHash(result);
-    return {snapshotId:`ltl_${hash(`${savedAt}|${context.contextHash}|${digest}`)}`,schemaVersion:SNAPSHOT_SCHEMA_VERSION,symbol:context.symbol,updatedAt:result.logic.updatedAt,savedAt,contextHash:context.contextHash,responseHash:digest,logic:clone(result.logic)};
+    return {snapshotId:`ltl_${hash(`${savedAt}|${context.contextHash}|${digest}`)}`,schemaVersion:SNAPSHOT_SCHEMA_VERSION,symbol:context.symbol,updatedAt:context.promptDate,savedAt,contextHash:context.contextHash,responseHash:digest,logic:storedLogic(result.logic)};
   }
   function legacySnapshot(logic,symbol,options={}){
     const savedAt=text(options.savedAt)||new Date().toISOString(),digest=`legacy_${hash(logic)}`;
     return {snapshotId:`ltl_${hash(`${savedAt}|${symbol}|${digest}`)}`,schemaVersion:SNAPSHOT_SCHEMA_VERSION,symbol,updatedAt:validDate(logic.updatedAt)?logic.updatedAt:'',savedAt,contextHash:'',responseHash:digest,logic:clone(logic)};
   }
-  function hasMaterialLogic(logic){return object(logic)&&Boolean(text(logic.investmentThesis)||Array.isArray(logic.coreDrivers)&&logic.coreDrivers.length||Array.isArray(logic.longTermRisks)&&logic.longTermRisks.length)}
+  function hasMaterialLogic(logic){return object(logic)&&Boolean(text(logic.investmentThesis)||Array.isArray(logic.coreDrivers)&&logic.coreDrivers.length||Array.isArray(logic.keyRisks)&&logic.keyRisks.length||Array.isArray(logic.longTermRisks)&&logic.longTermRisks.length)}
   function validateSnapshot(value,{allowLegacy=false}={}){
     if(!object(value))return {ok:false,errors:['长期逻辑快照必须是对象。']};
     const allowed=['snapshotId','schemaVersion','symbol','updatedAt','savedAt','contextHash','responseHash','logic'],shape=exactFields(value,allowed,'长期逻辑快照'),errors=[];
     if(shape)errors.push(shape);
     if(value.schemaVersion!==SNAPSHOT_SCHEMA_VERSION||!text(value.snapshotId)||!canonical(value.symbol)||!text(value.savedAt))errors.push('长期逻辑快照元数据无效。');
-    if(allowLegacy&&String(value.responseHash||'').startsWith('legacy_')){if(!object(value.logic))errors.push('历史长期逻辑内容无效。')}else{
+    const legacy=String(value.responseHash||'').startsWith('legacy_')||!isSlimLogic(value.logic);
+    if(legacy){if(!object(value.logic))errors.push('历史长期逻辑内容无效。')}else{
       if(!/^ltctx_[0-9a-f]{8}$/.test(String(value.contextHash||''))||!/^ltresp_[0-9a-f]{8}$/.test(String(value.responseHash||'')))errors.push('长期逻辑快照审计绑定无效。');
-      const logicValidation=validateLogic(value.logic);if(!logicValidation.ok)errors.push(logicValidation.message);
+      const logicValidation=validateStoredLogic(value.logic);if(!logicValidation.ok)errors.push(logicValidation.message);
     }
     return {ok:errors.length===0,errors};
   }
@@ -140,7 +152,7 @@
     if(!object(value))return {ok:false,errors:['长期逻辑审计存储必须是对象。']};
     const shape=exactFields(value,['schemaVersion','current','history'],'长期逻辑审计存储'),errors=[];if(shape)errors.push(shape);
     if(value.schemaVersion!==STORE_SCHEMA_VERSION)errors.push('长期逻辑审计存储版本无效。');
-    if(value.current!==null){const current=validateSnapshot(value.current);errors.push(...current.errors)}
+    if(value.current!==null){const current=validateSnapshot(value.current,{allowLegacy:true});errors.push(...current.errors)}
     if(!Array.isArray(value.history)||value.history.length>HISTORY_LIMIT)errors.push('长期逻辑历史必须是有界数组。');
     else value.history.forEach(item=>errors.push(...validateSnapshot(item,{allowLegacy:true}).errors));
     const ids=[value.current,...(Array.isArray(value.history)?value.history:[])].filter(Boolean).map(item=>item.snapshotId);if(new Set(ids).size!==ids.length)errors.push('长期逻辑审计编号重复。');
@@ -159,10 +171,10 @@
     if(!storeValidation.ok)throw new Error(storeValidation.errors.join('；'));
     const nextSnapshot=snapshot(result,context,options.transport,options),history=clone(existingStore.history||[]);
     if(existingStore.current)history.push(clone(existingStore.current));
-    else if(hasMaterialLogic(target.longTermLogic)&&stable(target.longTermLogic)!==stable(result.logic))history.push(legacySnapshot(target.longTermLogic,context.symbol,options));
-    target.longTermLogic=clone(result.logic);
+    else if(hasMaterialLogic(target.longTermLogic)&&stable(target.longTermLogic)!==stable(nextSnapshot.logic))history.push(legacySnapshot(target.longTermLogic,context.symbol,options));
+    target.longTermLogic=clone(nextSnapshot.logic);
     target.longTermLogicAudit={schemaVersion:STORE_SCHEMA_VERSION,current:nextSnapshot,history:history.slice(-HISTORY_LIMIT)};
-    target.dataFreshness={...(object(target.dataFreshness)?target.dataFreshness:{}),personalViewUpdatedAt:result.logic.updatedAt};
+    target.dataFreshness={...(object(target.dataFreshness)?target.dataFreshness:{}),personalViewUpdatedAt:context.promptDate};
     const finalValidation=validateStore(target.longTermLogicAudit,target.longTermLogic);if(!finalValidation.ok)throw new Error(finalValidation.errors.join('；'));
     return {candidate,snapshot:nextSnapshot,stockId:context.stockId};
   }
@@ -179,5 +191,5 @@
     }catch(error){if(typeof deps.rollback==='function')deps.rollback(currentState);return {status:'failed',stage:'save',writes:1,error}}
   }
 
-  return Object.freeze({CONTEXT_SCHEMA_VERSION,SNAPSHOT_SCHEMA_VERSION,STORE_SCHEMA_VERSION,HISTORY_LIMIT,ROOT_FIELDS,BINDING_FIELDS,LOGIC_FIELDS,LOGIC_STATUSES,CONFIDENCE_LEVELS,stable,hash,validDate,canonicalInput,sourceFingerprint,prepareContext,validateLogic,validate,process,responseHash,emptyStore,validateSnapshot,validateStore,buildCandidate,commit,clone});
+  return Object.freeze({CONTEXT_SCHEMA_VERSION,MODULE_SCHEMA_VERSION,SNAPSHOT_SCHEMA_VERSION,STORE_SCHEMA_VERSION,HISTORY_LIMIT,ROOT_FIELDS,BINDING_FIELDS,AI_LOGIC_FIELDS,STORED_LOGIC_FIELDS,LOGIC_FIELDS,LOGIC_STATUSES,CONFIDENCE_LEVELS,stable,hash,validDate,canonicalInput,sourceFingerprint,prepareContext,validateJudgment,validateStoredLogic,validateLogic,isSlimLogic,storedLogic,validate,process,responseHash,emptyStore,validateSnapshot,validateStore,buildCandidate,commit,clone});
 });
