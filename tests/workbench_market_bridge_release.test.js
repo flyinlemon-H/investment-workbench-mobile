@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Universe V1A release cache-busts Auth and preserved Workbench modules',()=>{
+test('Plan Runtime Phase 2 release cache-busts Runtime, Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='stock-universe-auto-add-v1a-20260903';
+  const version='plan-runtime-phase2-20260904';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
@@ -118,6 +118,8 @@ test('Universe V1A release cache-busts Auth and preserved Workbench modules',()=
     'src/universe-handoff.js',
     'src/technical-view-ux.js',
     'src/plan-v2.js',
+    'src/plan-runtime.js',
+    'src/plan-runtime-ui.js',
     'src/plan-review.js',
     'src/plan-review-ui.js',
     'src/v13-core-model.js',

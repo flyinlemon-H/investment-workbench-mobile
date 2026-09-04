@@ -36,6 +36,8 @@ roleByPath.set('src/decision-compression-contract.js','Decision Compression AI e
 roleByPath.set('src/portfolio-review-ui.js','Decision Compression scope, freshness, first layer, and preserved Portfolio Review drill-down workflow');
 roleByPath.set('src/state-watch-workflow.js','State-watch Definition strict session and target binding, readable preview/diff and confirmed same-ID candidate commit');
 roleByPath.set('src/state-watch-ui.js','Dedicated mobile state-watch Definition editor, manual and AI Draft preview/confirm and non-executable cards');
+roleByPath.set('src/plan-runtime.js','Plan Runtime v1 strict lifecycle, protected Plan and Current State binding, bounded history, and atomic candidate commit');
+roleByPath.set('src/plan-runtime-ui.js','Dedicated mobile Runtime Review manual transport, preview, explicit confirmation, status, and compact history UI');
 roleByPath.set('src/plan-v2.js','Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime');
 roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime');
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
@@ -75,6 +77,8 @@ const paths=[...new Set([
   'src/plan-v2.js',
   'src/state-watch-workflow.js',
   'src/state-watch-ui.js',
+  'src/plan-runtime.js',
+  'src/plan-runtime-ui.js',
   'src/plan-review.js',
   'src/plan-review-ui.js',
   'src/clipboard.js',
@@ -98,8 +102,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'stock-universe-auto-add-v1a-20260903',
-  dataMode:'Stock Universe V1A local-first automatic additions through Supabase Auth with scoped PC read access; membership only, no removals or full-state sync; existing Current State anchor guards, Plan V2 Phase 1B and market calculations preserved; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'plan-runtime-phase2-20260904',
+  dataMode:'Plan V2 Phase 2 explicit State-Watch Runtime Review with exact Plan and Current State binding, separate runtimeRevision, bounded transition history and no execution; Current State and Plan Definition contracts preserved; Stock Universe V1A remains membership-only with no Runtime Supabase sync; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
