@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Plan Runtime Phase 2 release cache-busts Runtime, Auth and preserved Workbench modules',()=>{
+test('Discussion User Decision V3 release cache-busts Discussion, Runtime, Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='plan-runtime-phase2-20260904';
+  const version='discussion-user-decision-v3-20260904';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',

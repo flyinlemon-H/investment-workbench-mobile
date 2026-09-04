@@ -27,7 +27,7 @@ roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces');
+roleByPath.set('src/ui-render.js','Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces');
 roleByPath.set('src/app.js','browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
@@ -43,8 +43,8 @@ roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/p
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
-roleByPath.set('src/discussion-workbench.js','Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt input/output boundary runtime');
-roleByPath.set('src/discussion-state-contract.js','Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime');
+roleByPath.set('src/discussion-workbench.js','Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs');
+roleByPath.set('src/discussion-state-contract.js','Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards');
 roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
@@ -102,8 +102,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'plan-runtime-phase2-20260904',
-  dataMode:'Plan V2 Phase 2 explicit State-Watch Runtime Review with exact Plan and Current State binding, separate runtimeRevision, bounded transition history and no execution; Current State and Plan Definition contracts preserved; Stock Universe V1A remains membership-only with no Runtime Supabase sync; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'discussion-user-decision-v3-20260904',
+  dataMode:'Discussion User Decision V3 position-centric conclusion above preserved technical evidence, with compact mobile-first controls, V1/V2 Current State fallback, strict fact ownership and no execution; Plan V2 Phase 2 Runtime and Stock Universe V1A contracts remain unchanged; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
