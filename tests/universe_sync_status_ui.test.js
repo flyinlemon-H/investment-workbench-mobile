@@ -33,8 +33,7 @@ const reconciledState=(securityCount,acknowledgedCount)=>{
 function renderStatus(state,{userAgent='fixture'}={}){
   const elements={
     pcSyncControl:{hidden:true},
-    pcSyncStatus:{textContent:''},
-    syncPcBtn:{hidden:true}
+    pcSyncStatus:{textContent:''}
   };
   const context={
     console,
@@ -65,10 +64,9 @@ test('zero pending renders persistent PC sync status with canonical security cou
   const elements=renderStatus(state);
   assert.equal(elements.pcSyncControl.hidden,false);
   assert.equal(elements.pcSyncStatus.textContent,'PC同步 · 已同步 19只');
-  assert.equal(elements.syncPcBtn.hidden,true);
 });
 
-test('one pending security shows its count and the existing PC sync action',()=>{
+test('one pending security shows its count without restoring the top-level file action',()=>{
   const state=reconciledState(20,19);
   const status=Universe.statusPresentation(state);
   assert.equal(status.text,'PC同步 · 1只等待同步');
@@ -77,7 +75,6 @@ test('one pending security shows its count and the existing PC sync action',()=>
 
   const elements=renderStatus(state);
   assert.equal(elements.pcSyncStatus.textContent,'PC同步 · 1只等待同步');
-  assert.equal(elements.syncPcBtn.hidden,false);
 });
 
 test('multiple pending securities display the correct count',()=>{
@@ -132,6 +129,9 @@ test('Tools toolbar places compact status before other actions without a zero-st
   const index=read('index.html');
   assert.ok(index.indexOf('id="pcSyncControl"')<index.indexOf('id="globalActions"'));
   assert.match(index,/id="pcSyncStatus" role="status" aria-live="polite"/);
+  assert.doesNotMatch(index,/id="syncPcBtn"|>同步到PC</);
   assert.doesNotMatch(index,/同步到PC（无待同步）|同步到PC \(无待同步\)/);
   assert.match(index,/@media\(max-width:390px\).*\.pc-sync-status/);
+  const settings=read('src/universe-sync-ui.js');
+  assert.match(settings,/灾备 \/ 文件交接/);assert.match(settings,/id="universeFileFallback">导出文件交接/);
 });

@@ -10,11 +10,6 @@ function normalizePlanList(plans){
 function getActivePlans(plans){
   return normalizePlanList(plans).filter(plan=>plan.status==='active'&&!['invalid','completed'].includes(plan.validityStatus));
 }
-
-function getArchivedPlans(plans){
-  return normalizePlanList(plans).filter(plan=>plan.status!=='active'||['invalid','completed'].includes(plan.validityStatus));
-}
-
 function getActivePlanByType(plans,planType){
   return sortPlansByPriority(getActivePlans(plans).filter(plan=>(!Object.prototype.hasOwnProperty.call(plan,'planMode')||plan.planMode==='legacy_price')&&plan.action===planType))[0]||null;
 }
@@ -78,10 +73,4 @@ function checkPlanTriggerLevel(plan,priceSnapshot,ruleConfig){
   if(distancePct<=level2Pct)return 'level2';
   if(distancePct<=level1Pct)return 'level1';
   return 'none';
-}
-
-function archivePlan(plan,reason){
-  if(plan&&Object.prototype.hasOwnProperty.call(plan,'planMode')&&plan.planMode!=='legacy_price')throw new Error('状态观察计划暂不支持旧价格计划归档。');
-  if(typeof PlanV2!=='undefined')return PlanV2.terminatePlan(plan,'replaced',{reason});
-  return {...plan,status:'replaced'};
 }

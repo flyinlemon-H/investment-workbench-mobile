@@ -1,13 +1,6 @@
 function normalizeQuoteCode(code){
   return String(code||'').trim().toUpperCase();
 }
-function codeKind(code){
-  const c=normalizeQuoteCode(code);
-  if(/^\d{1,5}\.HK$/.test(c))return 'hk';
-  if(/^\d{6}\.(SS|SZ)$/.test(c))return 'cn';
-  if(/^[A-Z.]{1,10}$/.test(c))return 'us';
-  return 'unknown';
-}
 function validateQuoteCode(code,type){
   const c=normalizeQuoteCode(code);
   if(!c)return {ok:false,reason:'缺少行情代码'};
@@ -172,16 +165,6 @@ function cloneRefreshValue(value){
   return typeof structuredClone==='function'?structuredClone(value):JSON.parse(JSON.stringify(value));
 }
 function touchPriceRefreshFreshness(s,r){touchDataFreshness(s,'priceUpdatedAt',r.updatedAt)}
-function snapshotPriceRefreshBusinessState(stock){
-  return {
-    stateUpdatedAt:state.updatedAt,
-    fields:Object.fromEntries(PRICE_REFRESH_MUTATED_FIELDS.map(key=>[key,{present:Object.prototype.hasOwnProperty.call(stock,key),value:cloneRefreshValue(stock[key])}]))
-  };
-}
-function restorePriceRefreshBusinessState(stock,snapshot){
-  Object.entries(snapshot.fields).forEach(([key,item])=>{if(item.present)stock[key]=cloneRefreshValue(item.value);else delete stock[key]});
-  state.updatedAt=snapshot.stateUpdatedAt;
-}
 async function refreshOnePrice(id,opts={}){
   const key=String(id||'');
   if(priceRefreshInFlight.has(key))return priceRefreshInFlight.get(key);

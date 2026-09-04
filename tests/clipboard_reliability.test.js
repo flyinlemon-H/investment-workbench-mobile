@@ -81,9 +81,9 @@ test('dedicated AI workflows use prepared visible requests and shared feedback s
   for(const source of [portfolio,plan,technical]){assert.match(source,/复制失败，请长按复制/);assert.match(source,/已复制 ✓/)}
 });
 
-test('generic prompt modals and Plan refresh pass their visible textarea to the helper',()=>{
+test('surviving prompt modals and Plan refresh pass their visible textarea to the helper',()=>{
   const ui=fs.readFileSync(path.resolve(__dirname,'../src/ui-render.js'),'utf8');
-  for(const id of ['aiAnalysisPromptText','aiAssistantPrompt','unifiedPromptPreview','reviewPackagePreview','v13PlanRefreshPromptText'])assert.match(ui,new RegExp(`selectableElement:[^}]*${id}|${id}[\\s\\S]{0,180}selectableElement`));
+  for(const id of ['aiAnalysisPromptText','aiAssistantPrompt','v13PlanRefreshPromptText'])assert.match(ui,new RegExp(`selectableElement:[^}]*${id}|${id}[\\s\\S]{0,180}selectableElement`));
   assert.match(ui,/async function copyText[\s\S]*ClipboardUtils\.copyTextWithFallback/);
   assert.match(ui,/alert\(result\.ok\?okMsg:'复制失败，请长按复制'\)/);
 });

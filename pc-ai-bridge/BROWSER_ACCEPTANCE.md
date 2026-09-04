@@ -1,6 +1,8 @@
 # Browser acceptance record — 2026-09-02
 
-Overall status: **partial acceptance; production-Origin gate is not passed**.
+Status: **HISTORICAL — partial acceptance record, not current operating status**
+
+The observations below describe the pre-acceptance checkpoint on 2026-09-02. The production Bridge was subsequently accepted; current startup and recovery guidance is in `README.md`. The retired Chrome Local Overrides bundle and setup document were removed in Cleanup Wave 1 after direct-reference and regression-gate checks.
 
 Release-policy update: the user subsequently authorized deployment before the remaining real-Chrome checks. Local Overrides is no longer a pre-deployment requirement. See `docs/PC_AI_BRIDGE_CONTROLLED_RELEASE.md`; this record does not claim the pending production acceptance has passed.
 
@@ -82,7 +84,7 @@ The static acceptance server uses test-only cache busting without changing produ
 
 ## Authorized Local Overrides preparation
 
-- Prepared a repository-external, local-only bundle with 59 current static scripts in original order. See [setup and cleanup instructions](LOCAL_OVERRIDES_SETUP.md).
+- A repository-external Local Overrides bundle was used during this historical checkpoint. That deployment-stage tooling is no longer part of the active acceptance suite.
 - Source scripts are fingerprinted. Generated copies only rename storage/database/channel/lock/session keys. A test prelude forwards allowed operations to native storage and counts successful main-key writes; it does not replace business validation or save logic. Network, permission and clipboard APIs remain unchanged.
 - Unit tests prove namespace forwarding, blocking of non-test storage/database operations, rejection of unexpected Origins, script ordering, unmodified transport/contract/clipboard sources, and no repository-source changes during generation.
 - Real Chrome preflight at `http://127.0.0.1:8768/` loaded the bundle, showed the isolation banner, and opened the synthetic stock's Long-Term Logic workspace with all 3 actions. The report showed 0 non-test storage accesses, zero shares and no plans. Its initial 3 writes include test seeding and existing startup normalization; they are **not** an AI commit result. Every AI acceptance action needs its own checkpoint.

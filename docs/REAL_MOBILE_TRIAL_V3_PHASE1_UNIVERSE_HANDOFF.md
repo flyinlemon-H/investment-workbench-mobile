@@ -1,5 +1,9 @@
 # REAL MOBILE TRIAL V3 Phase 1：手机股票池交接
 
+Status: **FALLBACK / HISTORICAL**
+
+当前主路径是 Supabase Stock Universe Auto Add；本文保留的是自动同步或 PC 云端读取不可用时的 OneDrive 文件交接灾备流程，不再是日常同步入口。
+
 ## 目标与边界
 
 本阶段只解决“手机新增股票进入 PC 行情更新范围”。它不做自动删除、持仓/成本/计划同步，也不引入后端、Supabase 或浏览器 GitHub 写权限。

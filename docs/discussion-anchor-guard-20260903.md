@@ -1,5 +1,7 @@
 # Discussion technical anchor guard
 
+Status: **HISTORICAL — release evidence; behavior remains protected by current regression tests**
+
 Rollback baseline: `8078ad793f27732ec6007f4f3f363bfa338292fc`.
 
 The confirmed production class is a valid AI judgment for `600487.SS` with no

@@ -15,7 +15,7 @@ function fixture(){
 }
 
 test('Pages path allowlist excludes Bridge, secrets, tests and path traversal',()=>{
-  for(const file of ['.nojekyll','pc-ai-bridge/bridge.py','pc-ai-bridge/.env','.env','tests/fixtures/chrome-overrides-harness.js','scripts/prepare_pages_artifact.js','src/../pc-ai-bridge/bridge.py','src/.env','src\\app.js','data/secret.js'])assert.equal(permittedPath(file),false,file);
+  for(const file of ['.nojekyll','pc-ai-bridge/bridge.py','pc-ai-bridge/.env','.env','tests/private-fixture.js','scripts/prepare_pages_artifact.js','src/../pc-ai-bridge/bridge.py','src/.env','src\\app.js','data/secret.js'])assert.equal(permittedPath(file),false,file);
   for(const file of ['index.html','src/api/ai-api.js','src/long-term-logic-contract.js','data/backend_config.js'])assert.equal(permittedPath(file),true,file);
 });
 

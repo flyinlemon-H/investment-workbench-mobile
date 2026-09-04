@@ -23,7 +23,7 @@ const output=path.resolve(process.argv[2]||path.join('test-results','discussion-
         globalThis.decisionV3Original=structuredClone(state);
       });
       const workspace=page.locator('.discussion-workbench'),buttons=workspace.locator('.discussion-actions button'),labels=await buttons.allTextContents();
-      assert.deepEqual(labels,['开始讨论','整理结论','导入结论','整理计划','导入计划','查看历史']);assert.equal(new Set(labels).size,6);
+      assert.deepEqual(labels,['开始讨论','整理结论','导入结论','查看历史','转到计划中心']);assert.equal(new Set(labels).size,5);
       const order=await workspace.locator(':scope > *').evaluateAll(nodes=>nodes.map(node=>node.className));assert.match(order[0],/discussion-control-card/);assert.match(order[1],/discussion-user-decision-card/);assert.match(order[2],/discussion-history/);
       assert.equal(await page.locator('.discussion-evidence').evaluate(node=>node.open),false);assert.match(await page.locator('.discussion-user-decision-card').innerText(),/当前结论[\s\S]*仓位方向[\s\S]*如果想加仓[\s\S]*需要警惕[\s\S]*止盈[\s\S]*止损[\s\S]*判断依据/);
       assert.match(await page.locator('.discussion-program-references').innerText(),/计划增加仓位参考[\s\S]*60[\s\S]*计划减仓参考[\s\S]*75/);
@@ -32,14 +32,13 @@ const output=path.resolve(process.argv[2]||path.join('test-results','discussion-
       await buttons.nth(0).click();assert.equal(await page.locator('#discussionPromptDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionPromptCloseBtn').click();
       await buttons.nth(1).click();assert.match(await page.locator('#discussionPromptTitle').innerText(),/整理结论已准备/);await page.locator('#discussionPromptCloseBtn').click();
       await buttons.nth(2).click();assert.equal(await page.locator('#discussionImportDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionImportCancelBtn').click();
-      await buttons.nth(3).click();assert.match(await page.locator('#discussionPromptTitle').innerText(),/计划整理已准备/);await page.locator('#discussionPromptCloseBtn').click();
-      await buttons.nth(4).click();assert.equal(await page.locator('#discussionPlanImportDialog').evaluate(node=>node.classList.contains('show')),true);await page.locator('#discussionPlanImportCancelBtn').click();
-      await buttons.nth(5).click();assert.equal(await page.locator('#discussionHistoryPanel').evaluate(node=>node.open),true);
-      await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0];stock.priceHistory=[];renderStockDetail()});assert.match(await page.locator('.discussion-status-warning').innerText(),/当前无法保存连续结论[\s\S]*完整日K技术锚点/);assert.equal(await page.locator('.discussion-actions button').count(),6);
+      await buttons.nth(3).click();assert.equal(await page.locator('#discussionHistoryPanel').evaluate(node=>node.open),true);
+      await buttons.nth(4).click();assert.equal(await page.locator('#workspace-tab-plan').getAttribute('aria-selected'),'true');await page.locator('#workspace-tab-ai').click();
+      await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0];stock.priceHistory=[];renderStockDetail()});assert.match(await page.locator('.discussion-status-warning').innerText(),/当前无法保存连续结论[\s\S]*完整日K技术锚点/);assert.equal(await page.locator('.discussion-actions button').count(),5);
       await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0],current=stock.discussionState.current;current.schemaVersion=DiscussionWorkbench.V2_STATE_SCHEMA_VERSION;delete current.userDecision;renderStockDetail()});assert.equal(await page.locator('.discussion-state-v2').count(),1);assert.equal(await page.locator('.discussion-user-decision-card').count(),0);assert.match(await page.locator('.discussion-state-v2').innerText(),/操作倾向[\s\S]*查看完整结论/);
       await page.evaluate(()=>{state=structuredClone(decisionV3Original);const stock=state.stocks[0],decision=stock.discussionState.current.userDecision;stock.shares=0;decision.headline='当前位置不适合建仓，继续等待。';decision.holding={status:'not_applicable',summary:'当前没有持仓。'};decision.positionDirection={status:'not_applicable',summary:'保持空仓观察。'};decision.addAssessment={status:'wait',summary:'等待更合适的建仓机会。'};decision.takeProfit={status:'not_applicable',summary:'当前无持仓，不适用。'};decision.stopLoss={status:'not_applicable',summary:'尚未持有，不适用。'};renderStockDetail()});assert.match(await page.locator('.discussion-user-decision-card').innerText(),/如果想建仓/);assert.doesNotMatch(await page.locator('.discussion-user-decision-card').innerText(),/如果想加仓/);
       await page.screenshot({path:path.join(output,`discussion-user-decision-${viewport.width}.png`),fullPage:true});
-      assert.deepEqual(errors,[]);results.push({viewport,controlOrder:true,sixActions:true,allActionsOpened:true,decisionBeforeEvidence:true,legacyFallback:true,blockingVisible:true,zeroPositionLabel:true,noOverflow:true,pageErrors:errors,dialogs});await context.close();
+      assert.deepEqual(errors,[]);results.push({viewport,controlOrder:true,duplicatePlanActionsRemoved:true,planCenterReachable:true,allActionsOpened:true,decisionBeforeEvidence:true,legacyFallback:true,blockingVisible:true,zeroPositionLabel:true,noOverflow:true,pageErrors:errors,dialogs});await context.close();
     }
   }finally{await browser.close()}
   fs.writeFileSync(path.join(output,'discussion-user-decision-browser-results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));

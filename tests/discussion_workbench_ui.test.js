@@ -18,9 +18,10 @@ test('existing AI discussion tab is renamed without adding a ninth workspace tab
   assert.ok(meta);assert.equal((meta[1].match(/\{key:/g)||[]).length,8);assert.match(meta[1],/\{key:'ai',label:'讨论'\}/);assert.doesNotMatch(meta[1],/AI讨论/);
 });
 
-test('workbench exposes the six-action Chinese workflow without duplicate controls',()=>{
+test('workbench keeps Current State actions and one Plan Center shortcut without duplicate Plan controls',()=>{
   const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
-  for(const label of ['开始讨论','整理结论','导入结论','整理计划','导入计划','查看历史']){assert.match(panel,new RegExp(label));assert.equal((panel.match(new RegExp(`>${label}<`,'g'))||[]).length,1,label)}
+  for(const label of ['开始讨论','整理结论','导入结论','查看历史','转到计划中心']){assert.match(panel,new RegExp(label));assert.equal((panel.match(new RegExp(`>${label}<`,'g'))||[]).length,1,label)}
+  for(const label of ['整理计划','导入计划'])assert.doesNotMatch(panel,new RegExp(`>${label}<`));
   for(const label of ['AI刷新','生成分析','刷新计划'])assert.doesNotMatch(panel,new RegExp(label));
   assert.match(ui,/预览结果/);assert.match(ui,/确认保存/);assert.match(ui,/保存后将成为下次讨论的起点/);
   assert.doesNotMatch(panel,/\bCurrent\b|Current State|needs_review|superseded|Discussion State/);

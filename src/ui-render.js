@@ -97,13 +97,11 @@ function renderSyncHint(){
 function renderPcSyncStatus(){
   const control=document.getElementById('pcSyncControl');
   const el=document.getElementById('pcSyncStatus');
-  const button=document.getElementById('syncPcBtn');
-  if(!control||!el||!button)return;
+  if(!control||!el)return;
   const status=window.UniverseHandoff&&typeof window.UniverseHandoff.statusPresentation==='function'
     ?window.UniverseHandoff.statusPresentation(state)
     :{text:'',showAction:false};
   el.textContent=status.text;
-  button.hidden=!status.showAction;
   control.hidden=!status.text||currentTab!=='tools'||Boolean(detailStockId);
 }
 const ZH_ENUM_MAP={
@@ -1811,59 +1809,8 @@ function v13StockEventPanel(stock){
   const row=event=>`<div class="trig-row" data-v13-detail-stock="${esc(stock.id)}" data-v13-detail-event="${esc(event.id)}" style="cursor:pointer"><div class="trig-name">${esc(v13EventPhaseLabel(event.phase))} <span class="muted">· 点击进入决策复核</span></div><div class="trig-dist">${esc(v13EventUpdatedText(event))}</div><div class="trig-desc"><b>${esc(event.title||'未命名事件')}</b>${event.summary?` · ${esc(event.summary)}`:''}</div></div>`;
   return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--seal)"><div class="card-title">当前事件</div><div class="card-note">事件只作为触发器，点击后进入对应决策复核，不再打开旧事件详情。</div>${events.length?`<div class="trig-list">${events.map(row).join('')}</div>`:'<div class="card-note">暂无未处理事件。</div>'}</div>`;
 }
-function stockSearchBase(stock){return [stock.name,stock.code].filter(Boolean).join(' ').trim()||'stock'}
-function collectionSourceLinks(stock){
-  const code=String(stock.code||'').trim().toUpperCase();
-  const name=String(stock.name||'').trim();
-  const symbol=code||name||'stock';
-  const q=stockSearchBase(stock);
-  const google=s=>`https://www.google.com/search?q=${encodeURIComponent(s)}`;
-  return [
-    {label:'行情',url:code?`https://finance.yahoo.com/quote/${encodeURIComponent(code)}`:google(`${q} stock quote`)},
-    {label:'估值',url:code?`https://finance.yahoo.com/quote/${encodeURIComponent(code)}/key-statistics`:google(`${q} valuation PE PB PS`)},
-    {label:'分析师预期',url:code?`https://finance.yahoo.com/quote/${encodeURIComponent(code)}/analysis`:google(`${q} analyst estimates`)},
-    {label:'技术图表',url:`https://www.tradingview.com/search/?query=${encodeURIComponent(symbol)}`},
-    {label:'新闻',url:google(`${q} news`)},
-    {label:'财报公告',url:google(`${q} annual report interim report announcement`)},
-    {label:'估值数据',url:google(`${q} historical valuation PE PB PS`)},
-    {label:'社媒讨论',url:google(`${q} forum discussion sentiment`)}
-  ];
-}
-function collectionPromptSchema(kind){
-  const schemas={
-    news:{newsReview:{summary:'',positivePoints:[],negativePoints:[],riskPoints:[],attentionPoints:[],sentiment:'neutral',confidence:'medium'}},
-    financial:{financialReview:{summary:'',revenueTrend:'',profitTrend:'',marginTrend:'',cashFlowTrend:'',debtRisk:'',growthQuality:'',positivePoints:[],negativePoints:[],riskPoints:[],confidence:'medium'}},
-    social:{socialReview:{summary:'',hotTopics:[],bullishArguments:[],bearishArguments:[],rumorRisks:[],sentiment:'neutral',confidence:'medium'}},
-    technical:{technicalReview:{summary:'',trend:'sideways',supportLevels:[],resistanceLevels:[],volumeSignal:'',riskSignal:'',operationSuggestion:'',confidence:'medium'}},
-    comprehensive:{comprehensiveReview:{summary:'',mainConclusion:'',whatChanged:[],actionBias:'watch',keyRisks:[],nextUpdateNeeded:[],confidence:'medium'}}
-  };
-  return schemas[kind]||schemas.comprehensive;
-}
-function collectionPromptText(stock,kind){
-  normalizeStockAnalysis(stock);
-  const ci=normalizeCollectionInputs(stock.collectionInputs);
-  const raw={news:ci.newsRawText,financial:ci.financialRawText,social:ci.socialRawText,technical:ci.technicalRawText,comprehensive:ci.generalRawText}[kind]||'';
-  const latestPrice=getComparablePrice(stock)||stockCurrentPrice(stock)||'';
-  const ctx={
-    stock:{name:stock.name||'',code:stock.code||'',type:stock.type||'',role:stock.role||'',shares:stock.shares||0,avgCost:stock.avgCost||'',currentPrice:latestPrice},
-    valuationData:normalizeValuationData(stock.valuationData),
-    dataFreshness:normalizeDataFreshness(stock.dataFreshness),
-    personalView:normalizeAnalysisInputs(stock.analysisInputs).personalView,
-    collectionInputs:ci,
-    rawText:raw
-  };
-  const title={news:'新闻整理',financial:'财报整理',social:'社媒整理',technical:'技术分析',comprehensive:'综合复核'}[kind]||'综合复核';
-  return [`请作为投资研究助理，对以下资料做${title}。`,'要求：','1. 只输出严格 JSON，不要输出 Markdown。','2. 同时在 summary/mainConclusion 等字段里给出可读结论。','3. 不构成买卖指令，仅作复核辅助。',`4. ${chineseOutputPromptRule()}`,'','当前上下文：',JSON.stringify(ctx,null,2),'','请按以下 JSON 结构输出：',JSON.stringify(collectionPromptSchema(kind),null,2)].join('\n');
-}
 function collapsibleCard(title,body,open=false,note=''){
   return `<details class="card" style="margin-bottom:14px"${open?' open':''}><summary class="card-title" style="cursor:pointer">${esc(title)}</summary><div style="margin-top:12px">${note?`<div class="card-note" style="margin-bottom:10px">${esc(note)}</div>`:''}${body}</div></details>`;
-}
-function collectionPanel(stock){
-  const ci=normalizeCollectionInputs(stock.collectionInputs);
-  const links=collectionSourceLinks(stock).map(x=>`<a class="chip tag" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.label)}</a>`).join('');
-  const area=(key,label)=>`<div class="form-row"><label>${esc(label)}</label>${key==='financialRawText'?'<div class="card-note" style="margin-bottom:6px">建议粘贴：营收、净利润、同比增速、毛利率、现金流、负债率、EPS、管理层说明、主要风险。快速更新可粘贴财经网站业绩摘要；重仓股建议粘贴公司公告或年报关键段落。</div>':''}${key==='technicalRawText'?'<div class="card-note" style="margin-bottom:6px">建议粘贴：K线趋势、MA20/MA60/MA120、成交量变化、支撑位、压力位、是否放量、是否跌破关键均线、风险信号。可先复制“技术面截图摘要 Prompt”，让 GPT 根据截图整理后再粘贴。</div>':''}<textarea id="ci_${key}" style="min-height:82px">${esc(ci[key])}</textarea></div>`;
-  const body=`<div class="form-row"><label>资料入口</label><div class="chips">${links}</div></div><div class="form-row"><label>粘贴资料</label></div>${area('newsRawText','新闻资料')}${area('financialRawText','财报/业绩资料')}${area('socialRawText','社媒讨论资料')}${area('technicalRawText','技术形态资料')}${area('generalRawText','综合资料')}<div class="modal-actions" style="justify-content:flex-start;margin-top:8px;flex-wrap:wrap"><button class="btn ghost small" data-collection-action="save">保存采集资料</button><button class="btn ghost small" id="copyFinancialIntegratedPromptFromCollectionBtn" type="button">复制财报一体化解析 Prompt</button><button class="btn ghost small" data-collection-prompt="news">复制新闻整理提示词</button><button class="btn ghost small" data-collection-prompt="financial">复制财报整理提示词</button><button class="btn ghost small" data-collection-prompt="social">复制社媒整理提示词</button><button class="btn ghost small" data-collection-prompt="technical">复制技术分析提示词</button><button class="btn ghost small" data-collection-prompt="comprehensive">复制综合复核提示词</button></div>`;
-  return collapsibleCard('信息采集面板',body,false,'默认折叠，展开后可粘贴资料或复制整理提示词。');
 }
 function financialReportTemplateText(){
   return ['报告期：','营业收入：','营收同比：','归母净利润：','净利润同比：','毛利率：','净利率：','ROE：','经营现金流：','自由现金流：','资产负债率：','EPS：','管理层对业务变化的说明：','主要风险：','资料来源：','备注：'].join('\n');
@@ -1887,45 +1834,6 @@ function financialAnalysisFlowPanel(){
   const body=`<div class="modal-actions" style="justify-content:flex-start;margin:0 0 12px;flex-wrap:wrap"><button class="btn ghost small" id="copyFinancialReportTemplateBtn" type="button">复制财报资料采集模板</button><button class="btn ghost small" id="copyFinancialFlowBtn" type="button">复制财报分析流程说明</button><button class="btn ghost small" id="copyFinancialIntegratedPromptBtn" type="button">复制财报一体化解析 Prompt</button><button class="btn ghost small" id="focusFinancialIntegratedImportBtn" type="button">打开/定位到财报一体化 JSON 导入</button></div><div class="dash" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><div class="card"><div class="card-title">推荐快捷流程</div><div class="text" style="max-width:none">1. 粘贴财报/业绩资料<br>2. 使用“财报一体化解析” Prompt<br>3. 导入一体化 JSON<br>4. 人工决定是否应用到九模块财务评分</div></div><div class="card"><div class="card-title">备用拆分流程</div><div class="text" style="max-width:none">1. 财务数据提取<br>2. 导入 financialData<br>3. 财报复核分析<br>4. 导入 financialReview</div></div></div><div class="dash" style="grid-template-columns:1fr 1fr;margin-bottom:12px"><div class="card"><div class="card-title">步骤 1：获取财报原文</div><div class="text" style="max-width:none">点击信息采集面板中的“财报公告”入口，也可以从公司公告、交易所公告、财经网站、券商研报摘要复制。日常更新不需要复制整份财报，优先复制关键财务段落。</div><div class="card-note" style="margin-top:8px"><b>建议复制内容：</b>${checklist.map(esc).join('、')}</div></div><div class="card"><div class="card-title">步骤 2：粘贴财报资料</div><div class="text" style="max-width:none">将财报原文粘贴到“信息采集面板 → 财报/业绩资料”。保存后会更新 financialUpdatedAt。</div></div><div class="card"><div class="card-title">步骤 3：一体化解析</div><div class="text" style="max-width:none">打开“统一 Prompt 生成器”，选择“财报一体化解析”，复制 Prompt 发给 GPT。将返回的 JSON 粘贴到下方“一体化 JSON 导入”。</div></div><div class="card"><div class="card-title">步骤 4：人工确认应用</div><div class="text" style="max-width:none">一体化导入只写入 financialData 和 aiReviews.financialReview，不会覆盖九模块评分。是否点击“应用到九模块财务评分”仍由你人工决定。</div></div></div><div class="form-row"><label>财报一体化 JSON 导入</label><textarea id="financialIntegratedImportText" style="min-height:170px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px" placeholder='可粘贴纯 JSON、Markdown json 代码块，或前后带说明文字的 AI 返回内容。要求顶层包含 {"financialData":{...},"financialReview":{...}}'></textarea></div><div class="modal-actions" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost small" id="importFinancialIntegratedBtn" type="button">导入一体化 JSON</button></div>`;
   return collapsibleCard('财报分析流程',body,false,'默认折叠，按 4 步完成财报原文采集、financialData 提取和 financialReview 导入。');
 }
-function technicalScreenshotPromptText(stock){
-  const name=stock&&stock.name?stock.name:'当前股票';
-  const code=stock&&stock.code?stock.code:'无代码';
-  return [`请根据我上传的 K 线图或技术图截图，整理 ${name}（${code}）的技术面摘要。`,'','要求：','1. 只根据截图内容判断，不要使用外部资料。','2. 如果截图中看不清某项信息，请写“无法判断”。','3. 不要给确定性买卖指令，只做技术面辅助分析。',`4. ${chineseOutputPromptRule()}`,'5. 请按以下格式输出，方便我粘贴进投资分析程序的“技术形态资料”：','','股票名称：','股票代码：','截图周期：','当前价格：','当前趋势：','MA20 / MA60 / MA120 相对位置：','成交量变化：','近期支撑位：','近期压力位：','是否放量：','是否跌破关键均线：','风险信号：','短期操作倾向：','需要继续观察的信号：','备注：'].join('\n');
-}
-function copyTechnicalScreenshotPrompt(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  copyText(technicalScreenshotPromptText(stock),'技术面截图摘要 Prompt 已复制。');
-}
-function technicalAnalysisFlowPanel(){
-  const body=`<div class="modal-actions" style="justify-content:flex-start;margin:0 0 12px;flex-wrap:wrap"><button class="btn ghost small" id="copyTechnicalScreenshotPromptBtn" type="button">复制技术面截图摘要 Prompt</button></div><div class="dash" style="grid-template-columns:1fr 1fr;margin-bottom:0"><div class="card"><div class="card-title">步骤 1：获取技术面资料</div><div class="text" style="max-width:none">可以使用历史价格 CSV 导入，让程序自动计算 MA20 / MA60 / MA120、支撑位、压力位。也可以从富途、东方财富、同花顺、TradingView 截图 K 线图。截图建议包含日K、周K、成交量、均线。</div></div><div class="card"><div class="card-title">步骤 2：让 GPT 整理截图摘要</div><div class="text" style="max-width:none">复制“技术面截图摘要 Prompt”，把 K 线截图发给 GPT，让 GPT 按固定格式整理技术面摘要。</div></div><div class="card"><div class="card-title">步骤 3：粘贴技术形态资料</div><div class="text" style="max-width:none">将 GPT 整理后的摘要粘贴到“信息采集面板 → 技术形态资料”。保存后会更新 technicalUpdatedAt。</div></div><div class="card"><div class="card-title">步骤 4：生成技术复核</div><div class="text" style="max-width:none">打开“统一 Prompt 生成器”，选择“技术复核”，复制 Prompt 发给 GPT。将返回的 technicalReview JSON 粘贴到“AI 复核导入”，类型选择“技术复核 technicalReview”。</div></div></div>`;
-  return collapsibleCard('技术面分析流程',body,false,'默认折叠，截图或历史价格导入后，用于整理技术形态资料和 technicalReview。');
-}
-async function saveCollectionInputs(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const prev=normalizeCollectionInputs(stock.collectionInputs);
-  const next=normalizeCollectionInputs({
-    newsRawText:document.getElementById('ci_newsRawText').value,
-    financialRawText:document.getElementById('ci_financialRawText').value,
-    socialRawText:document.getElementById('ci_socialRawText').value,
-    technicalRawText:document.getElementById('ci_technicalRawText').value,
-    generalRawText:document.getElementById('ci_generalRawText').value
-  });
-  stock.collectionInputs=next;
-  if(next.newsRawText!==prev.newsRawText)touchDataFreshness(stock,'newsUpdatedAt');
-  if(next.financialRawText!==prev.financialRawText)touchDataFreshness(stock,'financialUpdatedAt');
-  if(next.socialRawText!==prev.socialRawText)touchDataFreshness(stock,'socialUpdatedAt');
-  if(next.technicalRawText!==prev.technicalRawText)touchDataFreshness(stock,'technicalUpdatedAt');
-  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
-  render();
-  alert('采集资料已保存。');
-}
-function copyCollectionPrompt(kind){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  copyText(collectionPromptText(stock,kind),'AI整理提示词已复制。');
-}
 const AI_REVIEW_TYPES={
   newsReview:{label:'新闻复核',freshnessKey:'newsUpdatedAt',defaults:{summary:'',positivePoints:[],negativePoints:[],riskPoints:[],attentionPoints:[],sentiment:'neutral',confidence:'medium'}},
   financialReview:{label:'财报复核',freshnessKey:'financialUpdatedAt',defaults:{summary:'',revenueTrend:'',profitTrend:'',marginTrend:'',cashFlowTrend:'',debtRisk:'',growthQuality:'',positivePoints:[],negativePoints:[],riskPoints:[],confidence:'medium'}},
@@ -1933,9 +1841,6 @@ const AI_REVIEW_TYPES={
   technicalReview:{label:'技术复核',freshnessKey:'technicalUpdatedAt',defaults:{summary:'',trend:'sideways',cyclePosition:'unclear',cycleSummary:'',pricePosition:{lookbackDays:null,high:null,low:null,currentPercentile:null,distanceToCycleHighPct:null,distanceToCycleLowPct:null},supportLevels:[],resistanceLevels:[],supportZones:[],volumeSignal:'',riskSignal:'',holdHint:'',addHint:'',reduceHint:'',operationSuggestion:'',confidence:'medium'}},
   comprehensiveReview:{label:'综合复核',freshnessKey:'comprehensiveReviewUpdatedAt',defaults:{summary:'',mainConclusion:'',whatChanged:[],actionBias:'watch',keyRisks:[],nextUpdateNeeded:[],confidence:'medium'}}
 };
-function aiReviewTypeOptions(selected='newsReview'){
-  return Object.keys(AI_REVIEW_TYPES).map(k=>`<option value="${k}"${k===selected?' selected':''}>${AI_REVIEW_TYPES[k].label} ${k}</option>`).join('');
-}
 function normalizeAiReviewPayload(type,payload){
   const cfg=AI_REVIEW_TYPES[type];
   if(!cfg||!payload||typeof payload!=='object'||Array.isArray(payload))return null;
@@ -2008,111 +1913,6 @@ function extractFirstJsonObject(text){
   }
   throw new Error('未找到合法 JSON 对象');
 }
-function aiReviewUpdatedAt(stock,type){
-  const f=normalizeDataFreshness(stock.dataFreshness);
-  const key=AI_REVIEW_TYPES[type]&&AI_REVIEW_TYPES[type].freshnessKey;
-  return key?f[key]:'';
-}
-function currentAiReviewType(){
-  const el=document.getElementById('aiReviewType');
-  return (el&&AI_REVIEW_TYPES[el.value])?el.value:'newsReview';
-}
-function aiReviewImportPanel(stock){
-  const reviews=normalizeAiReviews(stock.aiReviews);
-  const body=`<div class="form-row two"><div><label>Review 类型</label><select id="aiReviewType">${aiReviewTypeOptions()}</select></div><div><label>当前状态</label><div class="card-note" id="aiReviewCurrentStatus">选择类型后显示</div></div></div><div class="form-row"><label>JSON 粘贴框</label><textarea id="aiReviewJsonText" style="min-height:150px" placeholder="可粘贴纯 JSON、Markdown json 代码块，或前后带说明文字的 AI 返回内容。">${esc(JSON.stringify(reviews.newsReview||{},null,2))}</textarea></div><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap"><button class="btn ghost small" id="importAiReviewBtn" type="button">导入 AI Review</button><button class="btn ghost small" id="clearAiReviewBtn" type="button">清空当前 Review</button><button class="btn ghost small" id="copyAiReviewBtn" type="button">复制当前 Review JSON</button></div><div class="card-note" style="margin-top:8px">AI Review 只写入 aiReviews，不会覆盖九模块评分、估值数据或决策建议。</div>`;
-  return collapsibleCard('AI 复核导入',body,false,'默认折叠，展开后粘贴 AI 返回 JSON。');
-}
-function refreshAiReviewImportBox(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const type=currentAiReviewType();
-  const reviews=normalizeAiReviews(stock.aiReviews);
-  const current=reviews[type];
-  const text=document.getElementById('aiReviewJsonText');
-  if(text)text.value=current?JSON.stringify(current,null,2):'';
-  const status=document.getElementById('aiReviewCurrentStatus');
-  if(status)status.textContent=`${current?'已导入':'暂无复核'} · 更新 ${aiReviewUpdatedAt(stock,type)||'—'}`;
-}
-async function importAiReview(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const type=currentAiReviewType();
-  const original=JSON.parse(JSON.stringify(normalizeAiReviews(stock.aiReviews)));
-  let parsed,review;
-  try{
-    parsed=extractFirstJsonObject(document.getElementById('aiReviewJsonText').value);
-    review=normalizeAiReviewPayload(type,parsed);
-    if(!review)throw new Error('JSON 对象为空或类型不匹配');
-  }catch(e){
-    stock.aiReviews=original;
-    alert('导入失败：'+e.message);
-    return;
-  }
-  stock.aiReviews=normalizeAiReviews(stock.aiReviews);
-  stock.aiReviews[type]=review;
-  touchDataFreshness(stock,AI_REVIEW_TYPES[type].freshnessKey);
-  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
-  render();
-  alert(`${AI_REVIEW_TYPES[type].label}已导入。`);
-}
-async function clearAiReview(type=currentAiReviewType(),silent=false){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock||!AI_REVIEW_TYPES[type])return;
-  if(!silent&&!confirm(`确认清空当前股票的${AI_REVIEW_TYPES[type].label}？`))return;
-  stock.aiReviews=normalizeAiReviews(stock.aiReviews);
-  stock.aiReviews[type]=null;
-  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
-  render();
-  if(!silent)alert(`${AI_REVIEW_TYPES[type].label}已清空。`);
-}
-function copyCurrentAiReview(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const type=currentAiReviewType();
-  const reviews=normalizeAiReviews(stock.aiReviews);
-  copyText(JSON.stringify(reviews[type]||{},null,2),'当前 AI Review JSON 已复制。');
-}
-function copyAllAiReviews(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  copyText(JSON.stringify(normalizeAiReviews(stock.aiReviews),null,2),'全部 AI Review JSON 已复制。');
-}
-async function clearAllAiReviews(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  if(!confirm('确认清空当前股票的全部 AI Review？'))return;
-  stock.aiReviews=defaultAiReviews();
-  try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
-  render();
-  alert('全部 AI Review 已清空。');
-}
-function reviewList(values){
-  const arr=Array.isArray(values)?values.filter(x=>String(x||'').trim()):[];
-  if(!arr.length)return '';
-  return `<ul style="margin:6px 0 0;padding-left:18px">${arr.slice(0,4).map(x=>`<li>${esc(formatChineseText(x))}${englishTextHint(x)}</li>`).join('')}</ul>`;
-}
-function reviewCoreTag(type,review){
-  if(!review)return '';
-  if(type==='technicalReview')return zhTrendStatus(review.trend)||formatChineseText(review.trend)||'';
-  if(type==='comprehensiveReview')return zhDecision(review.actionBias)||formatChineseText(review.actionBias)||'';
-  return zhActionStatus(review.sentiment)||formatChineseText(review.sentiment)||'';
-}
-function aiReviewBlock(stock,type){
-  const cfg=AI_REVIEW_TYPES[type];
-  const review=normalizeAiReviews(stock.aiReviews)[type];
-  if(!review)return `<div class="social-review-block"><div class="card-title">${cfg.label}</div><div class="social-empty">暂无复核</div></div>`;
-  const positives=review.positivePoints||review.bullishArguments||review.whatChanged||[];
-  const negatives=review.negativePoints||review.bearishArguments||[];
-  const risks=review.riskPoints||review.rumorRisks||review.keyRisks||[];
-  const extra=type==='technicalReview'?reviewList([review.volumeSignal,review.riskSignal,review.operationSuggestion].filter(Boolean)):(type==='financialReview'?reviewList([review.revenueTrend,review.profitTrend,review.marginTrend,review.cashFlowTrend,review.debtRisk,review.growthQuality].filter(Boolean)):reviewList(review.attentionPoints||review.hotTopics||review.nextUpdateNeeded||[]));
-  const summary=review.summary||review.mainConclusion||'—';
-  return `<div class="social-review-block"><div class="card-title">${cfg.label}</div><div class="card-note">更新 ${esc(aiReviewUpdatedAt(stock,type)||'—')} · ${esc(reviewCoreTag(type,review)||'—')} · 置信度 ${esc(zhConfidence(review.confidence)||review.confidence||'—')}</div><div class="text" style="max-width:none;margin-top:6px">${esc(formatChineseText(summary))}${englishTextHint(summary)}</div>${positives.length?'<div class="card-note" style="margin-top:6px"><b>利多/变化</b></div>'+reviewList(positives):''}${negatives.length?'<div class="card-note" style="margin-top:6px"><b>利空</b></div>'+reviewList(negatives):''}${risks.length?'<div class="card-note social-risk" style="margin-top:6px"><b>风险</b></div>'+reviewList(risks):''}${extra}</div>`;
-}
-function aiReviewSummaryPanel(stock){
-  const types=Object.keys(AI_REVIEW_TYPES);
-  const body=`<div class="modal-actions" style="justify-content:flex-start;margin:0 0 10px;flex-wrap:wrap"><button class="btn ghost small" id="copyAllAiReviewsBtn" type="button">复制全部 AI Review JSON</button><button class="btn ghost small danger" id="clearAllAiReviewsBtn" type="button">清空全部 AI Review</button></div><div class="social-review-note">仅作信息复核，不构成买卖指令；不会自动改变九模块评分或仓位建议。</div><div class="social-review-grid">${types.map(t=>aiReviewBlock(stock,t)).join('')}</div>`;
-  return collapsibleCard('AI 复核结论',body,false,'辅助资料，默认折叠。');
-}
 const UNIFIED_PROMPT_TYPES={
   promptValuation:'估值判断',
   promptNews:'新闻复核',
@@ -2125,9 +1925,6 @@ const UNIFIED_PROMPT_TYPES={
   promptScoreSuggestion:'九模块评分建议',
   promptActionReview:'操作建议复核'
 };
-function unifiedPromptTypeOptions(selected='promptComprehensive'){
-  return Object.keys(UNIFIED_PROMPT_TYPES).map(k=>`<option value="${k}"${k===selected?' selected':''}>${UNIFIED_PROMPT_TYPES[k]}</option>`).join('');
-}
 function promptOutputSchema(type){
   const schemas={
     promptValuation:{valuationData:{symbol:'',updatedAt:'',currency:'',marketCap:null,peTtm:null,forwardPe:null,pb:null,ps:null,evEbitda:null,dividendYield:null,historicalPercentile:null,peerComparison:'',valuationConclusion:''},valuationReview:{summary:'',positivePoints:[],negativePoints:[],riskFlags:[],actionHint:''}},
@@ -2414,166 +2211,6 @@ function buildUnifiedPrompt(stock,type){
     JSON.stringify(promptOutputSchema(type),null,2)
   ].filter(x=>x!==undefined&&x!==null&&x!=='').join('\n');
 }
-function unifiedPromptPanel(stock){
-  const body=`<div class="form-row two"><div><label>Prompt 类型</label><select id="unifiedPromptType">${unifiedPromptTypeOptions()}</select></div><div><label>操作</label><div class="modal-actions" style="justify-content:flex-start;margin:0;flex-wrap:wrap"><button class="btn ghost small" id="generateUnifiedPromptBtn" type="button">生成 Prompt</button><button class="btn ghost small" id="copyUnifiedPromptBtn" type="button">复制当前 Prompt</button><button class="btn ghost small" id="clearUnifiedPromptBtn" type="button">清空预览</button></div></div></div><div class="form-row"><label>Prompt 预览</label><textarea id="unifiedPromptPreview" style="min-height:220px" placeholder="选择类型后点击“生成 Prompt”。"></textarea></div><div class="card-note">本区域只生成和复制 Prompt，不会调用 AI，不会写入评分，也不会修改操作建议。</div>`;
-  return collapsibleCard('统一 Prompt 生成器',body,false,'默认折叠，展开后生成单项 Prompt。');
-}
-function generateUnifiedPrompt(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const type=document.getElementById('unifiedPromptType').value||'promptComprehensive';
-  document.getElementById('unifiedPromptPreview').value=buildUnifiedPrompt(stock,type);
-}
-function copyUnifiedPrompt(){
-  const el=document.getElementById('unifiedPromptPreview');
-  if(!el)return;
-  if(!String(el.value||'').trim())generateUnifiedPrompt();
-  copyText(el.value,'Prompt 已复制。',{selectableElement:el});
-}
-function clearUnifiedPrompt(){
-  const el=document.getElementById('unifiedPromptPreview');
-  if(el)el.value='';
-}
-function shortenPackageText(value,limit=900){
-  const s=String(value||'').trim();
-  if(!s)return '';
-  return s.length>limit?s.slice(0,limit)+`\n...[已截断 ${s.length-limit} 字]`:s;
-}
-function reviewPackageFreshnessNotes(stock){
-  const f=normalizeDataFreshness(stock.dataFreshness);
-  const labels={priceUpdatedAt:'价格',valuationUpdatedAt:'估值',newsUpdatedAt:'新闻',socialUpdatedAt:'社媒',financialUpdatedAt:'财报',technicalUpdatedAt:'技术',personalViewUpdatedAt:'个人观点',comprehensiveReviewUpdatedAt:'综合复核'};
-  return Object.keys(labels).map(k=>{
-    const st=dataFreshnessStatus(f[k]);
-    let note=st.label;
-    if(st.days===null)note='未更新';
-    else if(st.days>30)note='超过30天';
-    else if(st.days>7)note='超过7天';
-    return {field:k,label:labels[k],date:f[k]||'',days:st.days,note};
-  });
-}
-function buildReviewPackageContext(stock,mode='standard'){
-  normalizeStockAnalysis(stock);
-  const total=getEstimatedTotalAssets();
-  const mv=getMarketValue(stock);
-  const latestPrice=getComparablePrice(stock)||stockCurrentPrice(stock)||'';
-  const currentPrice=Number(latestPrice||0);
-  const cost=Number(stock.avgCost||0);
-  const shares=Number(stock.shares)||0;
-  const pnl=(currentPrice>0&&cost>0&&shares>0)?{amount:(currentPrice-cost)*shares,percent:(currentPrice-cost)/cost*100}:null;
-  const decision=calculateDecision(stock,{totalMarketValue:total});
-  const execution=calculateExecutionPlan(stock,{totalMarketValue:total});
-  const inputs=normalizeAnalysisInputs(stock.analysisInputs);
-  const ci=normalizeCollectionInputs(stock.collectionInputs);
-  const rawMode=mode==='full'?'full':(mode==='standard'?'summary':'none');
-  const rawText=rawMode==='none'?{}:{
-    valuationRawText:rawMode==='full'?inputs.valuationRawText:shortenPackageText(inputs.valuationRawText),
-    newsRawText:rawMode==='full'?ci.newsRawText:shortenPackageText(ci.newsRawText),
-    financialRawText:rawMode==='full'?ci.financialRawText:shortenPackageText(ci.financialRawText),
-    socialRawText:rawMode==='full'?ci.socialRawText:shortenPackageText(ci.socialRawText),
-    technicalRawText:rawMode==='full'?ci.technicalRawText:shortenPackageText(ci.technicalRawText),
-    generalRawText:rawMode==='full'?ci.generalRawText:shortenPackageText(ci.generalRawText)
-  };
-  return {
-    packageMode:mode,
-    stock:{
-      name:stock.name||'',
-      symbol:stock.code||'',
-      market:getCurrency(stock)||'',
-      status:stock.type==='watching'?'观察':'持仓',
-      role:stock.role||'',
-      theme:stock.theme||'',
-      shares,
-      cost:stock.avgCost||'',
-      currentPrice:latestPrice,
-      holdingValue:mv,
-      unrealizedPnl:pnl,
-      focus:isFocusStockForUpdate(stock)
-    },
-    systemJudgement:{
-      analysisScore:stock.analysisScore,
-      analysisFramework:normalizeAnalysisFramework(stock.analysisFramework,stock),
-      strategy:normalizeStrategy(stock.strategy,stock),
-      decision,
-      executionPlan:execution
-    },
-    dataFreshness:mode==='compact'?undefined:normalizeDataFreshness(stock.dataFreshness),
-    freshnessNotes:reviewPackageFreshnessNotes(stock),
-    valuation:{
-      valuationData:normalizeValuationData(stock.valuationData),
-      valuationRawText:mode==='compact'?undefined:rawText.valuationRawText
-    },
-    aiReviews:normalizeAiReviews(stock.aiReviews),
-    collectionInputs:mode==='compact'?undefined:{
-      newsRawText:rawText.newsRawText,
-      financialRawText:rawText.financialRawText,
-      socialRawText:rawText.socialRawText,
-      technicalRawText:rawText.technicalRawText,
-      generalRawText:rawText.generalRawText
-    },
-    personalView:inputs.personalView,
-    notes:stock.notes||stock.thesis||'',
-    executionLogs:typeof getExecutionLogRows==='function'?getExecutionLogRows(stock.name).slice(0,8):[]
-  };
-}
-function buildComprehensiveReviewPackage(stock,mode='standard'){
-  const modeName={compact:'精简模式',standard:'标准模式',full:'完整模式'}[mode]||'标准模式';
-  const longNote=mode==='full'?'注意：完整模式包含原始资料全文，内容可能较长。':'';
-  return [
-    `任务：综合复核自动组包（${modeName}）`,
-    longNote,
-    '',
-    '请作为投资研究助理，基于以下综合复核包进行分析。',
-    '',
-    '约束：',
-    '1. 只基于提供资料分析。',
-    '2. 不确定就写 confidence low。',
-    '3. 不要编造缺失财务或估值数据。',
-    '4. 不直接修改九模块评分。',
-    '5. 不直接替用户做交易决定。',
-    '6. 如果资料过期或缺失，要在 nextUpdateNeeded 中指出。',
-    '',
-    '请先给可读结论：',
-    '- 当前结论',
-    '- 和之前相比主要变化',
-    '- 当前最关键风险',
-    '- 操作倾向',
-    '- 下一步需要更新什么',
-    '',
-    '然后输出可导入 JSON：',
-    JSON.stringify(promptOutputSchema('promptComprehensive'),null,2),
-    '',
-    '综合复核包：',
-    JSON.stringify(buildReviewPackageContext(stock,mode),null,2)
-  ].filter(Boolean).join('\n');
-}
-function comprehensivePackagePanel(stock){
-  const body=`<div class="form-row two"><div><label>组包模式</label><select id="reviewPackageMode"><option value="compact">精简</option><option value="standard" selected>标准</option><option value="full">完整</option></select></div><div><label>操作</label><div class="modal-actions" style="justify-content:flex-start;margin:0;flex-wrap:wrap"><button class="btn ghost small" id="generateReviewPackageBtn" type="button">生成综合复核包</button><button class="btn ghost small" id="copyReviewPackageBtn" type="button">复制当前综合复核包</button><button class="btn ghost small" id="clearReviewPackageBtn" type="button">清空预览</button></div></div></div><div class="form-row"><label>复核包预览 <span class="muted" id="reviewPackageCount">0 字符</span></label><textarea id="reviewPackagePreview" style="min-height:240px" placeholder="选择模式后点击“生成综合复核包”。完整模式可能较长。"></textarea></div><div class="card-note">本区域只组包和复制，不调用 AI，不导入结果，不修改评分或操作建议。</div>`;
-  return collapsibleCard('综合复核自动组包',body,false,'默认折叠，展开后一键生成综合复核包。');
-}
-function updateReviewPackageCount(){
-  const el=document.getElementById('reviewPackagePreview');
-  const count=document.getElementById('reviewPackageCount');
-  if(el&&count)count.textContent=`${String(el.value||'').length} 字符`;
-}
-function generateReviewPackage(){
-  const stock=state.stocks.find(x=>x.id===detailStockId);
-  if(!stock)return;
-  const mode=document.getElementById('reviewPackageMode').value||'standard';
-  document.getElementById('reviewPackagePreview').value=buildComprehensiveReviewPackage(stock,mode);
-  updateReviewPackageCount();
-}
-function copyReviewPackage(){
-  const el=document.getElementById('reviewPackagePreview');
-  if(!el)return;
-  if(!String(el.value||'').trim())generateReviewPackage();
-  copyText(el.value,'综合复核包已复制。',{selectableElement:el});
-}
-function clearReviewPackage(){
-  const el=document.getElementById('reviewPackagePreview');
-  if(el)el.value='';
-  updateReviewPackageCount();
-}
-
 function render(){
   const d=new Date();
   const mainEl=document.getElementById('main');
@@ -3643,9 +3280,6 @@ function detailHeroPanel(s,mv,actual,deviation){
   const currency=getCurrency(s)||'—';
   const actualText=actual===null?'—':actual.toFixed(1)+'%';
   return `<div class="card detail-title-card"><div class="entry-head"><div><div class="entry-name">${esc(s.name||'未命名标的')}</div><div class="entry-code">${esc(s.code||'无代码')} · ${esc(category)}</div></div><div class="detail-title-actions">${priceRefreshFeedbackView(s)}</div></div></div><div class="card core-summary-card"><div class="card-title">核心数据摘要</div><div class="core-summary-grid"><div class="core-summary-item"><span>成本</span><strong>${fmtMaybe(s.avgCost)}</strong></div><div class="core-summary-item"><span>现价</span><strong>${current}</strong></div><div class="core-summary-item"><span>持仓</span><strong>${fmtInt(s.shares)}</strong></div><div class="core-summary-item"><span>市值</span><strong>${fmtMoney(mv)}</strong></div><div class="core-summary-item"><span>目标</span><strong>${fmtMaybe(s.targetPct,1)}%</strong></div><div class="core-summary-item"><span>实际</span><strong>${actualText}</strong></div></div><div class="core-summary-meta">更新 ${esc(date||'—')} · ${esc(s.code||'无代码')} · ${esc(currency)} · ${esc(chg)} · 偏差 ${esc(deviation)}</div></div>`;
-}
-function detailToolsPanel(s){
-  return `<details class="card" style="margin-top:14px;margin-bottom:14px"><summary class="card-title" style="cursor:pointer">详情工具</summary><div class="card-note" style="margin:8px 0 12px">这些是维护、导入和生成提示词工具，已从首屏下移，避免干扰日常分析。</div><div class="actions"><button class="btn small" data-detail-action="ai-assistant">AI助手</button><button class="btn ghost small" data-detail-action="financial-source">财报助手</button><button class="btn ghost small" data-detail-action="valuation-source">估值助手</button><button class="btn ghost small" data-detail-action="template">套用分析模板</button><button class="btn ghost small" data-detail-action="ai-prompt">生成分析提示词</button><button class="btn ghost small" data-detail-action="ai-import">导入AI分析JSON</button><button class="btn ghost small" data-detail-action="ai-strategy-import">导入AI策略JSON</button><button class="btn ghost small" data-detail-action="refresh">${s.type==='etf'?'刷新市值':'刷新价格'}</button><button class="btn ghost small" data-detail-action="edit">编辑标的</button></div></details>`;
 }
 function freshnessPanel(stock){
   const f=getAnalysisFreshness(stock);
@@ -5234,7 +4868,9 @@ function longTermWorkspacePanel(stock){
   const review=reviewRows.find(record=>record.isCurrent)||reviewRows[0];
   const body=`${v13LongTermReviewSummary(stock)}${longTermLogicPanel(stock)}${longTermMemoPanel(stock)}`;
   const risks=normalizeStringArray(l.keyRisks||l.longTermRisks);
-  return `${longTermAiStatusPanel(stock)}${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${workspaceSummaryCard('长期逻辑摘要',[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`下次复核 ${l.nextReviewDate||'—'}`,`关键风险 ${risks.length} 项`],'查看长期逻辑详情 / Prompt / JSON 导入',body,'var(--purple)','copy-long-term-logic-prompt','import-long-term-logic-json','call-long-term-logic-ai','API更新','复制给AI')}`;
+  const items=[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`下次复核 ${l.nextReviewDate||'—'}`,`关键风险 ${risks.length} 项`].filter(Boolean);
+  const summary=`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--purple)"><div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>长期逻辑摘要</span><button class="btn small" data-detail-action="call-long-term-logic-ai" type="button">API更新</button></div><div class="chips">${items.map(item=>`<span class="chip role">${esc(formatChineseText(item))}</span>`).join('')}</div><details class="long-logic-details" style="margin-top:10px"><summary>备用操作</summary><div class="long-logic-details-body"><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin:0"><button class="btn ghost small" data-detail-action="copy-long-term-logic-prompt" type="button">复制给AI</button><button class="btn ghost small" data-detail-action="import-long-term-logic-json" type="button">手动导入JSON</button></div><div class="card-note" style="margin-top:8px">仅在本机 Bridge 不可用或需要人工恢复时使用。</div></div></details></div>`;
+  return `${longTermAiStatusPanel(stock)}${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${summary}${workspaceDetails('查看长期逻辑详情',body)}`;
 }
 function operationChangeLabel(value){return {increased:'持仓数量增加',decreased:'持仓数量减少',cleared:'持仓数量归零',unchanged:'持仓数量未变化',unknown:'变化待校验'}[value]||'变化待校验'}
 function operationWorkspacePanel(stock){
@@ -5257,7 +4893,6 @@ async function previewOperationEntry(stock){const module=window.OperationEntry,c
 async function confirmOperationEntry(stock){const prepared=await previewOperationEntry(stock);if(!prepared||!prepared.validation.business_valid)return alert('录入内容尚未通过校验，不能更新正式持仓。');const warningText=arrSafe(prepared.validation.warnings).length?`\n提醒：${arrSafe(prepared.validation.warnings).join('；')}`:'';const name=stock.name||stock.code||stock.symbol||'当前标的',code=stock.code||stock.symbol||'—';const message=`二次确认更新正式持仓：\n标的 ${name}（${code}）\n持仓 ${prepared.draft.previous_shares} → ${prepared.draft.new_shares}\n券商成本 ${prepared.draft.previous_avg_cost} → ${prepared.validation.normalized_new_avg_cost}\n操作日期 ${prepared.draft.operation_date}${warningText}\n\n本操作只更新上述持仓事实并保存审计记录，不会推导成交价、金额、费用、盈亏、交易方向或现金变化。`;if(!confirm(message))return;try{const key=window.OperationEntry.contextKey(prepared.ctx),saved=window.OperationEntry.saved(key);await window.OperationEntry.applyDirectResult(state,prepared.ctx,saved,nextState=>saveState(nextState,{critical:true}));renderStockDetail();alert('正式持仓已更新并保存。')}catch(err){if(err&&err.type==='stale_tab')alert('检测到其它页面已保存更新。当前旧页面不能覆盖最新数据，请重新加载后再试。');else alert(`保存失败，正式持仓尚未更新，请重试。${err&&err.message?'\n'+err.message:''}`)}}
 async function startOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail();setTimeout(()=>{const input=document.getElementById('operationEntryNewShares');if(input)input.focus()},0)}
 async function abandonOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;if(!confirm('确认放弃本次录入草案？正式持仓不会变化。'))return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail()}
-function downloadOperationApplicationRequest(application){const blob=new Blob([JSON.stringify(application,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`operation_application_${application.symbol}_${todayDate()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function discussionStockKey(stock){return window.DiscussionWorkbench?window.DiscussionWorkbench.canonical(stock):String(stock&&stock.code||stock&&stock.symbol||'')}
 function discussionOptions(){return {state,allStocks:state.stocks,planReviewStore:state.planReviews,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'}}
 function startStockDiscussion(stock){
@@ -5461,7 +5096,7 @@ async function confirmDiscussionPlanImport(){
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
   const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(runtime),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口',blocking=!readiness.ready;
-  const warning=blocking?`<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>${esc(readiness.message)}</span></div>`:'',hero=`<section class="card discussion-control-card"><div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="prepare-discussion-plan" type="button">整理计划</button><button class="btn ghost small" data-detail-action="import-discussion-plan" type="button">导入计划</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button></div><details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></details></section>`,decision=current?discussionStateCard(current,'当前结论',stock):'';
+  const warning=blocking?`<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>${esc(readiness.message)}</span></div>`:'',hero=`<section class="card discussion-control-card"><div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button><button class="btn ghost small" data-workspace="plan" type="button">转到计划中心</button></div><details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></details></section>`,decision=current?discussionStateCard(current,'当前结论',stock):'';
   return `<div class="discussion-workbench">${hero}${decision}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
@@ -7451,20 +7086,6 @@ async function importLongTermLogicJson(){
   setLongTermAiState(stock,'updated','长期逻辑已通过人工导入更新。');
   alert('长期逻辑已导入。');
 }
-function detailResultsArchivePanel(s,cp){
-  const fundamentalDiagnostics=s.type==='etf'?etfIndexAnalysisPanel(s):`${financialSignalPanel(s)}${valuationAnalysisPanel(s)}${valuationSignalPanel(s)}`;
-  const body=`${technicalAnalysisPanel(s)}${fundamentalDiagnostics}${sentimentReviewPanel(s)}${allocationDecisionPanel(s)}${aiReviewSummaryPanel(s)}${decisionPanel(s)}${technicalSignalPanel(s)}${freshnessPanel(s)}${dataFreshnessPanel(s)}`;
-  return collapsibleCard('数据与评分诊断',body,false,s.type==='etf'?'这里保留技术、指数/行业、配置、决策引擎和数据更新时间的原始结果，用于排查数据和评分，不作为主决策入口。':'这里保留技术、财报、配置、估值、决策引擎和数据更新时间的原始结果，用于排查数据和评分，不作为主决策入口。');
-}
-function detailResearchArchivePanel(s,cp){
-  const discipline=`<div class="dash"><div class="card" style="grid-column:span 2"><div class="card-title">纪律规则</div><div class="text" style="max-width:none"><b>持有逻辑：</b>${esc(s.thesis||s.notes||'—')}<br><br><b>卖出/降仓：</b>${esc(s.sellRule||'—')}<br><br><b>加仓规则：</b>${esc(s.buyRule||'—')}</div></div><div class="card" style="grid-column:span 2"><div class="card-title">社媒舆情</div>${stockSocialSummary(s)}</div></div>`;
-  const plans=`<div class="dash"><div class="card" style="grid-column:span 2"><div class="card-title">加仓计划</div>${planListHtml(s.plans,'buy',cp)}</div><div class="card" style="grid-column:span 2"><div class="card-title">观察/防守计划</div>${planListHtml(s.plans,'observe',cp)}</div><div class="card" style="grid-column:span 2"><div class="card-title">减仓计划</div>${planListHtml(s.plans,'sell',cp)}</div><div class="card" style="grid-column:span 2"><div class="card-title">风险复核计划</div>${planListHtml(s.plans,'risk',cp)}</div></div><div class="card"><div class="card-title">操作记录</div>${stockExecutionRows(s.name)}</div>`;
-  return collapsibleCard('深度资料、规则与记录',`${discipline}${analysisInputsPanel(s)}${analysisFrameworkPanel(s)}${plans}`,false,'默认折叠。这里保留九模块、原始分析资料、纪律规则、完整计划表和操作记录。');
-}
-function detailAdvancedToolsArchivePanel(s){
-  const body=`${collectionPanel(s)}${technicalAnalysisFlowPanel()}${financialAnalysisFlowPanel()}${unifiedPromptPanel(s)}${comprehensivePackagePanel(s)}${aiReviewImportPanel(s)}${detailToolsPanel(s)}`;
-  return collapsibleCard('高级工具与旧流程',body,false,'默认折叠。旧版 Prompt、信息采集、AI Review 导入和维护工具都保留在这里。');
-}
 function longLogicStatusText(value){
   return {valid:'有效',weakening:'减弱',broken:'失效',unclear:'不明确'}[value]||value||'不明确';
 }
@@ -7823,12 +7444,6 @@ function renderStockDetail(){
   document.querySelectorAll('[data-v13-ai-discussion-review]').forEach(btn=>btn.addEventListener('click',()=>copyV13AiDiscussionPrompt(btn.dataset.v13AiDiscussionReview)));
   bindStockDetailActions(s);
   document.querySelectorAll('[data-v13-detail-event]').forEach(row=>row.addEventListener('click',()=>openV13EventDecisionReview(row.dataset.v13DetailStock,row.dataset.v13DetailEvent)));
-  document.querySelectorAll('[data-collection-action="save"]').forEach(b=>b.addEventListener('click',saveCollectionInputs));
-  document.querySelectorAll('[data-collection-prompt]').forEach(b=>b.addEventListener('click',()=>copyCollectionPrompt(b.dataset.collectionPrompt)));
-  const copyFinancialIntegratedFromCollection=document.getElementById('copyFinancialIntegratedPromptFromCollectionBtn');
-  if(copyFinancialIntegratedFromCollection)copyFinancialIntegratedFromCollection.addEventListener('click',copyFinancialIntegratedPrompt);
-  const copyTechnicalScreenshotPromptBtn=document.getElementById('copyTechnicalScreenshotPromptBtn');
-  if(copyTechnicalScreenshotPromptBtn)copyTechnicalScreenshotPromptBtn.addEventListener('click',copyTechnicalScreenshotPrompt);
   const copyFinancialTemplateBtn=document.getElementById('copyFinancialReportTemplateBtn');
   if(copyFinancialTemplateBtn)copyFinancialTemplateBtn.addEventListener('click',copyFinancialReportTemplate);
   const copyFinancialFlowBtn=document.getElementById('copyFinancialFlowBtn');
@@ -7839,31 +7454,5 @@ function renderStockDetail(){
   if(focusFinancialIntegratedBtn)focusFinancialIntegratedBtn.addEventListener('click',focusFinancialIntegratedImport);
   const importFinancialIntegratedBtn=document.getElementById('importFinancialIntegratedBtn');
   if(importFinancialIntegratedBtn)importFinancialIntegratedBtn.addEventListener('click',importFinancialIntegratedJson);
-  const genPrompt=document.getElementById('generateUnifiedPromptBtn');
-  if(genPrompt)genPrompt.addEventListener('click',generateUnifiedPrompt);
-  const copyPromptBtn=document.getElementById('copyUnifiedPromptBtn');
-  if(copyPromptBtn)copyPromptBtn.addEventListener('click',copyUnifiedPrompt);
-  const clearPromptBtn=document.getElementById('clearUnifiedPromptBtn');
-  if(clearPromptBtn)clearPromptBtn.addEventListener('click',clearUnifiedPrompt);
-  const genPackage=document.getElementById('generateReviewPackageBtn');
-  if(genPackage)genPackage.addEventListener('click',generateReviewPackage);
-  const copyPackage=document.getElementById('copyReviewPackageBtn');
-  if(copyPackage)copyPackage.addEventListener('click',copyReviewPackage);
-  const clearPackage=document.getElementById('clearReviewPackageBtn');
-  if(clearPackage)clearPackage.addEventListener('click',clearReviewPackage);
-  const packagePreview=document.getElementById('reviewPackagePreview');
-  if(packagePreview)packagePreview.addEventListener('input',updateReviewPackageCount);
-  const aiReviewType=document.getElementById('aiReviewType');
-  if(aiReviewType){aiReviewType.addEventListener('change',refreshAiReviewImportBox);refreshAiReviewImportBox()}
-  const importReview=document.getElementById('importAiReviewBtn');
-  if(importReview)importReview.addEventListener('click',importAiReview);
-  const clearReview=document.getElementById('clearAiReviewBtn');
-  if(clearReview)clearReview.addEventListener('click',()=>clearAiReview());
-  const copyReview=document.getElementById('copyAiReviewBtn');
-  if(copyReview)copyReview.addEventListener('click',copyCurrentAiReview);
-  const copyAll=document.getElementById('copyAllAiReviewsBtn');
-  if(copyAll)copyAll.addEventListener('click',copyAllAiReviews);
-  const clearAll=document.getElementById('clearAllAiReviewsBtn');
-  if(clearAll)clearAll.addEventListener('click',clearAllAiReviews);
   document.querySelectorAll('[data-analysis-edit]').forEach(b=>b.addEventListener('click',()=>openAnalysisEditor(b.dataset.analysisEdit)));
 }

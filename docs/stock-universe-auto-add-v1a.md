@@ -1,23 +1,22 @@
 # Stock Universe Auto Add V1A
 
+Status: **CURRENT**
+
 This release synchronizes **new canonical stock membership only**. It leaves all
 investment state and market calculations in their existing owners.
 
-## Deployment surfaces and current gate
+## Current production state
 
-Prepared on 2026-09-03; source push requires separate explicit approval.
+V1A is production accepted. Production migrations are applied, authenticated add-only membership is active, and the scoped PC Reader is connected to DailyMarketUpdate. OneDrive file handoff remains available only as disaster recovery.
 
-| Surface | State at preparation |
+| Surface | Current state |
 | --- | --- |
 | Test Supabase `lblyapnsngqnjimgskkp` | Active; both migrations applied; real Auth, RLS and browser → PC → mock bridge E2E passed |
-| Production Supabase `fntslvdxnupmdljnadec` | Active; automatic approval review rejected production migrations for lack of explicit production permission; no V1A migration applied |
-| Pages | Local release candidate only; no source push or deployment |
-| PC DailyMarketUpdate | Existing task points to this checkout; adapter integrated inside its existing lock; production credential not configured, so original registry remains in use |
+| Production Supabase `fntslvdxnupmdljnadec` | Active; V1A membership and private reader migrations applied with Auth/RLS |
+| Pages | Production UI includes automatic Universe enrollment and status |
+| PC DailyMarketUpdate | Existing task reads the scoped cloud Universe, unions it with the durable local registry and publishes market bridges |
 
-Production Auth has email/password enabled, signup enabled, anonymous signup off,
-and email confirmation required. A real user has not been created. Dashboard
-sign-in is required to verify the Site URL/redirect allowlist and SMTP readiness.
-Do not label production onboarding verified until this is done.
+Production Auth uses email/password with RLS ownership boundaries. V1A is strictly add-only: it has no deletion, `active:false`, tombstone or snapshot-replacement semantics. Existing local registry membership is never removed by an empty or failed cloud response.
 
 ## Data and persistence boundaries
 

@@ -1,5 +1,7 @@
 # Empty-storage baseline hotfix
 
+Status: **HISTORICAL — release evidence; not the current deployment gate**
+
 Scope: only the first load of genuinely pristine storage. No change to investment calculations, Holdings, Plan, Allocation, orders or broker facts.
 
 ## Root cause

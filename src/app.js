@@ -81,7 +81,6 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{det
 document.getElementById('addBtn').addEventListener('click',()=>openModal(null));
 document.getElementById('importBtn').addEventListener('click',importData);
 document.getElementById('exportBtn').addEventListener('click',exportData);
-document.getElementById('syncPcBtn')?.addEventListener('click',handoffUniverseToPc);
 document.getElementById('socialImportBtn').addEventListener('click',importSocialData);
 document.getElementById('socialImportFile').addEventListener('change',handleSocialImport);
 document.getElementById('resetBtn').addEventListener('click',resetSeed);
@@ -99,9 +98,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();if(typ
 
 async function handoffUniverseToPc(){
   const button=document.getElementById('syncPcBtn');
-  if(!window.UniverseHandoff||!button)return;
-  const original=button.textContent;
-  button.disabled=true;button.textContent='正在生成';
+  if(!window.UniverseHandoff)return;
+  const original=button&&button.textContent;
+  if(button){button.disabled=true;button.textContent='正在生成'}
   try{
     const manifest=await window.UniverseHandoff.buildManifest(state);
     const result=await window.UniverseHandoff.shareOrDownloadManifest(manifest);
@@ -110,7 +109,7 @@ async function handoffUniverseToPc(){
     await saveState(state,{critical:true});
     alert(result.method==='share'?'已打开分享。请保存到 OneDrive 同步收件夹，并等待 PC 更新。':'已下载同步文件。请将它保存到 OneDrive 同步收件夹。');
   }catch(error){alert(`同步文件生成失败：${error&&error.message||'未知错误'}`)}
-  finally{button.disabled=false;button.textContent=original;if(typeof renderPcSyncStatus==='function')renderPcSyncStatus()}
+  finally{if(button){button.disabled=false;button.textContent=original}if(typeof renderPcSyncStatus==='function')renderPcSyncStatus()}
 }
 function showStorageLoadingShell(){
   const main=document.getElementById('main');
@@ -394,7 +393,7 @@ function ensureShadowMigrationPanel(){
   return panel;
 }
 function setShadowMigrationEditLock(locked){
-  ['addBtn','saveBtn','resetBtn','importBtn','refreshAllBtn','fxBtn','syncPcBtn'].forEach(id=>{
+  ['addBtn','saveBtn','resetBtn','importBtn','refreshAllBtn','fxBtn'].forEach(id=>{
     const control=document.getElementById(id);
     if(control)control.disabled=Boolean(locked);
   });

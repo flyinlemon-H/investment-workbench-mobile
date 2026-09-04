@@ -63,7 +63,7 @@ const paths=[...new Set([
   'src/vendor/supabase-client.js',
   'src/universe-auto-add.js',
   'src/universe-sync-ui.js',
-  ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'),
+  ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'&&file!=='src/v13-risk-engine.js'),
   'src/api/ai-api.js',
   'src/long-term-logic-contract.js',
   'src/long-term-logic-workflow.js',

@@ -1,5 +1,7 @@
 # Plan V2 Phase 0 / 1A compatibility foundation
 
+Status: **HISTORICAL — compatibility rationale retained; current Plan behavior also includes State-Watch Definition and Runtime**
+
 Repository: `flyinlemon-H/investment-workbench-mobile`, branch `main`.
 Accepted baseline: `40d480dd3ab8dfd86652849babf8139953759809`.
 Scope: canonical mode preservation, nullable editor repair, and isolation from legacy price workflows. This release does not expose state-watch creation.

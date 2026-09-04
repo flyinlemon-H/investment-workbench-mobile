@@ -7,7 +7,6 @@ function getRebalanceAction(s,info,total){
 }
 
 // 旧计划缺少触发方向时不再根据当前价倒推意图。
-function inferTriggerOn(){return null}
 
 function planGap(cp,tp,action,triggerOn){
   if(typeof PlanV2!=='undefined'){

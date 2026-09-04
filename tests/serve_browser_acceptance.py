@@ -1,15 +1,12 @@
 """Loopback-only local acceptance server; does not change release asset versions."""
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import argparse
-import hashlib
-import json
 from pathlib import Path
 import re
 import time
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-OVERRIDE_DOCUMENT = None
 
 
 def allowed_asset(url):
@@ -36,7 +33,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if urlsplit(self.path).path not in {"/", "/index.html"}:
             return super().do_GET()
-        html = (OVERRIDE_DOCUMENT or ROOT / "index.html").read_text(encoding="utf-8")
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
         nonce = str(time.time_ns())
         html = re.sub(
             r'(<script\b[^>]*\bsrc=")([^"]+)(")',
@@ -58,13 +55,6 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--overrides-directory", type=Path)
-    args = parser.parse_args()
-    if args.overrides_directory:
-        manifest = json.loads((args.overrides_directory / "acceptance-manifest.json").read_text(encoding="utf-8"))
-        OVERRIDE_DOCUMENT = args.overrides_directory / "flyinlemon-h.github.io/investment-workbench-mobile/index.html"
-        if manifest["namespace"] != "__pc_ai_acceptance_20260902__" or hashlib.sha256(OVERRIDE_DOCUMENT.read_bytes()).hexdigest() != manifest["bundleSha256"]:
-            raise ValueError("Acceptance bundle integrity check failed")
+    argparse.ArgumentParser().parse_args()
     print("Acceptance server: http://127.0.0.1:8768", flush=True)
     ThreadingHTTPServer(("127.0.0.1", 8768), Handler).serve_forever()

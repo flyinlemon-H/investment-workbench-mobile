@@ -1,5 +1,7 @@
 # Plan V2 Phase 1B — State-Watch Definition
 
+Status: **HISTORICAL — superseded release status; Definition remains active and Plan Runtime Phase 2 is now production**
+
 Repository: `flyinlemon-H/investment-workbench-mobile`, branch `main`.
 Accepted production baseline: `fff87b9f5fbd64fecc8aec01d6f6df6e5be4117f`.
 Baseline assets: `plan-mode-compatibility-phase1a-20260903`.

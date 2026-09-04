@@ -1,6 +1,8 @@
 # PC AI Bridge + Long-Term Logic controlled release
 
-Status: preparing candidate; not deployed or fully accepted.
+Status: **HISTORICAL — superseded production status**
+
+This document records the 2026-09-02 controlled-release process. The Bridge is now an accepted production capability and starts through the existing Windows logon task. Use `pc-ai-bridge/README.md` for current operation; the pending/deployment language below is retained only as release evidence.
 
 ## Immutable rollback baseline
 

@@ -26,7 +26,6 @@
   function text(value){return String(value??'').trim()}
   function nullableText(value){const result=text(value);return result||null}
   function positive(value){const number=Number(value);return Number.isFinite(number)&&number>0?number:null}
-  function nonNegative(value){const number=Number(value);return Number.isFinite(number)&&number>=0?number:null}
   function integer(value,fallback=1){const number=Number(value);return Number.isInteger(number)&&number>=1?number:fallback}
   function dateValue(value){const result=text(value);return result&&Number.isFinite(Date.parse(result))?result:null}
   function dateOnly(value){const parsed=dateValue(value);return parsed?parsed.slice(0,10):null}

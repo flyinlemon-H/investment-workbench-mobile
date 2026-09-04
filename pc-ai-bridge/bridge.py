@@ -161,19 +161,13 @@ class DeterministicMockProvider:
                     "contextHash": binding["contextHash"],
                 },
                 "longTermLogic": {
-                    "updatedAt": prompt_date.isoformat(),
-                    "validUntil": (prompt_date + timedelta(days=180)).isoformat(),
                     "investmentThesis": "行业长期需求、公司执行能力与当前组合角色共同支持继续跟踪长期逻辑。",
                     "coreDrivers": ["行业需求延续", "公司竞争力保持", "组合角色清晰"],
-                    "industryDrivers": ["行业长期需求仍有结构性支撑"],
-                    "companyDrivers": ["公司具备可持续的交付与竞争能力"],
-                    "portfolioDrivers": ["在当前组合中承担长期成长观察角色"],
-                    "fundamentalSupport": "现有基本面资料对长期逻辑提供辅助验证，但仍需按期复核。",
-                    "longTermRisks": ["行业需求不及预期", "公司竞争优势减弱"],
+                    "keyRisks": ["行业需求不及预期", "公司竞争优势减弱"],
+                    "reviewTriggers": ["连续两个报告期需求下滑", "公司交付优势不再成立"],
                     "logicStatus": "valid",
                     "confidence": "medium",
                     "nextReviewDate": (prompt_date + timedelta(days=90)).isoformat(),
-                    "sourceSummary": "基于程序提供的当前长期逻辑、基本面、估值与数据新鲜度上下文。",
                 },
             }
         except Exception as exc:

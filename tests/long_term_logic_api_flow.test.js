@@ -53,6 +53,6 @@ test('invalid provider content and unavailable Bridge keep canonical state with 
 test('Long-Term UI keeps manual fallback, names the API update, and does not add security device modes',()=>{
   const ui=read('src/ui-render.js'),html=read('index.html');
   assert.match(ui,/call-long-term-logic-ai/);assert.match(ui,/调用AI/);assert.match(ui,/copy-long-term-logic-prompt/);assert.match(ui,/复制给AI/);
-  assert.match(ui,/API更新/);assert.doesNotMatch(ui,/run_ai_task\.py/);assert.doesNotMatch(ui+html,/PC模式|手机模式|设备认证/);
+  assert.match(ui,/API更新/);assert.match(ui,/<summary>备用操作<\/summary>/);assert.match(ui,/手动导入JSON/);assert.doesNotMatch(ui,/run_ai_task\.py/);assert.doesNotMatch(ui+html,/PC模式|手机模式|设备认证/);
   assert.match(ui,/LongTermLogicWorkflow\.processPrepared/);assert.match(ui,/commitProcessedLongTermLogic/);
 });
