@@ -110,8 +110,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'manual-analysis-sync-ltl-v1-20260904',
-  dataMode:'Long-Term Logic Slim V2 with legacy readable compatibility and explicit PC publish / mobile fetch Preview-Confirm sync; canonical payload hashes derive status, device transport metadata stays outside judgment backups, existing Bridge and Stock Universe security boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'cleanup-wave1-20260905',
+  dataMode:'Cleanup Wave 1 removes confirmed dead browser flows and demotes recovery-only controls; Current State, Long-Term Logic, Plan, storage, Supabase, OneDrive fallback, PC Bridge and market compatibility boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
