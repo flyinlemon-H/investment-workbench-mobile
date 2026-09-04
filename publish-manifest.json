@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "a26bac81c7ec9d03b76e8acadab59991ee424f1b",
-  "assetVersion": "manual-analysis-sync-ltl-v1-20260904",
-  "dataMode": "Long-Term Logic Slim V2 with legacy readable compatibility and explicit PC publish / mobile fetch Preview-Confirm sync; canonical payload hashes derive status, device transport metadata stays outside judgment backups, existing Bridge and Stock Universe security boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "f196f4e8bd3a1391f6ba2a76f5d32a0e6b929e1a",
+  "assetVersion": "cleanup-wave1-20260905",
+  "dataMode": "Cleanup Wave 1 removes confirmed dead browser flows and demotes recovery-only controls; Current State, Long-Term Logic, Plan, storage, Supabase, OneDrive fallback, PC Bridge and market compatibility boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 63329,
-      "sha256": "e979982be71c7d2fb2fe89f6cd44f68fc05e250a00056074330af1879098772d"
+      "bytes": 62167,
+      "sha256": "8feb2969702a1df7e9c423e4d01eb1744d7f1591538bb6c1523fccb6b6979f2f"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +103,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33539,
-      "sha256": "5787b9ac61a8b934f20282186549c376e698e30e94a1325a6941571ded98074c"
+      "bytes": 33463,
+      "sha256": "19f15b9904ae541a1a9ade2afd2979c754398b27912af8425838b5f65c697c9a"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -253,8 +253,8 @@
     {
       "path": "src/plan-v2.js",
       "role": "Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime",
-      "bytes": 34336,
-      "sha256": "91dc121e912cced585a3a1535cde56cc90ed9bc87f3ead1715bae36e87daa7c0"
+      "bytes": 34224,
+      "sha256": "92da6af69fe6c966eb50e7df8be49e218f363283c8afe6f696549f06896dd08f"
     },
     {
       "path": "src/portfolio-review-context.js",
@@ -277,20 +277,20 @@
     {
       "path": "src/position.js",
       "role": "browser runtime dependency",
-      "bytes": 4178,
-      "sha256": "68221ecf492bbd97dc3b87d3fdae23d47e44ec97b429522aa2298f5c4b6747d0"
+      "bytes": 4071,
+      "sha256": "c676049a3701f313484b229ace5bf5ce3480508b22e27c81fe4a228cba5b6ec1"
     },
     {
       "path": "src/price-refresh.js",
       "role": "Plan V2 program-owned price trigger observation and candidate-save runtime",
-      "bytes": 15763,
-      "sha256": "38eade71ba181e76807df6df969c67947625a42c4a2919b69f0c0562adb95f5f"
+      "bytes": 15031,
+      "sha256": "c4d1ab250bdf08243c5caa5c92875d5ac12551a3f1816c9fb6a763740b39cf46"
     },
     {
       "path": "src/rebalance.js",
       "role": "Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime",
-      "bytes": 7491,
-      "sha256": "8e9370945e38e4714a575bc483bdc94e07dfc26be664422373cad59b3dd91583"
+      "bytes": 7452,
+      "sha256": "93da1ef23f298f9a540246a067985f159b04eb8117292ade86b0bcf99d813892"
     },
     {
       "path": "src/social.js",
@@ -391,8 +391,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces",
-      "bytes": 671427,
-      "sha256": "a7c33e6ad19d085a9347bdfdec16b7b5cd8218a763feafa79ba76778301c2beb"
+      "bytes": 638083,
+      "sha256": "9cd78314c05db2e6e5014ff7cec23439e0e6f67d15983b3e11d66e62c77234a6"
     },
     {
       "path": "src/universe-auto-add.js",
@@ -409,8 +409,8 @@
     {
       "path": "src/universe-sync-ui.js",
       "role": "local/cloud/market status, login and scoped PC reader setup",
-      "bytes": 6979,
-      "sha256": "dd0b030d895643d54eb6e60b1a3344541c9865ebe05a0853d1ca28d283d63558"
+      "bytes": 7161,
+      "sha256": "3625f84101876f319205d8fdde553726ff9eb703b6f15f87c8d91ccdcd5b4178"
     },
     {
       "path": "src/v13-alpha3-services.js",
@@ -433,20 +433,14 @@
     {
       "path": "src/v13-plan-engine.js",
       "role": "Plan V2 lifecycle-aware plan orchestration runtime",
-      "bytes": 4066,
-      "sha256": "c709d70f2a60ed724c038d9b6237ae445ea6eca4d36c7b445c0c2cff9ef476f2"
+      "bytes": 3565,
+      "sha256": "2c84a1dc0c4dceabea3ded8e7dbd6898e39e25b8413203d233275d298c37e340"
     },
     {
       "path": "src/v13-recommendation-engine.js",
       "role": "Plan V2 lifecycle-aware recommendation compatibility runtime",
       "bytes": 11574,
       "sha256": "97533a2624b0019552f33a2a0e93e5127cef121fd6ba5934e4e8581833f2e088"
-    },
-    {
-      "path": "src/v13-risk-engine.js",
-      "role": "browser runtime dependency",
-      "bytes": 5571,
-      "sha256": "2a197b686f4e42dba6deac14ac1a4d7b49d5766d57bbaef59f19cd7a684f28e1"
     },
     {
       "path": "src/vendor/supabase-client.js",
