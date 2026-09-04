@@ -57,6 +57,10 @@ function validateRawImportShape(value){
 function createValidatedCandidateSnapshot(value,options={}){
   const source=validateRawImportShape(value);
   if(options.requireWatchDefinition===true)for(const stock of source.stocks)for(const plan of stock.plans||[]){if(plan&&plan.planMode==='state_watch'){const checked=PlanV2.validateWatchCanonical(plan,{requireDefinition:true});if(!checked.ok)throw new Error(checked.errors.join('；'));}}
+  if(Object.prototype.hasOwnProperty.call(source,'planRuntimeStates')){
+    if(!globalThis.PlanRuntime||typeof globalThis.PlanRuntime.validateStore!=='function')throw new Error('Plan Runtime 校验器不可用。');
+    const runtimeValidation=globalThis.PlanRuntime.validateStore(source.planRuntimeStates);if(!runtimeValidation.ok)throw new Error(runtimeValidation.errors.join('；'));
+  }
   const candidate=normalize(importResetClone(source));
   const validation=importResetValidation();
   if(validation&&typeof validation.validateState==='function')validation.validateState(candidate);

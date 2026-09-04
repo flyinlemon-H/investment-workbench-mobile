@@ -79,10 +79,10 @@
     return Array.isArray(value)?value.join('；')||'未设置':String(value);
   }
   function summary(definition,{compact=false}={}){return `<dl class="watch-definition-summary">${(compact?['reviewAction','entryConditions','confirmationConditions','invalidationConditions','priceReferences','applicableConditions','allocationConstraint','note','validUntil','nextReviewDate'].map(key=>[key,Plan.WATCH_LABELS[key]]):Object.entries(Plan.WATCH_LABELS)).filter(([key])=>!compact||key!=='name'&&valueText(key,definition[key])!=='未设置').map(([key,label])=>`<div><dt>${esc(label)}</dt><dd>${esc(valueText(key,definition[key]))}</dd></div>`).join('')}</dl>`}
-  function card(plan,stockId,{editable=true}={}){
+  function card(plan,stockId,{editable=true,runtimeHtml=''}={}){
     if(!Plan.hasWatchDefinition(plan))return `<div class="card-note">状态观察计划（只读） · 暂无完整 Definition · ${esc(plan.note||'')}</div>`;
     const labels={active:'进行中',cancelled:'已取消',completed:'已完成',replaced:'已替换'};
-    return `<article class="card watch-definition-card" data-watch-plan="${esc(plan.id)}"><div class="card-title">${esc(plan.name)}</div><div class="card-note">${esc(labels[plan.status])} · 版本 ${plan.planVersion}</div>${summary(Plan.watchDefinition(plan),{compact:true})}<p class="card-note">该计划为观察复核计划，需进一步形成执行决定。</p>${editable&&plan.status==='active'?`<button class="btn small" type="button" data-watch-edit="${esc(plan.id)}" data-watch-stock="${esc(stockId)}">编辑计划</button>`:''}</article>`;
+    return `<article class="card watch-definition-card" data-watch-plan="${esc(plan.id)}"><div class="card-title">${esc(plan.name)}</div><div class="card-note">计划定义 · ${esc(labels[plan.status])} · 版本 ${plan.planVersion}</div>${summary(Plan.watchDefinition(plan),{compact:true})}<p class="card-note">该计划为观察复核计划，需进一步形成执行决定。</p>${runtimeHtml}${editable&&plan.status==='active'?`<button class="btn small" type="button" data-watch-edit="${esc(plan.id)}" data-watch-stock="${esc(stockId)}">编辑计划</button>`:''}</article>`;
   }
   function renderPreview(result){
     if(!result||!result.ok)return `<div class="alert">${esc(result&&result.message||'请先生成草案')}。未写入任何数据。</div>`;

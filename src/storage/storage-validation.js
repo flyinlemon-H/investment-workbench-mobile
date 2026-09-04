@@ -65,6 +65,10 @@
       if(!isPlainObject(state.planReviews))fail('validation.state.planReviews');
       if(global.PlanReview&&typeof global.PlanReview.validateStore==='function'&&!global.PlanReview.validateStore(state.planReviews).ok)fail('validation.state.planReviewStore');
     }
+    if(state.planRuntimeStates!==undefined){
+      if(!isPlainObject(state.planRuntimeStates))fail('validation.state.planRuntimeStates');
+      if(!global.PlanRuntime||typeof global.PlanRuntime.validateStore!=='function'||!global.PlanRuntime.validateStore(state.planRuntimeStates).ok)fail('validation.state.planRuntimeStore');
+    }
     if(state.decisionCompression!==undefined){
       if(!isPlainObject(state.decisionCompression)||!Array.isArray(state.decisionCompression.history))fail('validation.state.decisionCompression');
       if(state.decisionCompression.current!==null&&state.decisionCompression.current!==undefined&&!isPlainObject(state.decisionCompression.current))fail('validation.state.decisionCompressionCurrent');
