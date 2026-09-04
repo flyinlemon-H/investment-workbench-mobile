@@ -18,6 +18,10 @@ roleByPath.set('src/api/api-client.js','loopback-only GET/POST transport with ti
 roleByPath.set('src/api/health-api.js','user-initiated Bridge health and AI capability checks');
 roleByPath.set('src/long-term-logic-contract.js','exact Long-Term Logic binding, validation, bounded audit and atomic candidate commit');
 roleByPath.set('src/long-term-logic-workflow.js','shared Manual/API Long-Term Logic Prompt and strict response processor');
+roleByPath.set('src/manual-analysis-sync.js','generic manual module sync envelope, SHA-256, Preview binding and confirmed apply engine');
+roleByPath.set('src/long-term-logic-sync-adapter.js','Slim Long-Term Logic module serializer, validator, business diff and canonical candidate adapter');
+roleByPath.set('src/manual-analysis-sync-cloud.js','authenticated browser RPC transport and derived analysis sync status');
+roleByPath.set('src/manual-analysis-sync-ui.js','PC publish and mobile fetch business Preview/Confirm workflow');
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
 roleByPath.set('src/strict-ai-json.js','shared strict AI JSON fenced transport preprocessor, parser, and post-repair diagnostics runtime');
@@ -63,6 +67,10 @@ const paths=[...new Set([
   'src/api/ai-api.js',
   'src/long-term-logic-contract.js',
   'src/long-term-logic-workflow.js',
+  'src/manual-analysis-sync.js',
+  'src/long-term-logic-sync-adapter.js',
+  'src/manual-analysis-sync-cloud.js',
+  'src/manual-analysis-sync-ui.js',
   'src/strict-ai-json.js',
   'src/batch-technical-review.js',
   'src/multi-stock-analysis.js',
@@ -102,8 +110,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-user-decision-v3-20260904',
-  dataMode:'Discussion User Decision V3 position-centric conclusion above preserved technical evidence, with compact mobile-first controls, V1/V2 Current State fallback, strict fact ownership and no execution; Plan V2 Phase 2 Runtime and Stock Universe V1A contracts remain unchanged; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'manual-analysis-sync-ltl-v1-20260904',
+  dataMode:'Long-Term Logic Slim V2 with legacy readable compatibility and explicit PC publish / mobile fetch Preview-Confirm sync; canonical payload hashes derive status, device transport metadata stays outside judgment backups, existing Bridge and Stock Universe security boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
