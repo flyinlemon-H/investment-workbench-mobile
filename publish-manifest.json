@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "f707d16b1541122aed759f1234d74e18ffec1c85",
-  "assetVersion": "stock-universe-auto-add-v1a-20260903",
-  "dataMode": "Stock Universe V1A local-first automatic additions through Supabase Auth with scoped PC read access; membership only, no removals or full-state sync; existing Current State anchor guards, Plan V2 Phase 1B and market calculations preserved; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "02141d7256de8b38bd91c599d01092ff1fe3de03",
+  "assetVersion": "plan-runtime-phase2-20260904",
+  "dataMode": "Plan V2 Phase 2 explicit State-Watch Runtime Review with exact Plan and Current State binding, separate runtimeRevision, bounded transition history and no execution; Current State and Plan Definition contracts preserved; Stock Universe V1A remains membership-only with no Runtime Supabase sync; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 57899,
-      "sha256": "4217b678e4a8dd3d3699babb8199bef024d13536634449a8795a37866662cd65"
+      "bytes": 57516,
+      "sha256": "78e3a56e1b98a3c999d14099e79e2925c6fc8c177df24a597e6fb2926cefa95b"
     },
     {
       "path": "social_posts.json",
@@ -151,8 +151,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7602,
-      "sha256": "ad598c3f63809531c716de2c0bed6a3559b443475047875525d7204473e33d36"
+      "bytes": 7993,
+      "sha256": "1fc65be14689c3e9407341f1de10c33e6807234944de15464f486d59d0ac0e62"
     },
     {
       "path": "src/long-term-logic-contract.js",
@@ -207,6 +207,18 @@
       "role": "Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime",
       "bytes": 30485,
       "sha256": "f3f1fc684f6d2c80345ed639653d61aee080e6cba025f99d41d0471b829b509c"
+    },
+    {
+      "path": "src/plan-runtime-ui.js",
+      "role": "Dedicated mobile Runtime Review manual transport, preview, explicit confirmation, status, and compact history UI",
+      "bytes": 10258,
+      "sha256": "ba19b65bc1ef8c2e153da3744f5b1f3852322a798e0cc8a8574853e2ebc72794"
+    },
+    {
+      "path": "src/plan-runtime.js",
+      "role": "Plan Runtime v1 strict lifecycle, protected Plan and Current State binding, bounded history, and atomic candidate commit",
+      "bytes": 28078,
+      "sha256": "d03bb349969cb84b9f5c4bb9648dcb211c59cef803a5dd08e5dc06e684930931"
     },
     {
       "path": "src/plan-update-draft.js",
@@ -271,14 +283,14 @@
     {
       "path": "src/state-watch-workflow.js",
       "role": "State-watch Definition strict session and target binding, readable preview/diff and confirmed same-ID candidate commit",
-      "bytes": 14980,
-      "sha256": "90a93bca8a88af72d744b876bcbd1f4f3736001b2be61382f27fda052c581f86"
+      "bytes": 15025,
+      "sha256": "480f9b88e061ef70148472b9d8e2c56897ebfaa4d2a40c1af276d1b767de0d41"
     },
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 121932,
-      "sha256": "f7b769d39b70ebb7edd8efb2db161a4305ee8839dd33c2914e8e5ba8d55526c5"
+      "bytes": 122084,
+      "sha256": "83aa68a946d860578bd32d6b92d8d66f5a79a3d9ffda603ebd7c362ea852c94f"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -331,8 +343,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards",
-      "bytes": 6803,
-      "sha256": "c43f2b1527d10099bfdae9fb42e8ff2c0b01a6ac2a2f49a837bc131accbbb10b"
+      "bytes": 7136,
+      "sha256": "d9849357b3c5de2e33bced9cf670f6b773bb3ab39df564da940f296c6120e65e"
     },
     {
       "path": "src/strict-ai-json.js",
@@ -355,8 +367,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
-      "bytes": 665115,
-      "sha256": "8fa5711f1cbadc069c9ace86dd07dc99686c16b93a5f3c6e928aafc78ce99dec"
+      "bytes": 665441,
+      "sha256": "802e7426415839c37f99190e0e5f0fa304847aa15b8c40ded94cfb0c074b2ac0"
     },
     {
       "path": "src/universe-auto-add.js",
