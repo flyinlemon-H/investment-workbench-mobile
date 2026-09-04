@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "9c0180904087e035fbc84cd34ae884c524e8038f",
-  "assetVersion": "discussion-user-decision-v3-20260904",
-  "dataMode": "Discussion User Decision V3 position-centric conclusion above preserved technical evidence, with compact mobile-first controls, V1/V2 Current State fallback, strict fact ownership and no execution; Plan V2 Phase 2 Runtime and Stock Universe V1A contracts remain unchanged; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "a26bac81c7ec9d03b76e8acadab59991ee424f1b",
+  "assetVersion": "manual-analysis-sync-ltl-v1-20260904",
+  "dataMode": "Long-Term Logic Slim V2 with legacy readable compatibility and explicit PC publish / mobile fetch Preview-Confirm sync; canonical payload hashes derive status, device transport metadata stays outside judgment backups, existing Bridge and Stock Universe security boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1800261,
-      "sha256": "ba7cb312870d22e1be64d1ef8d4d0d5031f157b5b94c61c2ab0be8b9fadbeead"
+      "bytes": 1803381,
+      "sha256": "e796f941d8d0b9b8a557c32e0efaa2bfbfb36e6cc26cf2ac5f9a2249de1bdae9"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 1282,
-      "sha256": "8dc09980dc8447ba99dfec0502b4d2dbd30d5da54dbbe8ddce52cb0af442768b"
+      "bytes": 1365,
+      "sha256": "63e6ea226cd7d27b50d394c3fb32bb80dae08c5b509d5a9479583d98cf096011"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 61421,
-      "sha256": "19b774e601ac2975e7ad570dd53aa5d889756f46a613a42912fee5c45078bb25"
+      "bytes": 63329,
+      "sha256": "e979982be71c7d2fb2fe89f6cd44f68fc05e250a00056074330af1879098772d"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +103,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33455,
-      "sha256": "2ace8efd317e85a6bf3ec36902081290a1a188f67f7b4087ee065fddb2fd04e7"
+      "bytes": 33539,
+      "sha256": "5787b9ac61a8b934f20282186549c376e698e30e94a1325a6941571ded98074c"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -145,26 +145,50 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 53676,
-      "sha256": "abb07021926f5e23376b128ef0a29d3a38d0d2b986bb87461d9502911e45d357"
+      "bytes": 53942,
+      "sha256": "702e8d7833b1d68095186bbdf7dedde4339e57a7fe2e81bb5bc8e1c3a72299a9"
     },
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7993,
-      "sha256": "1fc65be14689c3e9407341f1de10c33e6807234944de15464f486d59d0ac0e62"
+      "bytes": 7969,
+      "sha256": "bf1e439dd0a893e505f34c650cdb551d027ad77faca279b71e0726f473ba786d"
     },
     {
       "path": "src/long-term-logic-contract.js",
       "role": "exact Long-Term Logic binding, validation, bounded audit and atomic candidate commit",
-      "bytes": 16411,
-      "sha256": "2abcbae05e7dabae27e66200fc077f9992bf72793b6defe1d007b08a2701f9ce"
+      "bytes": 17257,
+      "sha256": "b1a1a368543854693b45570c90071778d9fa1af63f316d3a51a4ec9cc58104d7"
+    },
+    {
+      "path": "src/long-term-logic-sync-adapter.js",
+      "role": "Slim Long-Term Logic module serializer, validator, business diff and canonical candidate adapter",
+      "bytes": 6412,
+      "sha256": "71c4a79dec52ecfe23a635e20c6f61387e0c2ba470ca0d093f432c026aa1e031"
     },
     {
       "path": "src/long-term-logic-workflow.js",
       "role": "shared Manual/API Long-Term Logic Prompt and strict response processor",
-      "bytes": 4355,
-      "sha256": "3236d50fe7ad7fc9055bcf788619729008fe8870ffbfa583620bb1c038d514b9"
+      "bytes": 3991,
+      "sha256": "3c97ee94e4e27a8a696ae6a39c8953eddb539d634c944aaf0387197a81ca7299"
+    },
+    {
+      "path": "src/manual-analysis-sync-cloud.js",
+      "role": "authenticated browser RPC transport and derived analysis sync status",
+      "bytes": 3298,
+      "sha256": "c0f8674554d5326a2c9d984ebd21c0b131435961c64593841f84816f4823c3c0"
+    },
+    {
+      "path": "src/manual-analysis-sync-ui.js",
+      "role": "PC publish and mobile fetch business Preview/Confirm workflow",
+      "bytes": 8849,
+      "sha256": "b44c6df76479c08f21c36df80204092f61495453a998edbbaa3be7821ef5b311"
+    },
+    {
+      "path": "src/manual-analysis-sync.js",
+      "role": "generic manual module sync envelope, SHA-256, Preview binding and confirmed apply engine",
+      "bytes": 12295,
+      "sha256": "af22f7c0e35d5262d297b4234765508d16bf418da1c4c48376494ebed7eac3b3"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -235,8 +259,8 @@
     {
       "path": "src/portfolio-review-context.js",
       "role": "Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime",
-      "bytes": 31200,
-      "sha256": "976afb084cf6c195f83eb8dc3d0cd289e0494d1d7a0c407adb62f996c2286317"
+      "bytes": 31356,
+      "sha256": "8f1593ee5c4ff510f72e8717ff6b0682ec438ce3714764d2a00409b2e38fbcd5"
     },
     {
       "path": "src/portfolio-review-contract.js",
@@ -289,8 +313,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 122084,
-      "sha256": "83aa68a946d860578bd32d6b92d8d66f5a79a3d9ffda603ebd7c362ea852c94f"
+      "bytes": 122500,
+      "sha256": "5149c66164bb710b79b3e986b6810c2464bc9240effa36a675ee4847c6c56ca5"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -367,8 +391,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces",
-      "bytes": 670317,
-      "sha256": "5d858d83cd3879a90ebf57d88bcd7fc1cfd49b3f18770655cf71e994495c6a08"
+      "bytes": 671427,
+      "sha256": "a7c33e6ad19d085a9347bdfdec16b7b5cd8218a763feafa79ba76778301c2beb"
     },
     {
       "path": "src/universe-auto-add.js",
