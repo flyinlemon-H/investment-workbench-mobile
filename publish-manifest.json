@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "02141d7256de8b38bd91c599d01092ff1fe3de03",
-  "assetVersion": "plan-runtime-phase2-20260904",
-  "dataMode": "Plan V2 Phase 2 explicit State-Watch Runtime Review with exact Plan and Current State binding, separate runtimeRevision, bounded transition history and no execution; Current State and Plan Definition contracts preserved; Stock Universe V1A remains membership-only with no Runtime Supabase sync; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "9c0180904087e035fbc84cd34ae884c524e8038f",
+  "assetVersion": "discussion-user-decision-v3-20260904",
+  "dataMode": "Discussion User Decision V3 position-centric conclusion above preserved technical evidence, with compact mobile-first controls, V1/V2 Current State fallback, strict fact ownership and no execution; Plan V2 Phase 2 Runtime and Stock Universe V1A contracts remain unchanged; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 57516,
-      "sha256": "78e3a56e1b98a3c999d14099e79e2925c6fc8c177df24a597e6fb2926cefa95b"
+      "bytes": 61421,
+      "sha256": "19b774e601ac2975e7ad570dd53aa5d889756f46a613a42912fee5c45078bb25"
     },
     {
       "path": "social_posts.json",
@@ -133,20 +133,20 @@
     {
       "path": "src/discussion-plan-workflow.js",
       "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
-      "bytes": 40763,
-      "sha256": "318ae70f2d3f1e80b16f2b7283c23d92b8ef5021aa7f89e03dc916c81797a43b"
+      "bytes": 40818,
+      "sha256": "85cf7197ae44df0f29590c1e2d55feaa49c3ba36237d2efadea171cff870c96a"
     },
     {
       "path": "src/discussion-state-contract.js",
-      "role": "Single Stock Current State fail-closed decision archive contract with negation-aware semantic guards and protected atomic save runtime",
-      "bytes": 21267,
-      "sha256": "c0d51e80108640587fb3994383cb4a3329ecf930313a02e962f31ec687970251"
+      "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
+      "bytes": 27344,
+      "sha256": "5936646ca5562be7841fe44b94a8c00ba5db53092b51e49b5951ef80bad1f8c6"
     },
     {
       "path": "src/discussion-workbench.js",
-      "role": "Single Stock Current State v2 decision schema, legacy compatibility, continuity context, and fenced JSON prompt input/output boundary runtime",
-      "bytes": 45882,
-      "sha256": "60acde437232aeb626badd05fcf016e9f6b25f113f5e3d2a977d05c61b4972d8"
+      "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
+      "bytes": 53676,
+      "sha256": "abb07021926f5e23376b128ef0a29d3a38d0d2b986bb87461d9502911e45d357"
     },
     {
       "path": "src/import-export.js",
@@ -366,9 +366,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "Long-Term Logic shared Manual/API processing, automatic atomic save, audit UI and preserved Workbench interfaces",
-      "bytes": 665441,
-      "sha256": "802e7426415839c37f99190e0e5f0fa304847aa15b8c40ded94cfb0c074b2ac0"
+      "role": "Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces",
+      "bytes": 670317,
+      "sha256": "5d858d83cd3879a90ebf57d88bcd7fc1cfd49b3f18770655cf71e994495c6a08"
     },
     {
       "path": "src/universe-auto-add.js",
