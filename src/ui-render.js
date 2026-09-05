@@ -90,7 +90,8 @@ function renderSyncHint(){
   const invalidCount=window.UniverseHandoff?window.UniverseHandoff.invalidStockCount(state):0;
   const universeText=invalidCount?`${invalidCount}只代码需检查`:'';
   const backend=backendHealthText(),showDiagnostics=currentTab==='tools'&&!detailStockId;
-  el.textContent=[universeText,local,showDiagnostics?backend:''].filter(Boolean).join(' · ');
+  el.textContent=showDiagnostics?[universeText,local,backend].filter(Boolean).join(' · '):'';
+  el.hidden=!showDiagnostics;
   const backendStatus=document.getElementById('backendToolStatus');
   if(backendStatus)backendStatus.textContent=backend;
 }
@@ -471,49 +472,12 @@ function isFocusStockForUpdate(stock){
   return stock.type==='holding'&&((Number(stock.targetPct)||0)>=8||(Number(stock.capPct)||0)>=10||['核心仓','成长仓'].includes(stock.role)||Number(strategy.priority)<=3);
 }
 function updateChecklistRows(){
-  const rows=[];
-  state.stocks.forEach(s=>{
-    normalizeStockAnalysis(s);
-    const f=normalizeDataFreshness(s.dataFreshness);
-    const items=[];
-    const dates=[];
-    const add=(name,date)=>{items.push(name);if(normalizeDateOnly(date))dates.push(normalizeDateOnly(date))};
-    const priceDays=freshnessDays(priceReferenceDate(s));
-    const valuationDays=freshnessDays(f.valuationUpdatedAt);
-    const viewDays=freshnessDays(f.personalViewUpdatedAt);
-    if(s.type==='holding'){
-      if(priceDays===null)add('价格未更新','');
-      else if(priceDays>7)add('价格超过 7 天未更新',priceReferenceDate(s));
-      if(valuationDays===null||valuationDays>30)add('估值',f.valuationUpdatedAt);
-      if(isOverdue(f.financialUpdatedAt,30))add('财报资料需更新：建议使用“财报一体化解析”一次更新 financialData 和 financialReview',f.financialUpdatedAt);
-      if(viewDays===null||viewDays>30)add('个人观点',f.personalViewUpdatedAt);
-      if(isFocusStockForUpdate(s)&&!String(normalizeAnalysisInputs(s.analysisInputs).valuationRawText||'').trim())add('估值资料','');
-    }else if(s.type==='etf'){
-      if(priceDays===null)add('价格未更新','');
-      else if(priceDays>7)add('价格超过 7 天未更新',priceReferenceDate(s));
-    }else if(s.type==='watching'){
-      if(viewDays===null||viewDays>30)add('个人观点',f.personalViewUpdatedAt);
-    }
-    if(!isCashRow(s)&&isOverdue(f.technicalUpdatedAt,3))add('技术面待更新：可进入详情页查看“技术面分析流程”',f.technicalUpdatedAt);
-    const ci=normalizeCollectionInputs(s.collectionInputs);
-    const reviews=normalizeAiReviews(s.aiReviews);
-    if(String(ci.newsRawText||'').trim()&&!reviews.newsReview)add('新闻资料待复核','');
-    if(String(ci.financialRawText||'').trim()&&!reviews.financialReview)add('财报资料待复核：建议使用“财报一体化解析”一次更新 financialData 和 financialReview','');
-    if(String(ci.socialRawText||'').trim()&&!reviews.socialReview)add('社媒资料待复核','');
-    if(String(ci.technicalRawText||'').trim()&&!reviews.technicalReview)add('技术资料待复核','');
-    if(getCurrency(s)==='HKD'&&isDefaultFx())add('汇率为默认值，港股仓位占比需复核','');
-    if(items.length){
-      const oldest=dates.length?dates.sort()[0]:'未更新';
-      rows.push({s,items:[...new Set(items)],oldest,isHolding:s.type==='holding',focus:isFocusStockForUpdate(s),count:items.length,oldestDays:dates.length?(freshnessDays(oldest)??9999):9999});
-    }
-  });
-  rows.sort((a,b)=>(Number(b.isHolding)-Number(a.isHolding))||(Number(b.focus)-Number(a.focus))||(b.count-a.count)||(b.oldestDays-a.oldestDays)||String(a.s.name||'').localeCompare(String(b.s.name||''),'zh-CN'));
-  return rows;
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return [];
 }
 function updateChecklistPanel(){
-  const rows=updateChecklistRows();
-  if(!rows.length)return '<div class="card" style="margin-bottom:14px"><div class="card-title">待更新清单</div><div class="card-note">当前没有需要优先更新的股票资料。</div></div>';
-  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)"><div class="card-title">待更新清单（${rows.length} 只）</div><div class="modal-actions" style="justify-content:flex-start;margin:0 0 10px;flex-wrap:wrap"><button class="btn ghost small" id="copyUpdateCodesBtn" type="button">复制待更新股票代码</button><button class="btn ghost small" id="copyUpdatePromptBtn" type="button">复制待更新任务提示词</button></div><div class="trig-list">${rows.map(x=>`<div class="trig-row ${x.isHolding?'buy':''}" data-update-stock="${esc(x.s.id)}" style="cursor:pointer"><div class="trig-name">${esc(x.s.name||'—')} <span class="muted" style="font-weight:400">· ${esc(x.s.code||'无代码')} · ${x.isHolding?'持仓':'观察'}</span></div><div class="trig-dist">${esc(x.oldest)}</div><div class="trig-desc">需要更新：${x.items.map(esc).join('、')}${x.focus?' · 重点关注':''}</div></div>`).join('')}</div></div>`;
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return '';
 }
 async function copyText(text,okMsg,options={}){
   const notify=options.notify!==false,clipboardOptions={...options};delete clipboardOptions.notify;
@@ -1085,22 +1049,8 @@ function v13DashboardTriggeredPlanRows(){
   });
 }
 function v13HomeRecommendationRows(){
-  const rows=[];
-  (state.stocks||[]).forEach(stock=>{
-    normalizeStockAnalysis(stock);
-    const rec=v13AllRecommendationsForStock(stock).filter(x=>v13RecommendationAllowedOnHome(stock,x)).sort((a,b)=>{
-      const ar=typeof getRecommendationPriorityRank==='function'?getRecommendationPriorityRank(a):0;
-      const br=typeof getRecommendationPriorityRank==='function'?getRecommendationPriorityRank(b):0;
-      return br-ar;
-    })[0];
-    if(rec)rows.push({stock,rec});
-  });
-  return rows.sort((a,b)=>{
-    const ar=typeof getRecommendationPriorityRank==='function'?getRecommendationPriorityRank(a.rec):0;
-    const br=typeof getRecommendationPriorityRank==='function'?getRecommendationPriorityRank(b.rec):0;
-    if(br-ar)return br-ar;
-    return String(a.stock.name||a.stock.code||'').localeCompare(String(b.stock.name||b.stock.code||''),'zh-CN');
-  });
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return [];
 }
 function v13RecommendationRow(item){
   const stock=item.stock||{};
@@ -1109,22 +1059,12 @@ function v13RecommendationRow(item){
   return `<div class="trig-row" data-v13-rec-stock="${esc(stock.id||'')}" data-v13-rec-id="${esc(rec.id||'')}" style="cursor:pointer"><div class="trig-name">${esc(stock.name||stock.code||stock.symbol||'—')} <span class="muted">· ${esc(stock.code||stock.symbol||'')}</span></div><div class="trig-dist">${esc(v13RecommendationPriorityLabel(rec.priority))}</div><div class="trig-desc"><b>${esc(summary)}</b><div class="card-note">来源 ${esc(v13RecommendationSourceLabel(rec.source))}</div></div></div>`;
 }
 function v13HomeRecommendationTaskPanel(){
-  const rows=v13HomeRecommendationRows();
-  const refreshPanel=v13PlanRefreshPanel();
-  if(!rows.length)return refreshPanel;
-  const high=rows.filter(x=>['P4','P3'].includes(x.rec.priority));
-  const low=rows.filter(x=>['P2','P1'].includes(x.rec.priority));
-  const byPriority=priority=>high.filter(x=>x.rec.priority===priority);
-  const highSection=priority=>{
-    const list=byPriority(priority);
-    return `<div style="margin-top:10px"><div class="card-note" style="margin-bottom:6px">${esc(v13RecommendationPriorityLabel(priority))}（${list.length}）</div>${list.length?`<div class="trig-list">${list.map(v13RecommendationRow).join('')}</div>`:'<div class="card-note">暂无</div>'}</div>`;
-  };
-  const lowSection=low.length?`<details style="margin-top:10px"><summary class="card-note" style="cursor:pointer">🟡/⚪ 待关注与信息补充（${low.length}）</summary><div class="trig-list" style="margin-top:6px">${low.map(v13RecommendationRow).join('')}</div></details>`:'';
-  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--seal)"><div class="card-title">V13 当前复核任务</div><div class="card-note">按复核优先级展示；每只标的只显示一条主任务。计划类任务必须先通过计划有效性判断。</div>${highSection('P4')}${highSection('P3')}${lowSection}</div>${refreshPanel}`;
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return '';
 }
 function v13AiDecisionReviewRows(){
-  if(!window.AiDecisionReviewReader||typeof window.AiDecisionReviewReader.homePendingRecords!=='function')return [];
-  return window.AiDecisionReviewReader.homePendingRecords();
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return [];
 }
 function v13AiDecisionReviewStockFor(record){
   const symbol=String(record&&record.symbol||'').trim().toUpperCase();
@@ -1132,55 +1072,12 @@ function v13AiDecisionReviewStockFor(record){
   return (state.stocks||[]).find(stock=>[stock.code,stock.symbol,stock.id,stock.name].map(x=>String(x||'').trim().toUpperCase()).includes(symbol))||null;
 }
 function v13AiDecisionReviewHomePanel(){
-  const rows=v13AiDecisionReviewRows();
-  if(!rows.length)return '';
-  const rowHtml=rows.slice(0,6).map(record=>{
-    const stock=v13AiDecisionReviewStockFor(record);
-    const stockName=stock?(stock.name||stock.code||record.symbol):(record.symbol||'未匹配标的');
-    const stockId=stock&&stock.id?stock.id:'';
-    return `<div class="trig-row" data-v13-ai-review-stock="${esc(stockId)}" style="${stockId?'cursor:pointer':''}"><div class="trig-name">${esc(stockName)} <span class="muted">· ${esc(record.taskTypeLabel||'AI复核')}</span></div><div class="trig-dist">${esc(record.priority==='urgent'?'优先处理':'待处理')}</div><div class="trig-desc"><b>${esc(formatChineseText(record.userSummary||record.aiConclusion||'暂无 AI 结论'))}</b></div></div>`;
-  }).join('');
-  const extra=rows.length>6?`<div class="card-note" style="margin-top:8px">还有 ${rows.length-6} 条 AI 决策复核任务未展示。</div>`:'';
-  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--purple)"><div class="card-title">待处理任务（${rows.length}）</div><div class="card-note">仅显示仍需人工决策且尚未完成的 AI 复核任务。</div><div class="trig-list" style="margin-top:8px">${rowHtml}</div>${extra}</div>`;
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return '';
 }
 function v13HomeEventTaskPanel(){
-  const recommendationPanel=v13HomeRecommendationTaskPanel();
-  if(recommendationPanel)return recommendationPanel;
-  if(typeof getHomeVisibleEventsByStock!=='function')return '';
-  const events=getHomeVisibleEventsByStock(state.stocks||[]);
-  const groups={decision:[],prepare:[],info:[]};
-  events.forEach(event=>{
-    const phase=['decision','prepare','info'].includes(event.phase)?event.phase:'info';
-    groups[phase].push(event);
-  });
-  const total=events.length;
-  const sourceGroupLabel=event=>{
-    const type=String(event&&event.businessObjectType||'').trim();
-    if(type==='Plan')return '既定计划';
-    if(type==='RiskState')return '风险状态';
-    return '其它';
-  };
-  const row=event=>{
-    const stock=v13EventStockFor(event);
-    const stockName=stock?(stock.name||stock.code||stock.symbol||'—'):(event.stockId||'—');
-    const stockCode=stock?(stock.code||stock.symbol||''):'';
-    const targetId=stock&&stock.id?` data-v13-event-stock="${esc(stock.id)}"`:'';
-    return `<div class="trig-row"${targetId} style="${stock?'cursor:pointer':''}"><div class="trig-name">${esc(stockName)} <span class="muted">· ${esc(stockCode||sourceGroupLabel(event)||'事件')}</span></div><div class="trig-dist">${esc(v13EventPhaseLabel(event.phase).replace(/^.. /,''))}</div><div class="trig-desc"><b>${esc(event.title||'未命名事件')}</b>${event.summary?` · ${esc(event.summary)}`:''}</div></div>`;
-  };
-  const decisionSection=()=>{
-    const list=groups.decision||[];
-    const bySource={既定计划:[],风险状态:[],其他:[]};
-    list.forEach(event=>bySource[sourceGroupLabel(event)].push(event));
-    const sourceBlock=(label,items)=>items.length?`<div style="margin-top:8px"><div class="card-note" style="margin-bottom:6px">${esc(label)}（${items.length}）</div><div class="trig-list">${items.map(row).join('')}</div></div>`:'';
-    return `<div style="margin-top:10px"><div class="card-note" style="margin-bottom:6px">🔴 待处理（${list.length}）</div>${list.length?`${sourceBlock('既定计划',bySource.既定计划)}${sourceBlock('风险状态',bySource.风险状态)}${sourceBlock('其它',bySource.其他)}`:'<div class="card-note">暂无</div>'}</div>`;
-  };
-  const section=(phase,title)=>{
-    const list=groups[phase]||[];
-    return `<div style="margin-top:10px"><div class="card-note" style="margin-bottom:6px">${title}（${list.length}）</div>${list.length?`<div class="trig-list">${list.map(row).join('')}</div>`:'<div class="card-note">暂无</div>'}</div>`;
-  };
-  const infoList=groups.info||[];
-  const infoSection=infoList.length?`<details style="margin-top:10px"><summary class="card-note" style="cursor:pointer">⚪ 信息（${infoList.length}）</summary><div class="trig-list" style="margin-top:6px">${infoList.map(row).join('')}</div></details>`:`<div style="margin-top:10px"><div class="card-note" style="margin-bottom:6px">⚪ 信息（0）</div><div class="card-note">暂无</div></div>`;
-  return `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--seal)"><div class="card-title">首页任务流</div>${total?`${decisionSection()}${section('prepare','🟡 待关注')}${infoSection}`:'<div class="card-note">暂无需要处理的事件。</div>'}</div>`;
+  // Compatibility only: homepage attention is derived by HomepageAttention.
+  return '';
 }
 function v13EventSourceText(event){
   const parts=[event&&event.businessObjectType,event&&event.businessObjectId].map(x=>String(x||'').trim()).filter(Boolean);
@@ -2226,6 +2123,8 @@ function render(){
   if(fxBtn)fxBtn.textContent=fxLabel();
   const actions=document.getElementById('globalActions');
   if(actions)actions.style.display=currentTab==='tools'&&!detailStockId?'':'none';
+  const syncBar=document.querySelector('.universe-cloud-bar');
+  if(syncBar)syncBar.style.display=currentTab==='dashboard'&&!detailStockId?'none':'';
   const socialStatus=document.getElementById('socialDataStatus');
   if(socialStatus)socialStatus.style.display=currentTab==='tools'&&!detailStockId?'':'none';
   if(detailStockId&&detailSubView==='allocation')renderAllocationDecisionDetail();
@@ -2239,12 +2138,17 @@ function render(){
   else renderTable();
   if(typeof syncStorageMaintenanceUi==='function')syncStorageMaintenanceUi();
 }
+function homepageAttentionPanel(model){
+  const priorityLabels={critical:'关键',high:'优先',medium:'关注'};
+  const cards=model.items.map(item=>`<article class="card homepage-attention-card" data-home-attention-item data-priority="${esc(item.priority)}" style="margin-bottom:10px;border-left:3px solid ${item.priority==='medium'?'var(--gold)':'var(--seal)'};overflow-wrap:anywhere"><div class="card-title">${esc(item.name)} <span class="muted" style="float:right;font-weight:400">${priorityLabels[item.priority]}</span></div><div class="text" style="max-width:none;font-size:18px;font-weight:700">${esc(item.title)}</div><div class="card-note" style="margin-top:6px">${esc(item.summary)}</div>${item.secondary?`<div class="card-note" style="margin-top:5px">同时关注：${esc(item.secondary)}</div>`:''}<div class="modal-actions" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost small" type="button" data-home-attention-action="${esc(item.cta.action)}" data-stock-id="${esc(item.cta.stockId||item.stockId||'')}">${esc(item.cta.label)}</button></div></article>`).join('');
+  return `<section data-home-attention aria-label="今日关注"><h2 style="font-size:20px;margin:0 0 12px">今日关注</h2>${cards||`<div class="card" data-home-quiet><div class="text" style="max-width:none">${esc(model.quietText)}</div></div>`}${model.items.length?'<p class="card-note">其他标的暂无需要优先关注的变化。</p>':''}</section>`;
+}
 function renderDashboard(){
   const summary=document.getElementById('summary');
   const main=document.getElementById('main');
   if(!state.stocks.length){
     summary.innerHTML='暂无数据 · 请到「工具」页导入 JSON';
-    main.innerHTML='<div class="hint"><b>尚未导入组合数据。</b> 请进入「工具」页点击「导入JSON」选择之前导出的投资作战手册 JSON；程序不会再内置或自动恢复默认组合。</div><div class="empty">导入后这里会显示总览、触发计划、再平衡提示和待更新清单。</div>';
+    main.innerHTML='<div class="hint"><b>尚未导入组合数据。</b> 请进入「工具」页点击「导入JSON」选择之前导出的投资作战手册 JSON；程序不会再内置或自动恢复默认组合。</div><div class="empty">导入后这里会显示值得关注的风险、计划变化和行情数据问题。</div>';
     return;
   }
   const themeOrder=['宽基指数','黄金资源','AI科技','消费','防御','其他'];
@@ -2269,73 +2173,22 @@ function renderDashboard(){
     roleMap[k]=(roleMap[k]||0)+(getMarketValue(s)||0);
   });
   const roleRows=Object.keys(roleMap).sort((a,b)=>String(a).localeCompare(String(b),'zh-CN')).map(k=>({name:k,p:roleMap[k]/denominator*100}));
-  const planRows=v13DashboardTriggeredPlanRows();
-  const triggeredCount=planRows.reduce((sum,x)=>sum+x.plans.length,0);
-  const positionRows=state.stocks.map(s=>({s,info:getPositionInfo(s,denominator)}));
-  const rebalRows=positionRows.map(x=>({s:x.s,info:x.info,action:getRebalanceAction(x.s,x.info,denominator)})).filter(x=>x.action).sort((a,b)=>Math.abs(b.info.deviation||0)-Math.abs(a.info.deviation||0));
-  const noPriceRows=positionRows.filter(x=>x.info&&x.info.status==='no-price');
   const aiPct=(themeRows.find(x=>x.name==='AI科技')||{p:0}).p;
   const resPct=(themeRows.find(x=>x.name==='黄金资源')||{p:0}).p;
-  summary.innerHTML=`总资产 <strong>${fmtMoney(estAssets||totalMv)}</strong> · 已投资 <strong>${fmtMoney(totalMv)}</strong> · 现金/预留 <strong>${fmt(reserve,1)}%</strong> · AI <strong>${fmt(aiPct,1)}%</strong> · 黄金资源 <strong>${fmt(resPct,1)}%</strong>`;
-
-  const triggeredRows=planRows.map(({s,plans})=>{const cp=getComparablePrice(s);return plans.map(({p,g})=>`<div class="trig-row ${['sell','reduce'].includes(p.action)?'sell':'buy'}"><div class="trig-name">${esc(s.name)} <span class="muted">· ${['sell','reduce'].includes(p.action)?'减仓':'加仓'} · 触发价 ${fmtMaybe(p.triggerPrice)}</span></div><div class="trig-dist">${fmtMaybe(cp)} / ${fmt(g.absPct,1)}%</div><div class="trig-desc">${esc(p.note||'价格已触发，完整条件待确认')} <button class="link-btn" data-execute-stock="${esc(s.id)}" data-execute-plan="${esc(p.id)}">记录执行</button></div></div>`).join('')}).join('');
-  const triggeredPanel=planRows.length?`<details class="card" style="margin-bottom:14px;border-left:3px solid var(--seal)"><summary class="card-title">有效计划触发对照（${triggeredCount} 条）</summary><div class="card-note" style="margin:8px 0 10px">仅显示通过计划有效性判断的触发计划；旧计划进入刷新清单。</div><div class="trig-list">${triggeredRows}</div></details>`:'<div class="card" style="margin-bottom:14px"><div class="card-title">触发提醒</div><div class="card-note">当前没有已触发的价位计划。</div></div>';
-
-  const rebalPanel=rebalRows.length?`<div class="card" style="margin-bottom:14px"><div class="card-title">再平衡提示（${rebalRows.length} 只）</div><div class="trig-list">${rebalRows.slice(0,8).map(x=>{const cls=x.info.status==='overweight'?'sell':'buy';const word=x.info.status==='overweight'?'超配':'低配';return `<div class="trig-row ${cls}"><div class="trig-name">${esc(x.s.name)} <span class="muted">· ${word} ${x.info.deviation>0?'+':''}${fmt(x.info.deviation,1)}%</span></div><div class="trig-dist">${fmtMoney(Math.abs(x.action.amount||0))}</div><div class="trig-desc">${esc(x.action.text||x.action.desc||'按目标仓位复核')}</div></div>`}).join('')}</div></div>`:'<div class="card" style="margin-bottom:14px"><div class="card-title">再平衡提示</div><div class="card-note">当前没有明显偏离目标仓位的标的。</div></div>';
-
-  const trimAlerts=positionRows.map(x=>({s:x.s,info:x.info,trim:getTrimAction(x.s,x.info,denominator)})).filter(x=>x.trim);
-  const capAlerts=positionRows.filter(x=>x.info&&x.info.actualPct!==null&&Number(x.s.capPct)>0&&x.info.actualPct>=Number(x.s.capPct));
-  const themeAlerts=themeBreaches(denominator);
-  const disciplineRows=[
-    ...capAlerts.map(x=>`<div class="trig-row sell"><div class="trig-name">${esc(x.s.name)} <span class="muted">· 冻结线</span></div><div class="trig-dist">${fmt(x.info.actualPct,1)}%</div><div class="trig-desc">已达到或超过 ${fmt(Number(x.s.capPct),1)}%，按纪律不应继续加仓。</div></div>`),
-    ...trimAlerts.map(x=>`<div class="trig-row sell"><div class="trig-name">${esc(x.s.name)} <span class="muted">· 削减线</span></div><div class="trig-dist">${fmt(x.info.actualPct,1)}%</div><div class="trig-desc">建议复核削减到 ${fmt(x.trim.toPct,1)}%。${x.trim.sharesTxt?esc(x.trim.sharesTxt):''}</div></div>`),
-    ...themeAlerts.map(x=>`<div class="trig-row sell"><div class="trig-name">${esc(x.name)} <span class="muted">· 主题上限</span></div><div class="trig-dist">${fmt(x.a,1)}%</div><div class="trig-desc">${x.level==='hard'?'已达硬上限':'已达软上限'}，需控制新增仓位。</div></div>`)
-  ];
-  const disciplinePanel=disciplineRows.length?`<div class="card" style="margin-bottom:14px;border-left:3px solid var(--gold)"><div class="card-title">纪律规则提醒（${disciplineRows.length} 项）</div><div class="trig-list">${disciplineRows.join('')}</div></div>`:'';
-  const noPriceHint=noPriceRows.length?`<div class="alert" style="margin-bottom:14px">有 ${noPriceRows.length} 只标的缺少有效价格/市值，仓位和再平衡计算可能不完整。</div>`:'';
-  const fxRiskHint=isDefaultFx()?'<div class="alert" style="margin-bottom:14px">汇率使用默认值，港股市值和仓位占比可能有偏差。可到「工具」页更新 HKD→CNY 汇率。</div>':'';
-  main.innerHTML=`${v13AiDecisionReviewHomePanel()}${v13HomeEventTaskPanel()}${updateChecklistPanel()}${triggeredPanel}${disciplinePanel}${rebalPanel}${noPriceHint}${fxRiskHint}<div class="dash"><div class="card"><div class="card-title">按主题分布</div>${bars(themeRows)}</div><div class="card"><div class="card-title">按仓位角色分布</div>${bars(roleRows)}</div></div>`;
-  document.querySelectorAll('[data-v13-rec-stock]').forEach(el=>el.addEventListener('click',()=>openV13DecisionReview(el.dataset.v13RecStock,el.dataset.v13RecId)));
-  document.querySelectorAll('[data-v13-ai-review-stock]').forEach(el=>el.addEventListener('click',()=>{
-    if(!el.dataset.v13AiReviewStock)return;
-    openStockDetail(el.dataset.v13AiReviewStock);
-    setTimeout(()=>{
-      const target=document.querySelector('[data-v13-ai-review-panel]');
-      if(target&&typeof target.scrollIntoView==='function')target.scrollIntoView({behavior:'smooth',block:'start'});
-    },80);
+  const attention=window.HomepageAttention.build(state,{marketTask:window.MARKET_TASK_STATUS,syncStatus:window.UniverseAutoAdd?.status()});
+  summary.innerHTML=`今日关注 <strong data-home-attention-count>${attention.count}</strong> 项 · 总资产 <strong>${fmtMoney(estAssets||totalMv)}</strong>`;
+  main.innerHTML=`${homepageAttentionPanel(attention)}<details class="card" style="margin-top:14px"><summary class="card-title">组合分布</summary><div class="card-note">已投资 ${fmtMoney(totalMv)} · 现金/预留 ${fmt(reserve,1)}% · AI ${fmt(aiPct,1)}% · 黄金资源 ${fmt(resPct,1)}%</div><div class="dash" style="margin-top:12px"><div><div class="card-title">按主题分布</div>${bars(themeRows)}</div><div><div class="card-title">按仓位角色分布</div>${bars(roleRows)}</div></div></details>`;
+  main.querySelectorAll('[data-home-attention-action]').forEach(button=>button.addEventListener('click',()=>{
+    const action=button.dataset.homeAttentionAction,id=button.dataset.stockId;
+    if(action==='discussion')openStockDetail(id,'ai');
+    else if(action==='plan')openStockDetail(id,'plan');
+    else if(action==='technical'){
+      openStockDetail(id,'technical');
+      const dataPanel=document.querySelector('[data-technical-layer="status"]');
+      if(dataPanel){dataPanel.open=true;dataPanel.scrollIntoView({block:'start'})}
+    }
+    else if(action==='sync')window.openUniverseSyncSettings();
   }));
-  document.querySelectorAll('[data-v13-plan-refresh-start]').forEach(btn=>btn.addEventListener('click',e=>{
-    e.stopPropagation();
-    openV13PlanRefreshTool();
-  }));
-  document.querySelectorAll('[data-v13-plan-refresh-prompt]').forEach(btn=>btn.addEventListener('click',e=>{
-    e.stopPropagation();
-    openV13PlanRefreshTool(btn.dataset.v13PlanRefreshPrompt);
-    setTimeout(copyV13PlanRefreshPrompt,50);
-  }));
-  document.querySelectorAll('[data-v13-plan-refresh-import]').forEach(btn=>btn.addEventListener('click',e=>{
-    e.stopPropagation();
-    openV13PlanRefreshTool(btn.dataset.v13PlanRefreshImport);
-  }));
-  document.querySelectorAll('[data-v13-plan-center-stock]').forEach(btn=>btn.addEventListener('click',e=>{
-    e.stopPropagation();
-    openStockPlanCenter(btn.dataset.v13PlanCenterStock);
-  }));
-  document.querySelectorAll('[data-v13-plan-refresh-stock]').forEach(el=>el.addEventListener('click',()=>{
-    v13ActiveReviewReturn=null;
-    openStockDetail(el.dataset.v13PlanRefreshStock);
-    setTimeout(()=>{
-      const target=document.querySelector('[data-v13-detail-anchor="plan-current"]');
-      if(target&&typeof target.scrollIntoView==='function')target.scrollIntoView({behavior:'smooth',block:'start'});
-    },80);
-  }));
-  document.querySelectorAll('[data-v13-event-stock]').forEach(el=>el.addEventListener('click',()=>openStockDetail(el.dataset.v13EventStock)));
-  document.querySelectorAll('[data-execute-stock]').forEach(b=>b.addEventListener('click',()=>executePlan(b.dataset.executeStock,b.dataset.executePlan)));
-  document.querySelectorAll('[data-update-stock]').forEach(el=>el.addEventListener('click',()=>openStockDetail(el.dataset.updateStock)));
-  const copyCodes=document.getElementById('copyUpdateCodesBtn');
-  if(copyCodes)copyCodes.addEventListener('click',copyUpdateCodes);
-  const copyPrompt=document.getElementById('copyUpdatePromptBtn');
-  if(copyPrompt)copyPrompt.addEventListener('click',copyUpdatePrompt);
 }
 function renderTools(){
   const last=state.updatedAt?new Date(state.updatedAt).toLocaleString('zh-CN'):'—';
@@ -2430,8 +2283,6 @@ function entryTags(s){
   if(s.role)tags.push({text:s.role,cls:'role'});
   if(isOverdue(priceReferenceDate(s),7))tags.push({text:'价格待更新',cls:'sell'});
   if(!isCashRow(s)&&isOverdue(f.technicalUpdatedAt,3))tags.push({text:'技术面待更新',cls:'sell'});
-  if(s.type==='holding'&&isOverdue(f.newsUpdatedAt,30))tags.push({text:'新闻待更新',cls:'tag'});
-  if(s.type==='holding'&&isOverdue(f.financialUpdatedAt,30))tags.push({text:'财报待更新',cls:'tag'});
   const info=getPositionInfo(s,getEstimatedTotalAssets());
   if(info&&info.status==='overweight')tags.push({text:'超配复核',cls:'sell'});
   if(info&&info.status==='underweight')tags.push({text:'低配复核',cls:'buy'});

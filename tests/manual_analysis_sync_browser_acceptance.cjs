@@ -10,6 +10,8 @@ const output=path.resolve(process.argv[2]||path.join('test-results','manual-anal
       const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
       await context.route('**/*',route=>new URL(route.request().url()).pathname==='/src/vendor/supabase-client.js'?route.fulfill({contentType:'text/javascript',body:fs.readFileSync(path.join(__dirname,'fixtures/shared-auth-sdk.js'),'utf8')}):new URL(route.request().url()).origin===new URL(url).origin?route.continue():route.abort());
       await page.goto(url);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');
+      // Normal sync controls live outside the quiet homepage.
+      await page.locator('.tab[data-tab="tools"]').click();
       await page.waitForFunction(()=>UniverseAutoAdd.status().signedIn);
       assert.equal(await page.evaluate(()=>ManualAnalysisSyncCloud.role()),'receiver');
       await page.getByRole('button',{name:'自动同步设置',exact:true}).click();await page.locator(`[name=analysisSyncRole][value=${viewport.role}]`).check();await page.locator('#universeClose').click();

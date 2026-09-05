@@ -27,6 +27,8 @@ const config={projectRef:ref,url:origin,publishableKey:'sb_publishable_6bk0BQjpj
       return [origin,local].includes(url.origin)?route.continue():route.abort();
     });
     await page.goto(local);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');
+      // Normal sync controls live outside the quiet homepage.
+      await page.locator('.tab[data-tab="tools"]').click();
     await page.getByRole('button',{name:'自动同步设置',exact:true}).click();
     await page.locator('#universeEmail').fill(fixture.email);await page.locator('#universePassword').fill(fixture.password);
     await page.locator('#universeLogin').click();await page.waitForFunction(()=>UniverseAutoAdd.status().signedIn);
