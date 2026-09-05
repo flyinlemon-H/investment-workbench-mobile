@@ -100,7 +100,7 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
 
 test('Discussion User Decision V3 release cache-busts Discussion, Runtime, Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='cleanup-wave1-20260905';
+  const version='integration-hardening-supabase-sync-v1-20260905';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',

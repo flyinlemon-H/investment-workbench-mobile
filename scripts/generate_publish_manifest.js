@@ -11,6 +11,7 @@ const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
 roleByPath.set('data/supabase_config.js','public Supabase URL and publishable key only');
 roleByPath.set('src/vendor/supabase-client.js','pinned Supabase SDK with MIT license; browser Auth and add-only inserts');
+roleByPath.set('src/supabase-browser-client.js','single browser Supabase client, compatible persistent session and normalized Auth lifecycle');
 roleByPath.set('src/universe-auto-add.js','durable local-first canonical stock addition queue and standard Auth');
 roleByPath.set('src/universe-sync-ui.js','local/cloud/market status, login and scoped PC reader setup');
 roleByPath.set('src/api/ai-api.js','PC AI Bridge raw request/response transport envelope');
@@ -21,7 +22,7 @@ roleByPath.set('src/long-term-logic-workflow.js','shared Manual/API Long-Term Lo
 roleByPath.set('src/manual-analysis-sync.js','generic manual module sync envelope, SHA-256, Preview binding and confirmed apply engine');
 roleByPath.set('src/long-term-logic-sync-adapter.js','Slim Long-Term Logic module serializer, validator, business diff and canonical candidate adapter');
 roleByPath.set('src/manual-analysis-sync-cloud.js','authenticated browser RPC transport and derived analysis sync status');
-roleByPath.set('src/manual-analysis-sync-ui.js','PC publish and mobile fetch business Preview/Confirm workflow');
+roleByPath.set('src/manual-analysis-sync-ui.js','explicit browser-local analysis/receiver workflow and eligible Preview/Confirm controls');
 roleByPath.set('data/market_data_bridge.js','delivered daily market data bridge');
 roleByPath.set('data/market_task_status_bridge.js','delivered daily market task status bridge');
 roleByPath.set('src/strict-ai-json.js','shared strict AI JSON fenced transport preprocessor, parser, and post-repair diagnostics runtime');
@@ -111,8 +112,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'cleanup-wave1-20260905',
-  dataMode:'Cleanup Wave 1 removes confirmed dead browser flows and demotes recovery-only controls; Current State, Long-Term Logic, Plan, storage, Supabase, OneDrive fallback, PC Bridge and market compatibility boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'integration-hardening-supabase-sync-v1-20260905',
+  dataMode:'Integration Hardening Phase 1 shares one Supabase browser Auth session, uses an explicit browser-local analysis role, checks local entity eligibility before apply, and strictly verifies publish RPC envelopes; no schema, RLS, RPC, PC Reader, AI Bridge or CI changes; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
