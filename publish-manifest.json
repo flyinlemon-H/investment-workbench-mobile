@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "8049f1b40ccd8fa3d0ef7b98ca01d0530c7cd81d",
-  "assetVersion": "integration-hardening-supabase-sync-v1-20260905",
-  "dataMode": "Integration Hardening Phase 1 shares one Supabase browser Auth session, uses an explicit browser-local analysis role, checks local entity eligibility before apply, and strictly verifies publish RPC envelopes; no schema, RLS, RPC, PC Reader, AI Bridge or CI changes; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "2f13341b22d8d91c386560c2740f648c8c35e2e0",
+  "assetVersion": "homepage-risk-alert-v1-20260906",
+  "dataMode": "Homepage Risk Alert V1 derives current risk, meaningful Plan Runtime, relevant technical health and blocking system attention from canonical sources; no research-age tasks, automatic AI, production data writes or contract/pipeline changes; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 64389,
-      "sha256": "2b49b22a1f9cccac365443f4c0528b3fd102c5031a989ae04ac9e0f0912c880d"
+      "bytes": 63294,
+      "sha256": "f58cf912819880cd1029239d89b171bb5ee740aa2d08fe15a4be3d43862bcbaf"
     },
     {
       "path": "social_posts.json",
@@ -147,6 +147,12 @@
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
       "bytes": 53942,
       "sha256": "702e8d7833b1d68095186bbdf7dedde4339e57a7fe2e81bb5bc8e1c3a72299a9"
+    },
+    {
+      "path": "src/homepage-attention.js",
+      "role": "Read-only canonical homepage attention eligibility, source applicability, priority, root-cause deduplication and lifecycle",
+      "bytes": 13058,
+      "sha256": "11d46353cd3318839b71b002e3d87f7bf82f5bd909e10d99db5db9c378433ddc"
     },
     {
       "path": "src/import-export.js",
@@ -396,9 +402,9 @@
     },
     {
       "path": "src/ui-render.js",
-      "role": "Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces",
-      "bytes": 638083,
-      "sha256": "9cd78314c05db2e6e5014ff7cec23439e0e6f67d15983b3e11d66e62c77234a6"
+      "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
+      "bytes": 622940,
+      "sha256": "9b578240f6c376f032483331e755eca325e9994dfdf32830a85e23c9a8c2a87a"
     },
     {
       "path": "src/universe-auto-add.js",
