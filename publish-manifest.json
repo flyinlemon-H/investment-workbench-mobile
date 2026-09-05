@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "f196f4e8bd3a1391f6ba2a76f5d32a0e6b929e1a",
-  "assetVersion": "cleanup-wave1-20260905",
-  "dataMode": "Cleanup Wave 1 removes confirmed dead browser flows and demotes recovery-only controls; Current State, Long-Term Logic, Plan, storage, Supabase, OneDrive fallback, PC Bridge and market compatibility boundaries remain unchanged; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "8049f1b40ccd8fa3d0ef7b98ca01d0530c7cd81d",
+  "assetVersion": "integration-hardening-supabase-sync-v1-20260905",
+  "dataMode": "Integration Hardening Phase 1 shares one Supabase browser Auth session, uses an explicit browser-local analysis role, checks local entity eligibility before apply, and strictly verifies publish RPC envelopes; no schema, RLS, RPC, PC Reader, AI Bridge or CI changes; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 62167,
-      "sha256": "8feb2969702a1df7e9c423e4d01eb1744d7f1591538bb6c1523fccb6b6979f2f"
+      "bytes": 64389,
+      "sha256": "2b49b22a1f9cccac365443f4c0528b3fd102c5031a989ae04ac9e0f0912c880d"
     },
     {
       "path": "social_posts.json",
@@ -163,8 +163,8 @@
     {
       "path": "src/long-term-logic-sync-adapter.js",
       "role": "Slim Long-Term Logic module serializer, validator, business diff and canonical candidate adapter",
-      "bytes": 6412,
-      "sha256": "71c4a79dec52ecfe23a635e20c6f61387e0c2ba470ca0d093f432c026aa1e031"
+      "bytes": 6663,
+      "sha256": "a4965121d8f8122c107eb23de03b440be32cb2dcafdd34f444604f7888bec32c"
     },
     {
       "path": "src/long-term-logic-workflow.js",
@@ -175,20 +175,20 @@
     {
       "path": "src/manual-analysis-sync-cloud.js",
       "role": "authenticated browser RPC transport and derived analysis sync status",
-      "bytes": 3298,
-      "sha256": "c0f8674554d5326a2c9d984ebd21c0b131435961c64593841f84816f4823c3c0"
+      "bytes": 4162,
+      "sha256": "904e058a47853f5a801c339e9fbafdc53b0af7820a8601d78f94b83084ac898e"
     },
     {
       "path": "src/manual-analysis-sync-ui.js",
-      "role": "PC publish and mobile fetch business Preview/Confirm workflow",
-      "bytes": 8849,
-      "sha256": "b44c6df76479c08f21c36df80204092f61495453a998edbbaa3be7821ef5b311"
+      "role": "explicit browser-local analysis/receiver workflow and eligible Preview/Confirm controls",
+      "bytes": 9943,
+      "sha256": "e716fa6663322fef285c616516f4b38c2883159fda92a4f5bbad610bd0a6fe8e"
     },
     {
       "path": "src/manual-analysis-sync.js",
       "role": "generic manual module sync envelope, SHA-256, Preview binding and confirmed apply engine",
-      "bytes": 12295,
-      "sha256": "af22f7c0e35d5262d297b4234765508d16bf418da1c4c48376494ebed7eac3b3"
+      "bytes": 14087,
+      "sha256": "d75df1f885f8b17a5aed59b554deca59bd0bd1e97e902309f472265a38ed25fb"
     },
     {
       "path": "src/market-data-bridge.js",
@@ -377,6 +377,12 @@
       "sha256": "e2221590dc7032389aa4660e6acfc4e838071c96c96b03be8722892f698d6dc6"
     },
     {
+      "path": "src/supabase-browser-client.js",
+      "role": "single browser Supabase client, compatible persistent session and normalized Auth lifecycle",
+      "bytes": 3481,
+      "sha256": "743a69490540d8e39b7dfe27ffd0796c30ebf31c657e93c45c1b02d00bbe6df6"
+    },
+    {
       "path": "src/symbol-identity.js",
       "role": "M05B Hotfix 1 canonical symbol identity runtime",
       "bytes": 1648,
@@ -397,8 +403,8 @@
     {
       "path": "src/universe-auto-add.js",
       "role": "durable local-first canonical stock addition queue and standard Auth",
-      "bytes": 10835,
-      "sha256": "4dc6c1184ac246d0ca9189fe27305cb51e23c1c47d193ece6b19565d80a6db24"
+      "bytes": 9199,
+      "sha256": "587df9d640317a09b8c32211d21b0f75dad6fdc9f49a6291abf85dc4fb230e8b"
     },
     {
       "path": "src/universe-handoff.js",
@@ -409,8 +415,8 @@
     {
       "path": "src/universe-sync-ui.js",
       "role": "local/cloud/market status, login and scoped PC reader setup",
-      "bytes": 7161,
-      "sha256": "3625f84101876f319205d8fdde553726ff9eb703b6f15f87c8d91ccdcd5b4178"
+      "bytes": 7832,
+      "sha256": "62a53cc7c3bcfb5d58a149bfdaa847bee804e530570746c603a5299544964a02"
     },
     {
       "path": "src/v13-alpha3-services.js",
