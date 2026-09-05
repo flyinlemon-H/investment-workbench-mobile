@@ -61,6 +61,7 @@ const paths=[...new Set([
   // Custom Pages workflows do not run Jekyll; upload-pages-artifact excludes dotfiles.
   'data/supabase_config.js',
   'src/vendor/supabase-client.js',
+  'src/supabase-browser-client.js',
   'src/universe-auto-add.js',
   'src/universe-sync-ui.js',
   ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'&&file!=='src/v13-risk-engine.js'),

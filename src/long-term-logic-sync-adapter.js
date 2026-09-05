@@ -13,6 +13,7 @@
   function clone(value){return value===undefined?undefined:JSON.parse(JSON.stringify(value))}
   function canonical(value){return SymbolIdentity.canonicalSymbol(value)}
   function stockFor(state,entityKey){return state&&Array.isArray(state.stocks)?state.stocks.find(stock=>canonical(stock&&(stock.code||stock.symbol))===canonical(entityKey)):null}
+  function checkApplyEligibility(state,envelope){return stockFor(state,envelope.entityKey)?{ok:true}:{ok:false,code:'missing_local_stock',message:'本机尚未添加该股票。请先添加该股票后再获取长期逻辑。'}}
   function serialize(state,entityKey){
     const stock=stockFor(state,entityKey),logic=stock&&stock.longTermLogic;
     if(!Contract.isSlimLogic(logic))return null;
@@ -61,5 +62,5 @@
     return candidate;
   }
   function renderLabel(entityKey,state){const stock=stockFor(state,entityKey);return `${stock&&stock.name||entityKey} · 长期逻辑`}
-  return Object.freeze({moduleType,moduleSchemaVersion,PAYLOAD_FIELDS,serialize,validate,diff,sourceFingerprint,buildCandidate,renderLabel});
+  return Object.freeze({moduleType,moduleSchemaVersion,PAYLOAD_FIELDS,checkApplyEligibility,serialize,validate,diff,sourceFingerprint,buildCandidate,renderLabel});
 });

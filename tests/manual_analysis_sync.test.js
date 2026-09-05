@@ -80,7 +80,7 @@ test('device receipt failure never rolls back or falsely fails a completed canon
 
 test('Long-Term adapter is an explicit module-only allowlist and generic engine accepts a fake test adapter',async()=>{
   const payload=Adapter.serialize({stocks:[slimStock({shares:99,plans:[{id:'secret'}],currentState:{secret:true}})]},'1810.HK');assert.deepEqual(Object.keys(payload),Adapter.PAYLOAD_FIELDS);assert.equal(JSON.stringify(payload).includes('shares'),false);assert.equal(JSON.stringify(payload).includes('plans'),false);assert.equal(JSON.stringify(payload).includes('currentState'),false);
-  const fake={moduleType:'fake_module',moduleSchemaVersion:'fake-module.v1',serialize:()=>({value:'ok'}),validate:value=>({ok:value&&value.value==='ok',payload:value}),diff:()=>[],buildCandidate:state=>state,renderLabel:()=> '测试模块'};
+  const fake={checkApplyEligibility:()=>({ok:true}),moduleType:'fake_module',moduleSchemaVersion:'fake-module.v1',serialize:()=>({value:'ok'}),validate:value=>({ok:value&&value.value==='ok',payload:value}),diff:()=>[],buildCandidate:state=>state,renderLabel:()=> '测试模块'};
   const engine=Sync.createEngine({transport:memoryTransport()});engine.register(fake);assert.equal((await engine.preparePublish('fake_module','ENTITY_1',{})).status,'preview');assert.equal((await engine.preparePublish('unknown_module','ENTITY_1',{})).status,'unsupported');
 });
 

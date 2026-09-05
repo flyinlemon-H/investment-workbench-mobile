@@ -42,6 +42,7 @@ async function configurePage(page,contextLogic){
     return [new URL(local).origin,origin].includes(url.origin)?route.continue():route.abort();
   });
   await page.goto(local);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');
+  await page.evaluate(role=>ManualAnalysisSyncCloud.setRole(role),page.viewportSize().width===390?'receiver':'publisher');
   await page.evaluate(async value=>{localStorage.setItem(`universe-add-queue-${UNIVERSE_CLOUD_CONFIG.projectRef}`,JSON.stringify({schemaVersion:1,observed:['1810.HK'],lastOwner:null,items:[]}));const candidate=createValidatedCandidateSnapshot({stocks:[value],updatedAt:null});await persistCandidateSnapshot(candidate);state=candidate;detailStockId=value.id;setDetailWorkspace('longterm');renderStockDetail()},stock(contextLogic));
   await page.getByRole('button',{name:'自动同步设置',exact:true}).click();await page.locator('#universeEmail').fill(email);await page.locator('#universePassword').fill(password);await page.locator('#universeLogin').click();await page.waitForFunction(()=>UniverseAutoAdd.status().signedIn);await page.locator('#universeClose').click();
   return {errors,requests};

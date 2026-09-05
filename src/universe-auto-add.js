@@ -105,33 +105,10 @@
     return {initialize:snapshot=>observe(projection(snapshot),true),committed:snapshot=>observe(projection(snapshot),false),setUser,pump,status,flush:()=>serial};
   }
 
-  let queue=null,client=null,initialized=false,scheduled=null,initialization=null;
+  let queue=null,initialized=false,scheduled=null,initialization=null;
   function safeRefresh(){if(typeof root.renderUniverseCloudStatus==='function')root.renderUniverseCloudStatus()}
-  function configuration(){
-    const config=root.UNIVERSE_CLOUD_CONFIG;
-    if(!config||!config.projectRef||config.url!==`https://${config.projectRef}.supabase.co`||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey))throw new Error('UNIVERSE_CONFIG_INVALID');
-    return config;
-  }
-  function sdkClient(){
-    if(client)return client;
-    const config=configuration();
-    if(!root.UniverseSupabaseSdk)throw new Error('UNIVERSE_SDK_UNAVAILABLE');
-    client=root.UniverseSupabaseSdk.createClient(config.url,config.publishableKey,{
-      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:`universe-auth-${config.projectRef}`},
-      global:{fetch:async(input,init={})=>{
-        const controller=new root.AbortController(),cancel=()=>controller.abort();
-        if(init.signal){if(init.signal.aborted)cancel();else init.signal.addEventListener('abort',cancel,{once:true})}
-        const timer=root.setTimeout(cancel,15000);
-        try{return await root.fetch(input,{...init,signal:controller.signal})}
-        finally{root.clearTimeout(timer);if(init.signal)init.signal.removeEventListener('abort',cancel)}
-      }}
-    });
-    client.auth.onAuthStateChange((_event,session)=>{
-      // SDK callback must not await another Auth call (Auth lock reentrancy).
-      root.setTimeout(()=>{if(queue)void queue.setUser(session&&session.user&&session.user.id||null).then(schedule).catch(safeRefresh)},0);
-    });
-    return client;
-  }
+  function configuration(){return root.SupabaseBrowserClient.configuration()}
+  function sdkClient(){return root.SupabaseBrowserClient.getClient()}
   function schedule(){
     safeRefresh();if(scheduled!==null)return;
     scheduled=root.setTimeout(()=>{scheduled=null;if(queue)void queue.pump().then(safeRefresh).catch(safeRefresh)},300);
@@ -144,9 +121,8 @@
       lock:task=>root.navigator&&root.navigator.locks?root.navigator.locks.request(lockName,task):task(),
       online:()=>!root.navigator||root.navigator.onLine!==false,
       insert:async row=>{
-        const sdk=sdkClient(),{data,error}=await sdk.auth.getSession();
-        if(error)throw error;
-        if(!data.session||data.session.user.id!==row.user_id)throw {status:401};
+        const sdk=sdkClient(),session=await root.SupabaseBrowserClient.getSession();
+        if(!session||session.user.id!==row.user_id)throw {status:401};
         const result=await sdk.from('stock_universe_entries').upsert(row,{onConflict:'user_id,symbol',ignoreDuplicates:true});
         if(result.error)throw {...result.error,status:result.status};
       }
@@ -157,19 +133,14 @@
     root.addEventListener('storage',event=>{if(event.key===lockName)schedule()});
     // Auth/network is deliberately outside bootstrap/local persistence completion.
     void initialization.then(()=>{root.setTimeout(()=>{
-      try{void sdkClient().auth.getSession().then(({data,error})=>queue.setUser(!error&&data.session&&data.session.user.id||null)).then(schedule).catch(safeRefresh)}catch(_error){safeRefresh()}
+      try{root.SupabaseBrowserClient.onAuthStateChange((_event,session)=>queue.setUser(session?.user?.id||null).then(schedule).catch(safeRefresh))}catch(_error){safeRefresh()}
     },0)});
     return initialization;
   }
   function status(){return queue?queue.status():{state:'auth_required',pending:0,synced:0,signedIn:false}}
-  async function signIn(email,password){
-    const {error}=await sdkClient().auth.signInWithPassword({email,password});if(error)throw error;
-    schedule();return true;
-  }
-  async function signUp(email,password){
-    const {data,error}=await sdkClient().auth.signUp({email,password,options:{emailRedirectTo:new URL('./',root.location.href).href}});if(error)throw error;return Boolean(data.session);
-  }
-  async function signOut(){const {error}=await sdkClient().auth.signOut({scope:'local'});if(error)throw error;await queue.setUser(null);safeRefresh()}
+  async function signIn(email,password){await root.SupabaseBrowserClient.signIn(email,password);return true}
+  async function signUp(email,password){return Boolean((await root.SupabaseBrowserClient.signUp(email,password)).session)}
+  async function signOut(){await root.SupabaseBrowserClient.signOut()}
   async function issueReader(){
     const bytes=new Uint8Array(32);root.crypto.getRandomValues(bytes);
     const token=[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -179,7 +150,7 @@
   }
   async function readers(){const {data,error}=await sdkClient().rpc('list_stock_universe_readers');if(error)throw error;return data}
   async function revokeReader(id){const {error}=await sdkClient().rpc('revoke_stock_universe_reader',{p_id:id});if(error)throw error}
-  return {createQueue,projection,errorState,initialize,status,signIn,signUp,signOut,issueReader,readers,revokeReader,
-    retry:async()=>{if(queue){try{const {data,error}=await sdkClient().auth.getSession();await queue.setUser(!error&&data.session&&data.session.user.id||null)}catch(_error){}return queue.pump()}},
+  return {createQueue,projection,errorState,initialize,status,getClient:sdkClient,signIn,signUp,signOut,issueReader,readers,revokeReader,
+    retry:async()=>{if(queue){try{const session=await root.SupabaseBrowserClient.getSession();await queue.setUser(session?.user?.id||null)}catch(_error){}return queue.pump()}},
     flush:()=>queue&&queue.flush()};
 });

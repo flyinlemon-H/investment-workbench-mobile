@@ -64,7 +64,7 @@
     if(!transport)throw new Error('SYNC_TRANSPORT_REQUIRED');
     function register(adapter){
       if(!adapter||!MODULE_PATTERN.test(String(adapter.moduleType||''))||adapters.has(adapter.moduleType))throw new Error('SYNC_ADAPTER_INVALID');
-      for(const method of ['serialize','validate','diff','buildCandidate','renderLabel'])if(typeof adapter[method]!=='function')throw new Error('SYNC_ADAPTER_INVALID');
+      for(const method of ['serialize','validate','diff','buildCandidate','renderLabel','checkApplyEligibility'])if(typeof adapter[method]!=='function')throw new Error('SYNC_ADAPTER_INVALID');
       adapters.set(adapter.moduleType,adapter);return adapter;
     }
     function adapterFor(moduleType){return adapters.get(moduleType)||null}
@@ -90,8 +90,17 @@
       const local=await localSnapshot(adapter,state,preview.entityKey);
       if(local.payloadHash!==preview.localHash)return {status:'stale_local',writes:0,message:'本地长期逻辑已变化，请重新预览。'};
       const result=await transport.publish({moduleType:preview.moduleType,entityKey:preview.entityKey,moduleSchemaVersion:preview.moduleSchemaVersion,payloadHash:preview.localHash,payload:clone(preview.payload),expectedRevision:preview.expectedCloudRevision,expectedHash:preview.expectedCloudHash});
-      if(!result||result.status==='conflict')return {status:'stale_cloud',writes:0,message:'云端版本已变化，请重新预览。'};
-      return {status:result.status==='no_change'?'no_change':'published',writes:result.status==='no_change'?0:1,envelope:normalizeEnvelope(result.module||result.envelope||result)};
+      if(result&&result.status==='conflict')return {status:'stale_cloud',writes:0,message:'云端版本已变化，请重新预览。'};
+      const failure={status:'verification_failed',writes:0,cloudCommitUnknown:true,message:'同步结果校验失败，尚未确认同步成功。云端可能已保存，请重新获取或重试。'};
+      if(!object(result)||!['published','no_change'].includes(result.status)||!exactFields(result,['status','module'])||!object(result.module)||!exactFields(result.module,ENVELOPE_FIELDS))return failure;
+      const checked=await validateEnvelope(result.module);
+      if(!checked.ok)return failure;
+      const envelope=checked.envelope;
+      if(typeof result.module.revision!=='number'||typeof envelope.publishedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(envelope.publishedAt)||envelope.moduleType!==preview.moduleType||envelope.entityKey!==preview.entityKey||envelope.moduleSchemaVersion!==preview.moduleSchemaVersion||envelope.payloadHash!==local.payloadHash||stable(envelope.payload)!==stable(local.payload))return failure;
+      // no_change runs before CAS on the server: an identical concurrent publish or
+      // retry may return a later revision. It must never move behind the preview.
+      if(result.status==='published'?envelope.revision!==preview.expectedCloudRevision+1:envelope.revision<Math.max(1,preview.expectedCloudRevision+(preview.expectedCloudHash===local.payloadHash?0:1)))return failure;
+      return {status:result.status,writes:result.status==='published'?1:0,envelope};
     }
     async function fetchUpdates(state){
       const rows=await transport.listCurrent(),updates=[],unsupported=[];
@@ -102,7 +111,7 @@
         if(envelope.moduleSchemaVersion!==adapter.moduleSchemaVersion){unsupported.push({envelope,message:'当前版本暂不支持此更新'});continue}
         const valid=adapter.validate(envelope.payload);if(!valid||!valid.ok){unsupported.push({envelope,message:valid&&valid.message||'云端更新内容无效'});continue}
         const local=await localSnapshot(adapter,state,envelope.entityKey);
-        if(local.payloadHash!==envelope.payloadHash)updates.push(Object.freeze({envelope:clone(envelope),label:adapter.renderLabel(envelope.entityKey,state),localHash:local.payloadHash}));
+        if(local.payloadHash!==envelope.payloadHash)updates.push(Object.freeze({envelope:clone(envelope),label:adapter.renderLabel(envelope.entityKey,state),localHash:local.payloadHash,eligibility:adapter.checkApplyEligibility(state,envelope)}));
       }
       return {status:'completed',writes:0,updates,unsupported};
     }
@@ -111,6 +120,7 @@
       const envelope=checked.envelope,adapter=adapterFor(envelope.moduleType);
       if(!adapter||envelope.moduleSchemaVersion!==adapter.moduleSchemaVersion)return {status:'unsupported',writes:0,message:'当前版本暂不支持此更新。'};
       const valid=adapter.validate(envelope.payload);if(!valid||!valid.ok)return {status:'invalid_payload',writes:0,message:valid&&valid.message||'云端更新内容无效。'};
+      const eligibility=adapter.checkApplyEligibility(state,envelope);if(!eligibility||!eligibility.ok)return {status:'unavailable',writes:0,message:eligibility&&eligibility.message||'本机暂不能应用此更新。'};
       const fingerprint=typeof adapter.sourceFingerprint==='function'?adapter.sourceFingerprint(state,envelope.entityKey):(await localSnapshot(adapter,state,envelope.entityKey)).payloadHash;
       return Object.freeze({status:'preview',writes:0,direction:'apply',envelope:clone(envelope),sourceFingerprint:fingerprint,diff:adapter.diff(adapter.serialize(state,envelope.entityKey),envelope.payload),label:adapter.renderLabel(envelope.entityKey,state)});
     }
@@ -119,6 +129,7 @@
       const envelope=preview.envelope,adapter=adapterFor(envelope.moduleType);if(!adapter)return {status:'unsupported',writes:0};
       const exact=await transport.getCurrent(envelope.moduleType,envelope.entityKey),checked=exact?await validateEnvelope(exact):null;
       if(!checked||!checked.ok||checked.envelope.revision!==envelope.revision||checked.envelope.payloadHash!==envelope.payloadHash)return {status:'stale_cloud',writes:0,message:'云端版本已变化，请获取最新版本。'};
+      const eligibility=adapter.checkApplyEligibility(state,envelope);if(!eligibility||!eligibility.ok)return {status:'unavailable',writes:0,message:eligibility&&eligibility.message||'本机暂不能应用此更新。'};
       const fingerprint=typeof adapter.sourceFingerprint==='function'?adapter.sourceFingerprint(state,envelope.entityKey):(await localSnapshot(adapter,state,envelope.entityKey)).payloadHash;
       if(fingerprint!==preview.sourceFingerprint)return {status:'stale_local',writes:0,message:'本机数据已变化，请重新预览。'};
       let candidate;try{candidate=adapter.buildCandidate(state,envelope)}catch(error){return {status:'invalid_candidate',writes:0,error,message:error.message}}
