@@ -98,9 +98,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Discussion User Decision V3 release cache-busts Discussion, Runtime, Auth and preserved Workbench modules',()=>{
+test('Homepage Risk Alert V1 release cache-busts attention, Discussion, Runtime, Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='integration-hardening-supabase-sync-v1-20260905';
+  const version='homepage-risk-alert-v1-20260906';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
@@ -141,6 +141,7 @@ test('Discussion User Decision V3 release cache-busts Discussion, Runtime, Auth 
     'src/batch-technical-review.js',
     'src/multi-stock-analysis.js',
     'src/portfolio-review-context.js',
+    'src/homepage-attention.js',
     'src/portfolio-review-contract.js',
     'src/decision-compression-context.js',
     'src/decision-compression-contract.js',

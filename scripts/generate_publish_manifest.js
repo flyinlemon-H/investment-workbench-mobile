@@ -32,7 +32,8 @@ roleByPath.set('src/symbol-identity.js','M05B Hotfix 1 canonical symbol identity
 roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status and Phase 1 handoff runtime');
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
-roleByPath.set('src/ui-render.js','Discussion User Decision V3 mobile-first controls, position-centric conclusion, supporting evidence and preserved Workbench interfaces');
+roleByPath.set('src/ui-render.js','Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces');
+roleByPath.set('src/homepage-attention.js','Read-only canonical homepage attention eligibility, source applicability, priority, root-cause deduplication and lifecycle');
 roleByPath.set('src/app.js','browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
@@ -80,6 +81,7 @@ const paths=[...new Set([
   'src/universe-handoff.js',
   'src/technical-view-ux.js',
   'src/portfolio-review-context.js',
+  'src/homepage-attention.js',
   'src/portfolio-review-contract.js',
   'src/decision-compression-context.js',
   'src/decision-compression-contract.js',
@@ -112,8 +114,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'integration-hardening-supabase-sync-v1-20260905',
-  dataMode:'Integration Hardening Phase 1 shares one Supabase browser Auth session, uses an explicit browser-local analysis role, checks local entity eligibility before apply, and strictly verifies publish RPC envelopes; no schema, RLS, RPC, PC Reader, AI Bridge or CI changes; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'homepage-risk-alert-v1-20260906',
+  dataMode:'Homepage Risk Alert V1 derives current risk, meaningful Plan Runtime, relevant technical health and blocking system attention from canonical sources; no research-age tasks, automatic AI, production data writes or contract/pipeline changes; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
