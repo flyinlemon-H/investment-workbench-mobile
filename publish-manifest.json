@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "2f13341b22d8d91c386560c2740f648c8c35e2e0",
-  "assetVersion": "homepage-risk-alert-v1-20260906",
-  "dataMode": "Homepage Risk Alert V1 derives current risk, meaningful Plan Runtime, relevant technical health and blocking system attention from canonical sources; no research-age tasks, automatic AI, production data writes or contract/pipeline changes; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "286b6c7a2c7f48f4f2899f9e0d28848927381d65",
+  "assetVersion": "discussion-data-readiness-v1-20260906",
+  "dataMode": "Discussion Data Readiness V1 derives technical and optional research context, same-stock local return navigation and stale-session protection; no schema change, homepage age tasks, automatic AI, production cloud writes or market pipeline changes; only manifest-allowlisted public browser assets are delivered",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 63294,
-      "sha256": "f58cf912819880cd1029239d89b171bb5ee740aa2d08fe15a4be3d43862bcbaf"
+      "bytes": 64687,
+      "sha256": "5dea157a7959730f909cba456e020be7920f9bb449e7d43b0feb7404629a8ad5"
     },
     {
       "path": "social_posts.json",
@@ -131,6 +131,12 @@
       "sha256": "a316ed13b9d99921dcbe8ca9bd65798cba1ef8fc5aa628912b1238b7397c4389"
     },
     {
+      "path": "src/discussion-data-readiness.js",
+      "role": "Derived Discussion evidence readiness and session fingerprint; no persistent readiness or navigation data",
+      "bytes": 8201,
+      "sha256": "e9036e2f7a1268c430aeadc3fac723879ef49f0c76e5edd3ae99dd2226502bb3"
+    },
+    {
       "path": "src/discussion-plan-workflow.js",
       "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
       "bytes": 40818,
@@ -139,14 +145,14 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
-      "bytes": 27344,
-      "sha256": "5936646ca5562be7841fe44b94a8c00ba5db53092b51e49b5951ef80bad1f8c6"
+      "bytes": 27738,
+      "sha256": "abecd281ddfa0fac423aadd927d93d825a8364777293c2e28680b24fd358da46"
     },
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 53942,
-      "sha256": "702e8d7833b1d68095186bbdf7dedde4339e57a7fe2e81bb5bc8e1c3a72299a9"
+      "bytes": 54969,
+      "sha256": "9f5a13a4476aa06570d540861b35c770e4d7aa213294069a250658eb3f790a89"
     },
     {
       "path": "src/homepage-attention.js",
@@ -403,8 +409,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 622940,
-      "sha256": "9b578240f6c376f032483331e755eca325e9994dfdf32830a85e23c9a8c2a87a"
+      "bytes": 627457,
+      "sha256": "862a19db1fa152e63c71a68c5c00712ee263a6c06d882ff3e7aa74f5fc6620c1"
     },
     {
       "path": "src/universe-auto-add.js",
