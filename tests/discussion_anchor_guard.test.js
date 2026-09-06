@@ -7,8 +7,9 @@ const bar={date:'2026-09-02',close:20,is_complete_bar:true,adjustment:'qfq',pric
 const stock=()=>({id:'anchor-fixture',code:'600487.SS',name:'隔离锚点测试',type:'holding',shares:100,avgCost:18,plans:[],priceHistory:[{...bar}]});
 const parse=prepared=>Contract.process(fixture.replace('__SOURCE_DISCUSSION_VERSION__',prepared.sourceDiscussionVersion),{expectedSymbol:'600487.SS',sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:100,hasActivePlan:false,technicalDataStatus:prepared.context.currentFacts.technical.dataStatus,prepared});
 function uiContext(source){
-  const sandbox={window:{DiscussionWorkbench:Workbench,DiscussionStateContract:Contract},discussionPreparedContexts:new Map(),discussionStockKey:()=>source.code,discussionOptions:()=>({}),Error};
+  const sandbox={window:{DiscussionWorkbench:Workbench,DiscussionStateContract:Contract,DiscussionDataReadiness:require('../src/discussion-data-readiness.js')},discussionPreparedContexts:new Map(),discussionStockKey:()=>source.code,discussionOptions:()=>({}),Error};
   vm.createContext(sandbox);
+  vm.runInContext(ui.slice(ui.indexOf('function discussionContextChanged'),ui.indexOf('function navigateDiscussionWorkspace')),sandbox);
   vm.runInContext(ui.slice(ui.indexOf('function ensureDiscussionArchiveContext'),ui.indexOf('function discussionPromptSummary')),sandbox);
   return sandbox;
 }
@@ -67,6 +68,7 @@ test('failed storage attempts preserve canonical current/history and keep stale-
 test('save errors are localized and focus/scroll status without exposing implementation errors',()=>{
   const calls=[],region={textContent:'',scrollIntoView:()=>calls.push('scroll'),focus:()=>calls.push('focus')};
   const sandbox={document:{getElementById:()=>region},alert:()=>assert.fail('region exists')};vm.createContext(sandbox);
+  vm.runInContext(ui.slice(ui.indexOf('function discussionContextChanged'),ui.indexOf('function navigateDiscussionWorkspace')),sandbox);
   vm.runInContext(ui.slice(ui.indexOf('function translateDiscussionImportFailureMessage'),ui.indexOf('function previewDiscussionImport')),sandbox);
   for(const error of [new Error('technical anchor mismatch; technical anchor bar invalid'),{code:'anchor_not_ready'},new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化'),{type:'stale_tab'},new Error('private internal details')]){
     const message=sandbox.translateDiscussionImportFailureMessage(error);sandbox.showDiscussionImportFailure(message);

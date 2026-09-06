@@ -49,6 +49,7 @@ roleByPath.set('src/plan-review.js','Batch Plan Review schema, strict contract/p
 roleByPath.set('src/plan-review-ui.js','Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow');
 roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft application runtime');
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
+roleByPath.set('src/discussion-data-readiness.js','Derived Discussion evidence readiness and session fingerprint; no persistent readiness or navigation data');
 roleByPath.set('src/discussion-workbench.js','Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs');
 roleByPath.set('src/discussion-state-contract.js','Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards');
 roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
@@ -94,6 +95,7 @@ const paths=[...new Set([
   'src/plan-review.js',
   'src/plan-review-ui.js',
   'src/clipboard.js',
+  'src/discussion-data-readiness.js',
   'src/discussion-workbench.js',
   'src/discussion-state-contract.js',
   'src/discussion-plan-workflow.js'

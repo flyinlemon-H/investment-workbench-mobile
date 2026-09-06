@@ -27,6 +27,7 @@ const longTermAiStates=new Map();
 let discussionImportPreview=null;
 let discussionPlanImportPreview=null;
 let discussionPromptReturnFocus=null;
+let discussionResearchReturn=null;
 const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm']);
 const DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1';
 function normalizeDetailWorkspace(value){return DETAIL_WORKSPACE_TABS.includes(String(value||''))?String(value):'plan'}
@@ -4424,6 +4425,7 @@ function renderAnalysisOverview(){
 }
 
 function openStockDetail(id,workspace=''){
+  discussionResearchReturn=null;
   detailStockId=id;
   detailSubView='';
   setDetailWorkspace(workspace||loadDetailWorkspacePreference(),{persist:Boolean(workspace)});
@@ -4435,6 +4437,7 @@ function openStockPlanCenter(id){
   render();
 }
 function closeStockDetail(){
+  discussionResearchReturn=null;
   detailStockId=null;
   detailSubView='';
   render();
@@ -4746,9 +4749,38 @@ async function startOperationEntry(stock){const module=window.OperationEntry,ctx
 async function abandonOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;if(!confirm('确认放弃本次录入草案？正式持仓不会变化。'))return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail()}
 function discussionStockKey(stock){return window.DiscussionWorkbench?window.DiscussionWorkbench.canonical(stock):String(stock&&stock.code||stock&&stock.symbol||'')}
 function discussionOptions(){return {state,allStocks:state.stocks,planReviewStore:state.planReviews,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'}}
+function discussionContextChanged(stock){
+  const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
+  return window.DiscussionDataReadiness&&window.DiscussionDataReadiness.sessionChanged(prepared,window.DiscussionWorkbench.buildContext(stock,discussionOptions()));
+}
+function requireCurrentDiscussionContext(stock){
+  if(discussionContextChanged(stock))throw new Error('资料已更新，请重新生成本次讨论上下文。请重新开始讨论并整理结论。');
+}
+function navigateDiscussionWorkspace(stock,workspace){
+  const allowed=['news','fundamental','longterm','valuation','technical','plan'];
+  if(detailWorkspace==='ai'&&allowed.includes(workspace))discussionResearchReturn={symbol:discussionStockKey(stock),evidence:window.DiscussionDataReadiness.evidenceSnapshot(stock),plans:window.DiscussionWorkbench.buildContext(stock,discussionOptions()).protectedHash};
+  else if(!allowed.includes(workspace)&&workspace!=='ai')discussionResearchReturn=null;
+  setDetailWorkspace(workspace);renderStockDetail();
+}
+function returnToDiscussion(stock){
+  if(!discussionResearchReturn||discussionResearchReturn.symbol!==discussionStockKey(stock))return;
+  discussionResearchReturn=null;setDetailWorkspace('ai');renderStockDetail();
+}
+function discussionReturnBanner(stock,workspace){
+  if(workspace==='ai'||!discussionResearchReturn||discussionResearchReturn.symbol!==discussionStockKey(stock))return '';
+  const source=window.DiscussionDataReadiness.evidenceSnapshot(stock),before=discussionResearchReturn.evidence,stable=window.DiscussionWorkbench.stable;
+  const keys={news:['news','shortTermSentiment'],fundamental:['financialData','financialReview'],valuation:['valuationData','valuationReview'],longterm:['longTermLogic','longTermLogicAudit','thesis']},labels={news:'新闻',fundamental:'基本面',valuation:'估值',longterm:'长期逻辑',plan:'计划'};
+  const changed=(keys[workspace]||[]).some(key=>stable(source[key])!==stable(before[key]))||(workspace==='plan'&&discussionResearchReturn.plans!==window.DiscussionWorkbench.buildContext(stock,discussionOptions()).protectedHash);
+  return `<div class="discussion-return" role="status"><span>${changed?esc(labels[workspace]+'已更新'):'查看完成后可返回同一股票讨论'}</span><button class="btn ghost small" data-detail-action="return-to-discussion" type="button">返回讨论</button></div>`;
+}
+function discussionReadinessPanel(stock,runtime){
+  const model=runtime.context.dataReadiness;if(!model)return '';
+  const technical=model.technical,changed=discussionContextChanged(stock);
+  return `<div class="discussion-readiness"><div class="discussion-technical-readiness ${technical.ready?'':'is-limited'}"><span>${esc(technical.label)}</span>${technical.ready?'':`<button class="link-btn" data-workspace="technical" type="button">${esc(technical.actionLabel)}</button>`}</div>${changed?'<div class="discussion-context-stale" role="status">资料已更新，请重新生成本次讨论上下文。<button class="link-btn" data-detail-action="start-stock-discussion" type="button">重新开始讨论</button></div>':''}<details class="discussion-supporting-data"><summary>资料 · 查看资料</summary><div class="discussion-soft-rows">${Object.keys(window.DiscussionDataReadiness.MODULES).map(key=>`<div><span>${esc(model[key].label)}</span><button class="link-btn" data-workspace="${esc(model[key].workspace)}" type="button">查看${esc(window.DiscussionDataReadiness.MODULES[key].label)}</button></div>`).join('')}</div><div class="card-note">资料是否需要补充，取决于本次问题。</div><div class="card-note">${esc(technical.actionNote)}</div></details></div>`;
+}
 function startStockDiscussion(stock){
   if(!window.DiscussionWorkbench)return alert('讨论工作台模块未加载。');
-  try{const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);openDiscussionPromptDialog(stock,'discussion')}
+  try{const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);document.querySelector('.discussion-context-stale')?.remove();openDiscussionPromptDialog(stock,'discussion')}
   catch(error){alert(`无法开始讨论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionArchive(stock){
@@ -4762,6 +4794,7 @@ function prepareDiscussionPlan(stock){
 }
 function ensureDiscussionArchiveContext(stock){
   if(!window.DiscussionWorkbench)throw new Error('讨论工作台模块未加载。');
+  requireCurrentDiscussionContext(stock);
   const key=discussionStockKey(stock);let prepared=discussionPreparedContexts.get(key);
   if(!prepared)prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());
   const readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(prepared);
@@ -4810,6 +4843,7 @@ function closeDiscussionPromptDialog(){
 }
 async function copyDiscussionPrepared(){
   const dialog=document.getElementById('discussionPromptDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),kind=dialog&&dialog.dataset.kind,prepared=stock&&(kind==='plan'?discussionPlanPreparedContexts.get(discussionStockKey(stock)):discussionPreparedContexts.get(discussionStockKey(stock)));
+  if(stock&&kind!=='plan'&&discussionContextChanged(stock)){document.getElementById('discussionPromptFeedback').textContent='资料已更新，请重新生成本次讨论上下文。';document.getElementById('discussionPreparedPrompt').value='';return;}
   const payload=kind==='archive'&&prepared&&prepared.archive?prepared.archive:prepared;
   if(!payload||!payload.request)return;
   const field=document.getElementById('discussionPreparedPrompt'),details=document.getElementById('discussionPromptDetails'),feedback=document.getElementById('discussionPromptFeedback'),button=document.getElementById('discussionPromptCopyBtn');
@@ -4893,6 +4927,7 @@ function showDiscussionImportFailure(message){
 function previewDiscussionImport(){
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock)),message=document.getElementById('discussionImportMessage'),preview=document.getElementById('discussionImportPreview'),confirmButton=document.getElementById('discussionImportConfirmBtn');
   if(!stock||!prepared){message.textContent='本次讨论上下文已丢失，请关闭后重新开始讨论。';confirmButton.disabled=true;return}
+  if(discussionContextChanged(stock)){discussionImportPreview=null;confirmButton.disabled=true;showDiscussionImportFailure('资料已更新，请重新生成本次讨论上下文。');return;}
   const facts=prepared.context&&prepared.context.currentFacts||{},holding=facts.holding||{},plans=Array.isArray(facts.plans)?facts.plans:[],technical=facts.technical||{},marketRisk=facts.marketRisk||{},result=window.DiscussionStateContract.process(document.getElementById('discussionImportText').value,{expectedSymbol:discussionStockKey(stock),sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:holding.shares,hasActivePlan:plans.length>0,technicalDataStatus:technical.dataStatus,marketRiskAvailable:marketRisk.status&&marketRisk.status!=='unavailable',programProvesFullPlanConditions:false,prepared});
   discussionImportPreview=result;
   if(!result.ok){message.textContent=result.message;preview.innerHTML='';confirmButton.disabled=true;return}
@@ -4947,7 +4982,7 @@ async function confirmDiscussionPlanImport(){
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
   const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(runtime),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口',blocking=!readiness.ready;
-  const warning=blocking?`<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>${esc(readiness.message)}</span></div>`:'',hero=`<section class="card discussion-control-card"><div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button><button class="btn ghost small" data-workspace="plan" type="button">转到计划中心</button></div><details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></details></section>`,decision=current?discussionStateCard(current,'当前结论',stock):'';
+  const warning=blocking?`<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>缺少完整日K技术锚点。讨论可继续；补齐行情后重新开始讨论，才能保存。</span></div>`:'',hero=`<section class="card discussion-control-card"><div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button><button class="btn ghost small" data-workspace="plan" type="button">转到计划中心</button></div>${discussionReadinessPanel(stock,runtime)}<details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></details></section>`,decision=current?discussionStateCard(current,'当前结论',stock):'';
   return `<div class="discussion-workbench">${hero}${decision}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
@@ -4978,7 +5013,7 @@ function stockWorkspaceTabs(stock){
     return `<button class="workspace-tab${selected?' active':''}" id="workspace-tab-${esc(item.key)}" role="tab" type="button" data-workspace-tab="${esc(item.key)}" aria-selected="${selected?'true':'false'}" aria-controls="workspace-panel" tabindex="${selected?'0':'-1'}">${esc(item.label)}</button>`;
   }).join('');
   const anchor=`workspace-${active}`;
-  return `<div class="workspace-tabs-shell"><div class="workspace-tablist" role="tablist" aria-label="标的工作区">${tabs}</div><section class="workspace-tabpanel" id="workspace-panel" role="tabpanel" aria-labelledby="workspace-tab-${esc(active)}" data-workspace-section="${esc(active)}" data-v13-detail-anchor="${esc(anchor)}">${v13TargetReviewReturnBanner(stock,anchor)}${activeWorkspacePanel(stock,active)}</section></div>`;
+  return `<div class="workspace-tabs-shell"><div class="workspace-tablist" role="tablist" aria-label="标的工作区">${tabs}</div><section class="workspace-tabpanel" id="workspace-panel" role="tabpanel" aria-labelledby="workspace-tab-${esc(active)}" data-workspace-section="${esc(active)}" data-v13-detail-anchor="${esc(anchor)}">${v13TargetReviewReturnBanner(stock,anchor)}${discussionReturnBanner(stock,active)}${activeWorkspacePanel(stock,active)}</section></div>`;
 }
 function planListHtml(plans,type,cp){
   const arr=v13DisplayActivePlans(plans).filter(p=>v13PlanDisplayCategory(p)===type).sort((a,b)=>Number(b.triggerPrice||0)-Number(a.triggerPrice||0));
@@ -7029,6 +7064,7 @@ function handleDetailAction(action,stock){
   if(action==='open-plan-refresh'&&s)openV13PlanRefreshTool(s.id);
   if(action==='long-logic')openLongLogicModal();
   if(action==='copy-ai-discussion-prompt')copyAiDiscussionPrompt();
+  if(action==='return-to-discussion'&&s)returnToDiscussion(s);
   if(action==='start-stock-discussion'&&s)startStockDiscussion(s);
   if(action==='prepare-discussion-archive'&&s)prepareDiscussionArchive(s);
   if(action==='import-discussion-state'&&s)openDiscussionImportDialog(s);
@@ -7248,14 +7284,12 @@ function bindStockDetailActions(stock){
   mainEl.querySelectorAll('[data-workspace]').forEach(btn=>btn.addEventListener('click',e=>{
     e.preventDefault();
     e.stopPropagation();
-    setDetailWorkspace(btn.dataset.workspace||'plan');
-    renderStockDetail();
+    navigateDiscussionWorkspace(stock,btn.dataset.workspace||'plan');
   }));
   mainEl.querySelectorAll('[data-workspace-tab]').forEach(btn=>{
     btn.addEventListener('click',e=>{
       e.preventDefault();
-      setDetailWorkspace(btn.dataset.workspaceTab||'plan');
-      renderStockDetail();
+      navigateDiscussionWorkspace(stock,btn.dataset.workspaceTab||'plan');
       const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
       if(activeTab)activeTab.focus({preventScroll:true});
     });
@@ -7265,8 +7299,7 @@ function bindStockDetailActions(stock){
       const tabs=DETAIL_WORKSPACE_META.map(item=>item.key);
       const current=tabs.indexOf(normalizeDetailWorkspace(btn.dataset.workspaceTab));
       const next=e.key==='Home'?0:(e.key==='End'?tabs.length-1:(current+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length);
-      setDetailWorkspace(tabs[next]);
-      renderStockDetail();
+      navigateDiscussionWorkspace(stock,tabs[next]);
       const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
       if(activeTab)activeTab.focus({preventScroll:true});
     });

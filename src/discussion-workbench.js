@@ -1,11 +1,12 @@
 (function(root,factory){
   const api=factory(
     typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity,
-    typeof module==='object'&&module.exports?require('./plan-v2.js'):root&&root.PlanV2
+    typeof module==='object'&&module.exports?require('./plan-v2.js'):root&&root.PlanV2,
+    ()=>typeof module==='object'&&module.exports?require('./discussion-data-readiness.js'):root&&root.DiscussionDataReadiness
   );
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DiscussionWorkbench=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,PlanV2){
+})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,PlanV2,getReadiness){
   'use strict';
 
   const STORE_SCHEMA_VERSION='stock-discussion.store.v1';
@@ -322,11 +323,13 @@
     const runtimeStore=object(options.state&&options.state.planRuntimeStates&&options.state.planRuntimeStates.byPlanId),planRuntime=activePlans(stock).map(plan=>runtimeStore[text(plan&&plan.id)]).filter(Boolean).map(item=>({planId:text(item.planId),phase:text(item.phase),runtimeRevision:Number(item.runtimeRevision)||0,summary:text(item.summary),confidence:text(item.confidence),sourceCurrentStateId:text(item.sourceCurrentStateId),sourceDiscussionVersion:text(item.sourceDiscussionVersion)}));
     const suppliedMarket=object(options.marketRiskContext||stock&&stock.discussionMarketRisk),marketRisk=Object.keys(suppliedMarket).length?{status:text(suppliedMarket.status)||'unclear',summary:text(suppliedMarket.summary),source:text(suppliedMarket.source)||'user_provided'}:{status:'unavailable',summary:'当前没有可用的大盘风险判断，不得自行推断。',source:'none'};
     const protectedSnapshot={symbol,technicalAnchor:technical.anchorBar,holding:{shares:holding.shares,avgCost:holding.avgCost,role:holding.role,type:holding.type},plans:currentRefs.plans,planReviews:currentRefs.planReviews,planRuntime,marketRisk,longTermLogic:currentRefs.longTermLogic};
-    const protectedHash=`discussionctx_${hash(protectedSnapshot)}`,sourceDiscussionVersion=`discussion_v3_${hash({protectedSnapshot,currentStateId:current&&current.stateId||null})}`;
+    const protectedHash=`discussionctx_${hash(protectedSnapshot)}`,sourceDiscussionVersion=`discussion_v3_${hash({protectedSnapshot,currentStateId:current&&current.stateId||null,evidenceHash:getReadiness()?getReadiness().fingerprint(stock):null,technicalReadiness:getReadiness()?getReadiness().technical(stock,options):null})}`;
     const technicalStatus=text(stock&&stock.technicalData&&stock.technicalData.technicalDataStatus)||'unavailable',limitations=['实际券商持仓、成交和订单具有最终权威。','当前目标仓位尚未确认，不做精确仓位建议。'];
     if(technicalStatus!=='fresh')limitations.push('当前技术资料未标记为较新，只能在有限覆盖下谨慎讨论。');
     const context={schemaVersion:CONTEXT_SCHEMA_VERSION,symbol,name:text(stock&&stock.name),mode:current?'continuation':'bootstrap',sourceDiscussionVersion,currentState:compactCurrentState(current,freshness),continuity:{status:freshness.status,reason:freshness.reason,barMode:increment.mode,barMessage:increment.message,warnings:increment.warnings},changes,currentFacts:{holding,allocation:{status:'unconfirmed',message:'当前目标仓位尚未确认'},technical:{technicalAsOf:technical.anchorBar.date,latestCompleteBar:technical.anchorBar.date,dataStatus:technicalStatus,snapshot:technical,bars:increment.bars},plans:activePlans(stock).map(compactPlan),planReviews:currentRefs.planReviews.map(review=>({...review,statusText:review.freshness==='stale'?'计划变更后尚未重新复核':(review.freshness==='current'?'计划复核与当前计划一致':'尚未保存计划复核')})),planRuntime,marketRisk,modules},limitations:limitations.concat(increment.warnings).slice(0,8)};
-    return {context,protectedSnapshot,protectedHash,sourceDiscussionVersion,references:currentRefs,technicalSnapshot:technical,metrics:null};
+    const readiness=getReadiness();
+    if(readiness)context.dataReadiness=readiness.build(stock,options);
+    return {context,protectedSnapshot,protectedHash,sourceDiscussionVersion,evidenceHash:readiness?readiness.fingerprint(stock):undefined,references:currentRefs,technicalSnapshot:technical,metrics:null};
   }
   function buildDiscussionRequest(stock,options={}){
     const prepared=options.prepared||buildContext(stock,options),context=prepared.context;
@@ -343,6 +346,7 @@
       `如需判断今天盘中强弱，请结合用户随后提供的分时截图；程序当前只提供截至 ${context.currentFacts.technical.technicalAsOf||'尚未确认日期'} 的完整日K事实。`,
       '基于上次已确认状态和之后新增事实，继续讨论这只股票。先识别哪些旧结论仍成立、哪些发生变化，再结合用户随后提供的分时/截图回答问题。不要自动生成正式存档，除非用户明确要求整理结论。',
       '',
+      getReadiness()?getReadiness().RULES:'',
       '程序生成的连续讨论上下文：',JSON.stringify(publicContext,null,2)
     ].join('\n');
     return {...prepared,request,metrics:requestMetrics(request)};
@@ -364,6 +368,8 @@
       'symbol 与 sourceDiscussionVersion 是 allowlist 内的程序绑定字段，必须原样返回；technicalDataStatus 不在 allowlist 中，不得返回。',
       `程序当前 technicalDataStatus: ${technicalDataStatus}。technicalDataStatus 是程序拥有的输入上下文，只用于判断 confidence，不得输出到 currentState JSON。`,
       confidenceRule,
+      '软资料较旧或缺失不自动要求更新；只在本次问题实质依赖且证据不足时建议补充最少必要资料，禁止泛化更新全部模块。缺失证据不得编造，只限制依赖该资料的判断。userDecision 保持简短，不写资料清单。dataReadiness 不得写入 currentState。',
+      prepared.context.dataReadiness&&!prepared.context.dataReadiness.technical.ready?'当前完整日K或技术快照未就绪；当前技术结论只能条件化，confidence 不得为 high。':'',
       '输入/输出边界示例：上下文 technicalDataStatus: stale 时，正确输出保留 "confidence":"medium" 且不含 technicalDataStatus；错误输出含 "technicalDataStatus":"stale","confidence":"medium"，会被 strict schema 拒绝。完整输出仍须包含 allowlist 的全部字段。',
       '严格按此顺序判断并输出：userDecision、actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       'userDecision 必须且只能包含 headline、holding、positionDirection、addAssessment、warning、takeProfit、stopLoss、riskSource。holding、positionDirection、addAssessment、takeProfit、stopLoss 各自必须且只能包含 status、summary；warning 必须且只能包含 summary、items。',

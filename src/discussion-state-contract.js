@@ -137,7 +137,7 @@ function process(raw,options={}){
   const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
   const top=object(parsed.value),topKeys=Object.keys(top);
   if(topKeys.length!==1||topKeys[0]!=='currentState')return invalid('schema_error',StrictAiJson.contractMessage('顶层只能包含 currentState。'),parsed.input);
-  const validation=validateJudgment(top.currentState,{symbol:options.expectedSymbol,sourceDiscussionVersion:options.sourceDiscussionVersion,holdingShares:options.holdingShares,hasActivePlan:options.hasActivePlan,technicalDataStatus:options.technicalDataStatus,programProvesFullPlanConditions:options.programProvesFullPlanConditions,marketRiskAvailable:options.marketRiskAvailable===true});
+  const validation=validateJudgment(top.currentState,{symbol:options.expectedSymbol,sourceDiscussionVersion:options.sourceDiscussionVersion,holdingShares:options.holdingShares,hasActivePlan:options.hasActivePlan,technicalDataStatus:options.prepared&&options.prepared.context&&options.prepared.context.dataReadiness&&!options.prepared.context.dataReadiness.technical.ready?'unavailable':options.technicalDataStatus,programProvesFullPlanConditions:options.programProvesFullPlanConditions,marketRiskAvailable:options.marketRiskAvailable===true});
   if(!validation.ok)return invalid('validation_error',StrictAiJson.contractMessage(validation.errors.join('；')),parsed.input);
   const anchorReadiness=options.prepared?assessTechnicalAnchorReadiness(options.prepared):null;
   if(anchorReadiness&&!anchorReadiness.ready)return {ok:true,previewReady:false,writes:0,code:anchorReadiness.code,reason:anchorReadiness.reason,message:anchorReadiness.message,input:parsed.input,currentState:validation.judgment};
@@ -151,7 +151,9 @@ function process(raw,options={}){
     const candidate=clone(state),found=findStock(candidate,result.currentState.symbol);
     if(!found.stock)throw new Error('找不到本次讨论对应的股票。');
     const rebuilt=Workbench.buildContext(found.stock,{state:candidate,allStocks:candidate.stocks,planReviewStore:candidate.planReviews,planReviewApi:options.planReviewApi,timeZone:options.timeZone,now:options.now});
-    if(rebuilt.sourceDiscussionVersion!==prepared.sourceDiscussionVersion||rebuilt.protectedHash!==prepared.protectedHash)throw new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。');
+    if(rebuilt.protectedHash!==prepared.protectedHash)throw new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。');
+    if(prepared.evidenceHash&&rebuilt.evidenceHash!==prepared.evidenceHash)throw new Error('资料已更新，请重新生成本次讨论上下文。');
+    if(rebuilt.sourceDiscussionVersion!==prepared.sourceDiscussionVersion)throw new Error('讨论上下文缺失或已过期，请重新开始讨论。');
   const confirmedAt=(()=>{const raw=options.now instanceof Date?options.now:new Date(options.now||Date.now());if(!Number.isFinite(raw.getTime()))throw new Error('确认时间无效。');return raw.toISOString()})();
     const confirmedDate=Workbench.localCalendarDate(confirmedAt,{timeZone:options.timeZone||'Asia/Shanghai'}),judgment=result.currentState,store=Workbench.normalizeStore(found.stock.discussionState);
     const anchorReadiness=assessTechnicalAnchorReadiness({technicalSnapshot:prepared&&prepared.technicalSnapshot,references:prepared&&prepared.references});
