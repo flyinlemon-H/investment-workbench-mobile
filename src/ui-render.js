@@ -19,7 +19,7 @@ let editModalReturnTab='';
 let v13ActiveReviewReturn=null;
 let v13DecisionReviewDirty={};
 let v13DecisionReviewCloseContext=null;
-let detailWorkspace='plan';
+let detailWorkspace='ai';
 const discussionPreparedContexts=new Map();
 const discussionPlanPreparedContexts=new Map();
 const discussionHistoryVisibility=new Set();
@@ -28,9 +28,9 @@ let discussionImportPreview=null;
 let discussionPlanImportPreview=null;
 let discussionPromptReturnFocus=null;
 let discussionResearchReturn=null;
-const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm']);
+const DETAIL_WORKSPACE_TABS=Object.freeze(['ai','plan','operation','technical','news','fundamental','valuation','longterm','research','history']);
 const DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1';
-function normalizeDetailWorkspace(value){return DETAIL_WORKSPACE_TABS.includes(String(value||''))?String(value):'plan'}
+function normalizeDetailWorkspace(value){return DETAIL_WORKSPACE_TABS.includes(String(value||''))?String(value):'ai'}
 function loadDetailWorkspacePreference(){
   try{return normalizeDetailWorkspace(window.sessionStorage&&window.sessionStorage.getItem(DETAIL_WORKSPACE_SESSION_KEY))}catch(_){return 'plan'}
 }
@@ -2110,11 +2110,12 @@ function buildUnifiedPrompt(stock,type){
   ].filter(x=>x!==undefined&&x!==null&&x!=='').join('\n');
 }
 function render(){
+  if(typeof parkMaintenanceControls==='function')parkMaintenanceControls();
   const d=new Date();
   const mainEl=document.getElementById('main');
   if(mainEl)mainEl.onclick=null;
   document.getElementById('dateStamp').textContent=d.toISOString().slice(0,10).replace(/-/g,'.')+' · '+d.toLocaleDateString('zh-CN',{weekday:'long'});
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===currentTab));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===primaryTabFor(currentTab)));
   document.getElementById('countHolding').textContent=state.stocks.filter(s=>s.type==='holding').length;
   document.getElementById('countEtf').textContent=state.stocks.filter(s=>s.type==='etf').length;
   document.getElementById('countWatching').textContent=state.stocks.filter(s=>s.type==='watching').length;
@@ -2123,9 +2124,9 @@ function render(){
   const fxBtn=document.getElementById('fxBtn');
   if(fxBtn)fxBtn.textContent=fxLabel();
   const actions=document.getElementById('globalActions');
-  if(actions)actions.style.display=currentTab==='tools'&&!detailStockId?'':'none';
+  if(actions)actions.style.display='none';
   const syncBar=document.querySelector('.universe-cloud-bar');
-  if(syncBar)syncBar.style.display=currentTab==='dashboard'&&!detailStockId?'none':'';
+  if(syncBar)syncBar.style.display='none';
   const socialStatus=document.getElementById('socialDataStatus');
   if(socialStatus)socialStatus.style.display=currentTab==='tools'&&!detailStockId?'':'none';
   if(detailStockId&&detailSubView==='allocation')renderAllocationDecisionDetail();
@@ -2135,7 +2136,10 @@ function render(){
   else if(currentTab==='logs')renderExecutionLog();
   else if(currentTab==='analysis')renderAnalysisOverview();
   else if(currentTab==='edit')renderEditCenter();
-  else if(currentTab==='tools')renderTools();
+  else if(currentTab==='tools')renderSimplifiedTools();
+  else if(currentTab==='more')renderMore();
+  else if(currentTab==='plans')renderTargets(true);
+  else if(['targets','holding','etf','watching'].includes(currentTab)){if(currentTab!=='targets')targetFilter=currentTab;renderTargets();}
   else renderTable();
   if(typeof syncStorageMaintenanceUi==='function')syncStorageMaintenanceUi();
 }
@@ -2148,8 +2152,8 @@ function renderDashboard(){
   const summary=document.getElementById('summary');
   const main=document.getElementById('main');
   if(!state.stocks.length){
-    summary.innerHTML='暂无数据 · 请到「工具」页导入 JSON';
-    main.innerHTML='<div class="hint"><b>尚未导入组合数据。</b> 请进入「工具」页点击「导入JSON」选择之前导出的投资作战手册 JSON；程序不会再内置或自动恢复默认组合。</div><div class="empty">导入后这里会显示值得关注的风险、计划变化和行情数据问题。</div>';
+    summary.innerHTML='暂无数据 · 更多 → 备份与恢复';
+    main.innerHTML='<div class="hint"><b>尚未导入组合数据。</b> 请进入「更多 → 备份与恢复」，选择之前导出的投资作战手册 JSON；程序不会再内置或自动恢复默认组合。</div><div class="empty">导入后这里会显示值得关注的风险、计划变化和行情数据问题。</div>';
     return;
   }
   const themeOrder=['宽基指数','黄金资源','AI科技','消费','防御','其他'];
@@ -4369,7 +4373,7 @@ function financialSignalPanel(stock){
   const sig=calculateFinancialSignal(stock);
   return `<div class="card" style="margin-bottom:14px"><div class="card-title">财务自动评分 <button class="link-btn" data-detail-action="edit-financial" style="float:right">编辑财务数据</button></div><div class="dash" style="margin:0"><div><div class="card-num">${fmtMaybe(sig.financialScore,1)}<span style="font-size:13px;color:var(--ink3)"> / 10</span></div><div class="card-note">状态 ${esc(financialStatusLabel(sig.financialStatus))}</div></div><div><div class="card-title">报告期</div><div class="card-note">${esc(fd.reportPeriod||'—')} · ${esc(fd.currency||'—')}</div></div><div><div class="card-title">增长 / 利润率</div><div class="card-note">收入 ${fmtMaybe(fd.revenueGrowth,1)}% · 利润 ${fmtMaybe(fd.profitGrowth,1)}% · 净利率 ${fmtMaybe(fd.netMargin,1)}%</div></div><div><div class="card-title">更新时间</div><div class="card-note">${esc(fd.lastUpdated||'—')}</div></div></div><div class="text" style="max-width:none;margin-top:10px"><b>摘要：</b>${esc(formatChineseText(sig.financialSummary))}<br><b>信号：</b><br>${zhBreakList(sig.signals)}<br><b>提醒：</b><br>${zhBreakList(sig.warnings)}</div><div class="modal-actions" style="justify-content:flex-start;margin-top:10px;flex-wrap:wrap"><button class="btn ghost small" data-detail-action="import-financial">导入财报/财务JSON</button><button class="btn ghost small" data-detail-action="apply-financial">应用到九模块财务评分</button></div></div>`;
 }
-function renderAnalysisOverview(){
+function renderAdvancedAnalysisOverview(mountId='main'){
   state.stocks.forEach(normalizeStockAnalysis);
   let rows=state.stocks.slice();
   if(analysisRoleFilter)rows=rows.filter(s=>analysisPositionRole(s)===analysisRoleFilter);
@@ -4386,8 +4390,8 @@ function renderAnalysisOverview(){
   if(analysisFinancialMissingFilter==='missing')rows=rows.filter(s=>!hasFinancialData(s.financialData));
   rows=rows.filter(s=>analysisScoreInRange(Number(s.analysisScore)||0,analysisScoreFilter));
   analysisSortRows(rows);
-  document.getElementById('summary').innerHTML=`分析总览 <strong>${rows.length}</strong> / ${state.stocks.length} 只 · 平均分 <strong>${rows.length?fmt(rows.reduce((sum,s)=>sum+(Number(s.analysisScore)||0),0)/rows.length,1):'—'}</strong>`;
-  const main=document.getElementById('main');
+  if(mountId==='main')document.getElementById('summary').innerHTML=`分析总览 <strong>${rows.length}</strong> / ${state.stocks.length} 只 · 平均分 <strong>${rows.length?fmt(rows.reduce((sum,s)=>sum+(Number(s.analysisScore)||0),0)/rows.length,1):'—'}</strong>`;
+  const main=document.getElementById(mountId);
   const roleOptions=['','核心仓','成长仓','卫星仓','观察仓'].map(x=>`<option value="${esc(x)}"${analysisRoleFilter===x?' selected':''}>${x||'全部角色'}</option>`).join('');
   const statusOptions=['','positive','neutral','negative'].map(x=>`<option value="${esc(x)}"${analysisStatusFilter===x?' selected':''}>${x?zhActionStatus(x):'全部状态'}</option>`).join('');
   const riskOptions=['','positive','neutral','negative'].map(x=>`<option value="${esc(x)}"${analysisRiskFilter===x?' selected':''}>${x?zhActionStatus(x):'全部风险'}</option>`).join('');
@@ -4407,20 +4411,20 @@ function renderAnalysisOverview(){
   const empty='<div class="empty">当前筛选条件下没有匹配标的。</div>';
   const table=rows.length?`<div class="table-wrap"><table><thead><tr><th>名称</th><th>代码</th><th>总分</th><th>决策分</th><th>动作</th><th>建议金额</th><th>建议股数</th><th>执行状态</th><th>目标</th><th>当前</th><th>缺口</th><th>优先级</th><th>新鲜度</th><th>自动技术</th><th>自动估值</th><th>自动财务</th><th>风险</th><th>操作计划</th></tr></thead><tbody>${rows.map(s=>{const d=decisionForStock(s);const ex=executionForStock(s);const f=getAnalysisFreshness(s);const ts=calculateTechnicalSignal(s);const vs=calculateValuationSignal(s);const vd=normalizeValuationData(s.valuationData);const fs=calculateFinancialSignal(s);const fd=normalizeFinancialData(s.financialData);return `<tr class="analysis-row" data-analysis-stock="${esc(s.id)}" style="cursor:pointer"><td class="name" data-label="名称">${esc(s.name||'—')}</td><td class="num" data-label="代码">${esc(s.code||'—')}</td><td data-label="总分">${analysisScoreCell(s.analysisScore)}</td><td data-label="决策分">${analysisScoreCell(d.decisionScore)}</td><td data-label="动作">${esc(decisionActionLabel(d.action))}</td><td data-label="建议金额">${fmtMoney(ex.suggestedBuyAmount)}</td><td data-label="建议股数">${fmtInt(ex.suggestedShares)}</td><td data-label="执行状态">${esc(zhActionStatus(ex.executionStatus))}</td><td data-label="目标">${fmtMaybe(d.targetWeight,1)}%</td><td data-label="当前">${fmtMaybe(d.currentWeight,1)}%</td><td data-label="缺口">${fmtMaybe(d.positionGap,1)}%</td><td data-label="优先级">${fmtMaybe(d.priority,0)}</td><td data-label="新鲜度">${esc(zhActionStatus(f.staleLevel))}<div class="card-note">${f.daysSinceUpdate===null?'—':f.daysSinceUpdate+'天'}</div></td><td data-label="自动技术">${analysisScoreCell(ts.technicalScore)}<div class="card-note">${esc(zhActionStatus(ts.technicalStatus))}</div></td><td data-label="自动估值">${analysisScoreCell(vs.valuationScore)}<div class="card-note">${esc(zhActionStatus(vs.valuationStatus))} · ${esc(vd.lastUpdated||'—')}</div></td><td data-label="自动财务">${analysisScoreCell(fs.financialScore)}<div class="card-note">${esc(zhActionStatus(fs.financialStatus))} · ${esc(fd.reportPeriod||fd.lastUpdated||'—')}</div></td><td data-label="风险">${analysisScoreCell(analysisModuleScore(s,'risks'))}<div class="card-note">${esc(zhActionStatus(analysisModuleStatus(s,'risks')))}</div></td><td class="text" data-label="操作计划">${esc(formatChineseText(analysisActionPlan(s)||d.suggestedAction||'—'))}</td></tr>`}).join('')}</tbody></table></div>`:empty;
   main.innerHTML=filters+table;
-  document.getElementById('analysisSort').addEventListener('change',e=>{analysisSortMode=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisRole').addEventListener('change',e=>{analysisRoleFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisStatus').addEventListener('change',e=>{analysisStatusFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisRisk').addEventListener('change',e=>{analysisRiskFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisScoreRange').addEventListener('change',e=>{analysisScoreFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisAction').addEventListener('change',e=>{analysisActionFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisCapital').addEventListener('change',e=>{analysisCapitalFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisExecution').addEventListener('change',e=>{analysisExecutionFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisFreshness').addEventListener('change',e=>{analysisFreshnessFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisTechnicalStatus').addEventListener('change',e=>{analysisTechnicalStatusFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisValuationStatus').addEventListener('change',e=>{analysisValuationStatusFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisValuationMissing').addEventListener('change',e=>{analysisValuationMissingFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisFinancialStatus').addEventListener('change',e=>{analysisFinancialStatusFilter=e.target.value;renderAnalysisOverview()});
-  document.getElementById('analysisFinancialMissing').addEventListener('change',e=>{analysisFinancialMissingFilter=e.target.value;renderAnalysisOverview()});
+  document.getElementById('analysisSort').addEventListener('change',e=>{analysisSortMode=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisRole').addEventListener('change',e=>{analysisRoleFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisStatus').addEventListener('change',e=>{analysisStatusFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisRisk').addEventListener('change',e=>{analysisRiskFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisScoreRange').addEventListener('change',e=>{analysisScoreFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisAction').addEventListener('change',e=>{analysisActionFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisCapital').addEventListener('change',e=>{analysisCapitalFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisExecution').addEventListener('change',e=>{analysisExecutionFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisFreshness').addEventListener('change',e=>{analysisFreshnessFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisTechnicalStatus').addEventListener('change',e=>{analysisTechnicalStatusFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisValuationStatus').addEventListener('change',e=>{analysisValuationStatusFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisValuationMissing').addEventListener('change',e=>{analysisValuationMissingFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisFinancialStatus').addEventListener('change',e=>{analysisFinancialStatusFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
+  document.getElementById('analysisFinancialMissing').addEventListener('change',e=>{analysisFinancialMissingFilter=e.target.value;renderAdvancedAnalysisOverview(mountId)});
   document.querySelectorAll('[data-analysis-stock]').forEach(row=>row.addEventListener('click',()=>openStockDetail(row.dataset.analysisStock)));
 }
 
@@ -4428,7 +4432,7 @@ function openStockDetail(id,workspace=''){
   discussionResearchReturn=null;
   detailStockId=id;
   detailSubView='';
-  setDetailWorkspace(workspace||loadDetailWorkspacePreference(),{persist:Boolean(workspace)});
+  setDetailWorkspace(workspace||'ai',{persist:false});
   render();
 }
 function openStockPlanCenter(id){
@@ -4657,7 +4661,7 @@ function planWorkspacePanel(stock){
   const reviewRows=window.AiDecisionReviewReader&&typeof window.AiDecisionReviewReader.recordsForStock==='function'?window.AiDecisionReviewReader.recordsForStock(stock):[];
   const planReview=reviewRows.find(record=>record.isCurrent&&record.outcomeType==='plan_update')||reviewRows.find(record=>record.outcomeType==='plan_update');
   const planUpdate=planReview?(planReview.resolutionType==='plan_applied'?`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--gold)"><div class="card-title">计划更新已应用</div><div class="card-note">应用时间 ${esc(planReview.applicationAppliedAt||planReview.resolvedAt||'—')} · 新增 ${esc(planReview.createdPlanCount||0)} 条 · 归档 ${esc(planReview.archivedPlanCount||0)} 条 · 审计编号 ${esc(planReview.applicationAuditId||planReview.sourceApplicationId||'—')}</div></div>`:v13PlanUpdateDraftPanel(stock,planReview)):'';
-  return `${discussionPlanPanel}${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看历史计划',v13PlanCenterHistory(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}`;
+  return `<div class="card"><div class="card-title">当前计划</div><div class="actions"><button class="btn small" data-detail-action="view-plan-center" type="button">转到计划中心</button><button class="btn ghost small" data-workspace="operation" type="button">录入操作结果</button></div></div>${v13CurrentActivePlanSummaryPanel(stock)||'<div class="card">尚无当前计划，可到计划中心创建。</div>'}<details class="card"><summary>计划整理与高级操作</summary>${discussionPlanPanel}${planGenerationReadinessCard(stock)}${refreshPanel}${v13StockEventCompactPanel(stock)}${planUpdate}${planSummary}${workspaceDetails('查看详细计划',v13PlanCenterDetailSections(stock))}${workspaceDetails('查看仓位与计划详情',positionPlanPanel(stock))}</details>`;
 }
 function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--teal)',copyAction='',importAction='',extraAction='',extraLabel='',copyLabel='复制'){
   const rows=(Array.isArray(items)?items:[]).filter(Boolean).slice(0,4);
@@ -4724,7 +4728,7 @@ function longTermWorkspacePanel(stock){
   const risks=normalizeStringArray(l.keyRisks||l.longTermRisks);
   const items=[review&&review.userSummary?review.userSummary:(l.investmentThesis?longLogicThesisExcerpt(l.investmentThesis):'待补充长期逻辑'),`状态 ${longLogicStatusText(l.logicStatus)}`,review&&review.nextReviewDue?`下次复核 ${review.nextReviewDue}`:`下次复核 ${l.nextReviewDate||'—'}`,`关键风险 ${risks.length} 项`].filter(Boolean);
   const summary=`<div class="card" style="margin-bottom:12px;border-left:4px solid var(--purple)"><div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><span>长期逻辑摘要</span><button class="btn small" data-detail-action="call-long-term-logic-ai" type="button">API更新</button></div><div class="chips">${items.map(item=>`<span class="chip role">${esc(formatChineseText(item))}</span>`).join('')}</div><details class="long-logic-details" style="margin-top:10px"><summary>备用操作</summary><div class="long-logic-details-body"><div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap;margin:0"><button class="btn ghost small" data-detail-action="copy-long-term-logic-prompt" type="button">复制给AI</button><button class="btn ghost small" data-detail-action="import-long-term-logic-json" type="button">手动导入JSON</button></div><div class="card-note" style="margin-top:8px">仅在本机 Bridge 不可用或需要人工恢复时使用。</div></div></details></div>`;
-  return `${longTermAiStatusPanel(stock)}${typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):''}${summary}${workspaceDetails('查看长期逻辑详情',body)}`;
+  return `${longTermAiStatusPanel(stock)}${summary}${workspaceDetails('查看长期逻辑详情',body)}${workspaceDetails('同步与版本',typeof analysisSyncStatusPanel==='function'?analysisSyncStatusPanel(stock):'')}`;
 }
 function operationChangeLabel(value){return {increased:'持仓数量增加',decreased:'持仓数量减少',cleared:'持仓数量归零',unchanged:'持仓数量未变化',unknown:'变化待校验'}[value]||'变化待校验'}
 function operationWorkspacePanel(stock){
@@ -4757,7 +4761,7 @@ function requireCurrentDiscussionContext(stock){
   if(discussionContextChanged(stock))throw new Error('资料已更新，请重新生成本次讨论上下文。请重新开始讨论并整理结论。');
 }
 function navigateDiscussionWorkspace(stock,workspace){
-  const allowed=['news','fundamental','longterm','valuation','technical','plan'];
+  const allowed=['news','fundamental','longterm','valuation','technical','plan','research'];
   if(detailWorkspace==='ai'&&allowed.includes(workspace))discussionResearchReturn={symbol:discussionStockKey(stock),evidence:window.DiscussionDataReadiness.evidenceSnapshot(stock),plans:window.DiscussionWorkbench.buildContext(stock,discussionOptions()).protectedHash};
   else if(!allowed.includes(workspace)&&workspace!=='ai')discussionResearchReturn=null;
   setDetailWorkspace(workspace);renderStockDetail();
@@ -4853,7 +4857,7 @@ async function copyDiscussionPrepared(){
   feedback.textContent='复制失败，请长按复制';details.open=true;
   try{field.focus({preventScroll:true});field.select();field.setSelectionRange(0,field.value.length)}catch(_){}
 }
-function toggleDiscussionHistory(stock){const key=discussionStockKey(stock);if(discussionHistoryVisibility.has(key))discussionHistoryVisibility.delete(key);else discussionHistoryVisibility.add(key);renderStockDetail();setTimeout(()=>document.getElementById('discussionHistoryPanel')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
+function toggleDiscussionHistory(stock){discussionHistoryVisibility.add(discussionStockKey(stock));navigateDiscussionWorkspace(stock,'history')}
 function discussionStatusPresentation(stock){
   const store=window.DiscussionWorkbench.normalizeStore(stock.discussionState),fresh=window.DiscussionWorkbench.stateFreshness(stock,store.current,discussionOptions());
   if(!store.current)return {label:'尚无讨论结论',className:'',reason:'首次保存结论后，程序将从这里继续跟踪后续变化。',current:null,store};
@@ -4865,16 +4869,16 @@ function discussionProgramPriceReferences(stock){
   const add=rows.filter(row=>row.kind==='add').map(row=>row.price),reduce=rows.filter(row=>row.kind==='reduce').map(row=>row.price),line=(label,prices)=>prices.length?`<div class="discussion-program-reference"><span>${esc(label)}</span><b>${prices.map(value=>esc(String(value))).join(' / ')}</b></div>`:'';
   return line('计划增加仓位参考',add)+line('计划减仓参考',reduce);
 }
-function discussionStateCard(item,label,stock=null){
+function discussionStateCard(item,label,stock=null,actions=''){
   if(!item)return '';
   const list=(title,rows)=>`<div><div class="card-title">${esc(title)}</div>${rows&&rows.length?`<ul class="discussion-compact-list">${rows.map(row=>`<li>${esc(formatChineseText(row))}</li>`).join('')}</ul>`:'<div class="card-note">无</div>'}</div>`;
   const meta=`<div class="discussion-state-head"><span class="chip tag">${esc(label)}</span><span>${esc(item.confirmedAt?new Date(item.confirmedAt).toLocaleString('zh-CN'):(item.confirmedDate||'—'))} · 技术锚点 ${esc(item.technicalAsOf||'—')}</span></div>`;
   if(!item.actionAssessment||!item.trendAssessment||!Array.isArray(item.structureAssessment))return `<article class="discussion-state-card discussion-state-legacy">${meta}<h3>${esc(formatChineseText(item.stage||'已确认'))}</h3><p>${esc(formatChineseText(item.summary||'—'))}</p><div class="discussion-state-grid">${list('关键变化',item.keyChanges)}${list('风险',item.risks)}${list('观察点',item.watchPoints)}</div><div class="card-note"><b>与计划关系：</b>${esc(formatChineseText(item.planRelation||'未说明'))} · 置信度 ${esc(zhConfidence(item.confidence))}</div></article>`;
   const actionLabels={risk_control:'风险控制',reduce_review:'减仓复核',hold_watch:'持有观察',wait_confirmation:'等待确认',add_review:'加仓复核',entry_review:'建仓复核',no_action:'暂不操作'},priorityLabels={high:'高优先级',medium:'中优先级',low:'低优先级'},attentionLabels={normal:'普通观察',focused:'重点观察',window:'临近窗口'},trendLabels={uptrend:'上升',downtrend:'下降',sideways:'震荡',recovery:'修复',rebound:'反弹',unclear:'不明确'},typeLabels={top:'顶部结构',bottom:'底部结构',breakout:'突破结构',pullback:'回踩结构',recovery:'修复结构',consolidation:'整理结构',none:'暂无明确结构',unclear:'结构不明确'},statusLabels={forming:'形成中',confirmed:'已确认',valid:'仍有效',broken:'已破坏',unclear:'不明确'},sourceLabels={program:'程序事实',external_software:'外部软件',ai_chart_judgment:'AI图形判断',user_provided:'用户提供'};
   const trendRows=[`整体：${trendLabels[item.trendAssessment.overall]||'不明确'}`,...arrSafe(item.trendAssessment.timeframes).map(row=>`${row.timeframe}：${trendLabels[row.status]||'不明确'}｜${row.explanation}`)],structureRows=arrSafe(item.structureAssessment).map(row=>`${row.timeframe}：${typeLabels[row.type]||'结构不明确'}${statusLabels[row.status]||'不明确'}｜${sourceLabels[row.source]||'来源未说明'}${row.sourceAsOf?` ${row.sourceAsOf}`:''}｜${row.shortReason}`),decision=item.userDecision;
-  if(!decision)return `<article class="discussion-state-card discussion-decision-card discussion-state-v2 ${item.actionAssessment.priority==='high'?'is-high':''}">${meta}<div class="discussion-decision-badges"><span class="discussion-primary-badge">${esc(attentionLabels[item.attentionLevel]||'普通观察')}</span><span class="discussion-priority-badge">${esc(priorityLabels[item.actionAssessment.priority]||'低优先级')}</span></div><div class="discussion-action-label"><span>操作倾向</span><strong>${esc(actionLabels[item.actionAssessment.category]||'暂不操作')}</strong></div><h3>${esc(formatChineseText(item.actionAssessment.headline))}</h3><div class="discussion-decision-core"><div><div class="card-title">趋势</div><div class="discussion-inline-rows">${trendRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join('')}</div></div><div><div class="card-title">结构</div><div class="discussion-inline-rows">${structureRows.length?structureRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join(''):'<span>暂无明确结构</span>'}</div></div>${list('当前重点',item.focusPoints)}</div><div class="discussion-plan-relation"><b>与计划关系</b><span>${esc(formatChineseText(item.planRelation&&item.planRelation.summary||'未说明'))}</span></div><details class="discussion-state-details"><summary>查看完整结论</summary><div class="discussion-state-details-body"><p>${esc(formatChineseText(item.summary||'—'))}</p><div class="discussion-state-grid">${list('判断依据',item.actionAssessment.reasons)}${list('升级条件',item.actionAssessment.upgradeConditions)}${list('降级条件',item.actionAssessment.downgradeConditions)}${list('关键变化',item.keyChanges)}${list('风险',item.risks)}${list('完整观察点',item.watchPoints)}</div><div class="card-note">阶段：${esc(formatChineseText(item.stage||'已确认'))} · 置信度 ${esc(zhConfidence(item.confidence))}</div></div></details></article>`;
+  if(!decision)return `<article class="discussion-state-card discussion-decision-card discussion-state-v2 ${item.actionAssessment.priority==='high'?'is-high':''}">${meta}<div class="discussion-decision-badges"><span class="discussion-primary-badge">${esc(attentionLabels[item.attentionLevel]||'普通观察')}</span><span class="discussion-priority-badge">${esc(priorityLabels[item.actionAssessment.priority]||'低优先级')}</span></div><div class="discussion-action-label"><span>操作倾向</span><strong>${esc(actionLabels[item.actionAssessment.category]||'暂不操作')}</strong></div><h3>${esc(formatChineseText(item.actionAssessment.headline))}</h3><div class="discussion-decision-core"><div><div class="card-title">趋势</div><div class="discussion-inline-rows">${trendRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join('')}</div></div><div><div class="card-title">结构</div><div class="discussion-inline-rows">${structureRows.length?structureRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join(''):'<span>暂无明确结构</span>'}</div></div>${list('当前重点',item.focusPoints)}</div><div class="discussion-plan-relation"><b>与计划关系</b><span>${esc(formatChineseText(item.planRelation&&item.planRelation.summary||'未说明'))}</span></div>${actions}<details class="discussion-state-details"><summary>查看完整结论</summary><div class="discussion-state-details-body"><p>${esc(formatChineseText(item.summary||'—'))}</p><div class="discussion-state-grid">${list('判断依据',item.actionAssessment.reasons)}${list('升级条件',item.actionAssessment.upgradeConditions)}${list('降级条件',item.actionAssessment.downgradeConditions)}${list('关键变化',item.keyChanges)}${list('风险',item.risks)}${list('完整观察点',item.watchPoints)}</div><div class="card-note">阶段：${esc(formatChineseText(item.stage||'已确认'))} · 置信度 ${esc(zhConfidence(item.confidence))}</div></div></details></article>`;
   const zeroPosition=decision.holding.status==='not_applicable',warningItems=arrSafe(decision.warning&&decision.warning.items),riskLabels={stock:'风险主要来自个股',market:'风险主要来自大盘',both:'个股与大盘风险并存',unclear:'风险来源仍需确认'},section=(title,summary,className='')=>`<div class="discussion-user-section ${className}"><div class="card-title">${esc(title)}</div><p>${esc(formatChineseText(summary||'—'))}</p></div>`,takeProfit=decision.takeProfit.status==='not_applicable'?'':section('止盈',decision.takeProfit.summary),stopLoss=decision.stopLoss.status==='not_applicable'?'':section('止损',decision.stopLoss.summary),programReferences=discussionProgramPriceReferences(stock);
-  return `<article class="discussion-state-card discussion-user-decision-card ${item.actionAssessment.priority==='high'?'is-high':''}">${meta}<section class="discussion-user-headline"><div class="card-title">当前结论</div><h3>${esc(formatChineseText(decision.headline))}</h3>${riskLabels[decision.riskSource]?`<span class="discussion-risk-source">${esc(riskLabels[decision.riskSource])}</span>`:''}</section><div class="discussion-user-grid">${section('仓位方向',decision.positionDirection.summary,'is-position')}${section(zeroPosition?'如果想建仓':'如果想加仓',decision.addAssessment.summary,'is-add')}<div class="discussion-user-section is-warning"><div class="card-title">需要警惕</div><p>${esc(formatChineseText(decision.warning.summary||'—'))}</p>${warningItems.length?`<ul class="discussion-compact-list">${warningItems.map(row=>`<li>${esc(formatChineseText(row))}</li>`).join('')}</ul>`:''}</div>${takeProfit||stopLoss?`<div class="discussion-profit-loss">${takeProfit}${stopLoss}</div>`:''}${programReferences?`<div class="discussion-program-references">${programReferences}</div>`:''}</div><details class="discussion-state-details discussion-evidence"><summary>判断依据</summary><div class="discussion-state-details-body"><div class="discussion-decision-badges"><span class="discussion-primary-badge">${esc(attentionLabels[item.attentionLevel]||'普通观察')}</span><span class="discussion-priority-badge">${esc(priorityLabels[item.actionAssessment.priority]||'低优先级')}</span><span class="discussion-priority-badge">${esc(actionLabels[item.actionAssessment.category]||'暂不操作')}</span></div><p>${esc(formatChineseText(item.summary||'—'))}</p><div class="discussion-decision-core"><div><div class="card-title">趋势</div><div class="discussion-inline-rows">${trendRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join('')}</div></div><div><div class="card-title">结构</div><div class="discussion-inline-rows">${structureRows.length?structureRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join(''):'<span>暂无明确结构</span>'}</div></div><div class="discussion-plan-relation"><b>与计划关系</b><span>${esc(formatChineseText(item.planRelation&&item.planRelation.summary||'未说明'))}</span></div></div><div class="discussion-state-grid">${list('判断理由',item.actionAssessment.reasons)}${list('升级条件',item.actionAssessment.upgradeConditions)}${list('降级条件',item.actionAssessment.downgradeConditions)}${list('关键变化',item.keyChanges)}${list('技术风险',item.risks)}${list('持续观察',item.watchPoints)}</div><div class="card-note">阶段：${esc(formatChineseText(item.stage||'已确认'))} · 置信度 ${esc(zhConfidence(item.confidence))}</div></div></details></article>`;
+  return `<article class="discussion-state-card discussion-user-decision-card ${item.actionAssessment.priority==='high'?'is-high':''}">${meta}<section class="discussion-user-headline"><div class="card-title">当前结论</div><h3>${esc(formatChineseText(decision.headline))}</h3>${riskLabels[decision.riskSource]?`<span class="discussion-risk-source">${esc(riskLabels[decision.riskSource])}</span>`:''}</section><div class="discussion-user-grid">${section('仓位方向',decision.positionDirection.summary,'is-position')}${section(zeroPosition?'如果想建仓':'如果想加仓',decision.addAssessment.summary,'is-add')}<div class="discussion-user-section is-warning"><div class="card-title">需要警惕</div><p>${esc(formatChineseText(decision.warning.summary||'—'))}</p>${warningItems.length?`<ul class="discussion-compact-list">${warningItems.map(row=>`<li>${esc(formatChineseText(row))}</li>`).join('')}</ul>`:''}</div>${takeProfit||stopLoss?`<div class="discussion-profit-loss">${takeProfit}${stopLoss}</div>`:''}${programReferences?`<div class="discussion-program-references">${programReferences}</div>`:''}</div>${actions}<details class="discussion-state-details discussion-evidence"><summary>判断依据</summary><div class="discussion-state-details-body"><div class="discussion-decision-badges"><span class="discussion-primary-badge">${esc(attentionLabels[item.attentionLevel]||'普通观察')}</span><span class="discussion-priority-badge">${esc(priorityLabels[item.actionAssessment.priority]||'低优先级')}</span><span class="discussion-priority-badge">${esc(actionLabels[item.actionAssessment.category]||'暂不操作')}</span></div><p>${esc(formatChineseText(item.summary||'—'))}</p><div class="discussion-decision-core"><div><div class="card-title">趋势</div><div class="discussion-inline-rows">${trendRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join('')}</div></div><div><div class="card-title">结构</div><div class="discussion-inline-rows">${structureRows.length?structureRows.map(row=>`<span>${esc(formatChineseText(row))}</span>`).join(''):'<span>暂无明确结构</span>'}</div></div><div class="discussion-plan-relation"><b>与计划关系</b><span>${esc(formatChineseText(item.planRelation&&item.planRelation.summary||'未说明'))}</span></div></div><div class="discussion-state-grid">${list('判断理由',item.actionAssessment.reasons)}${list('升级条件',item.actionAssessment.upgradeConditions)}${list('降级条件',item.actionAssessment.downgradeConditions)}${list('关键变化',item.keyChanges)}${list('技术风险',item.risks)}${list('持续观察',item.watchPoints)}</div><div class="card-note">阶段：${esc(formatChineseText(item.stage||'已确认'))} · 置信度 ${esc(zhConfidence(item.confidence))}</div></div></details></article>`;
 }
 function discussionHistoryPanel(stock,presentation){
   const open=discussionHistoryVisibility.has(discussionStockKey(stock)),history=presentation.store.history.slice().reverse();
@@ -4981,9 +4985,13 @@ async function confirmDiscussionPlanImport(){
 }
 function aiDiscussionWorkspacePanel(stock){
   if(!window.DiscussionWorkbench)return '<div class="card"><div class="empty">讨论工作台模块未加载。</div></div>';
-  const status=discussionStatusPresentation(stock),current=status.current,legacy=v13AiDecisionReviewDetailPanel(stock),runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(runtime),barCount=runtime.context.currentFacts.technical.bars.length,barText=current?(barCount?`新增完整日K ${barCount} 根`:'自上次确认后暂无新的完整日K'):'首次讨论将使用有限历史窗口',blocking=!readiness.ready;
-  const warning=blocking?`<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>缺少完整日K技术锚点。讨论可继续；补齐行情后重新开始讨论，才能保存。</span></div>`:'',hero=`<section class="card discussion-control-card"><div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="chip ${status.className}">${esc(current?current.confirmedDate:'首次使用')}</span><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-detail-action="toggle-discussion-history" type="button">查看历史</button><button class="btn ghost small" data-workspace="plan" type="button">转到计划中心</button></div>${discussionReadinessPanel(stock,runtime)}<details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="discussion-data-line"><span>技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}</span><span>${esc(barText)}</span><span>${esc(runtime.context.currentFacts.allocation.message)}</span></div><div class="card-note">本工作台不调用 AI，不保存整段 Prompt 或回复；只有预览后人工确认的结论或计划会写入。</div></details></section>`,decision=current?discussionStateCard(current,'当前结论',stock):'';
-  return `<div class="discussion-workbench">${hero}${decision}${discussionHistoryPanel(stock,status)}<details class="discussion-history"><summary>既有 AI 处理历史</summary><div class="discussion-history-body">${legacy||'<div class="empty" style="padding:24px">暂无既有 AI 处理历史。</div>'}</div></details></div>`;
+  const status=discussionStatusPresentation(stock),current=status.current,runtime=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(runtime),blocking=!readiness.ready;
+  const actions=`<div class="modal-actions discussion-actions" aria-label="讨论操作"><button class="btn small" data-detail-action="start-stock-discussion" type="button">开始讨论</button><button class="btn small" data-detail-action="prepare-discussion-archive" type="button">整理结论</button></div>`;
+  const warning=blocking?'<div class="alert discussion-status-warning"><b>当前无法保存连续结论</b><span>缺少完整日K技术锚点。讨论可继续；补齐行情后重新开始讨论，才能保存。</span></div>':'';
+  const statusStrip=`<div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}`;
+  const decision=current?discussionStateCard(current,'当前结论',stock,actions):actions;
+  const support=`<section class="card discussion-control-card"><div class="actions discussion-secondary-actions"><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-workspace="plan" type="button">当前 Plan</button></div>${discussionReadinessPanel(stock,runtime)}<details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="card-note">技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}。只有预览后人工确认的结论或计划会写入。</div></details></section>`;
+  return `<div class="discussion-workbench">${statusStrip}${decision}${support}</div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
   {key:'ai',label:'讨论'},
@@ -5005,7 +5013,7 @@ function activeWorkspacePanel(stock,key){
   if(key==='longterm')return longTermWorkspacePanel(stock);
   return planWorkspacePanel(stock);
 }
-function stockWorkspaceTabs(stock){
+function legacyStockWorkspaceTabs(stock){
   const active=normalizeDetailWorkspace(detailWorkspace);
   if(active!==detailWorkspace)detailWorkspace=active;
   const tabs=DETAIL_WORKSPACE_META.map(item=>{
@@ -7290,17 +7298,17 @@ function bindStockDetailActions(stock){
     btn.addEventListener('click',e=>{
       e.preventDefault();
       navigateDiscussionWorkspace(stock,btn.dataset.workspaceTab||'plan');
-      const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
+      const activeTab=document.getElementById(`workspace-tab-${workspacePrimaryKey(detailWorkspace)}`);
       if(activeTab)activeTab.focus({preventScroll:true});
     });
     btn.addEventListener('keydown',e=>{
       if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
       e.preventDefault();
-      const tabs=DETAIL_WORKSPACE_META.map(item=>item.key);
+      const tabs=PRIMARY_WORKSPACE_META.map(item=>item.key);
       const current=tabs.indexOf(normalizeDetailWorkspace(btn.dataset.workspaceTab));
       const next=e.key==='Home'?0:(e.key==='End'?tabs.length-1:(current+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length);
       navigateDiscussionWorkspace(stock,tabs[next]);
-      const activeTab=document.getElementById(`workspace-tab-${detailWorkspace}`);
+      const activeTab=document.getElementById(`workspace-tab-${workspacePrimaryKey(detailWorkspace)}`);
       if(activeTab)activeTab.focus({preventScroll:true});
     });
   });
@@ -7321,7 +7329,7 @@ function renderStockDetail(){
   const actual=info&&info.actualPct!==null?info.actualPct:null;
   const deviation=info&&info.deviation!==null?`${info.deviation>=0?'+':''}${info.deviation.toFixed(1)}%`:'—';
   document.getElementById('summary').innerHTML=`标的详情 · <strong>${esc(s.name)}</strong> · ${esc(s.role||'—')} · ${esc(s.theme||'—')}`;
-  document.getElementById('main').innerHTML=`<div data-v13-detail-anchor="overview">${detailHeroPanel(s,mv,actual,deviation)}</div>${v13ReviewReturnBanner(s)}${stockWorkspaceTabs(s)}`;
+  document.getElementById('main').innerHTML=`<div data-v13-detail-anchor="overview"><div class="detail-compact-header"><div><h2>${esc(s.name)}</h2><div class="card-note">${esc(s.code)} · 现价 ${fmtMaybe(cp)} · 持仓 ${fmtInt(s.shares)}</div></div><button class="btn ghost small" id="backToListBtn" type="button">返回</button></div></div>${v13ReviewReturnBanner(s)}${stockWorkspaceTabs(s)}<details class="card"><summary>持仓与行情详情</summary>${detailHeroPanel(s,mv,actual,deviation)}</details>`;
   const backToListBtn=document.getElementById('backToListBtn');
   if(backToListBtn)backToListBtn.addEventListener('click',closeStockDetail);
   document.querySelectorAll('[data-v13-return-review]').forEach(btn=>btn.addEventListener('click',returnToActiveV13Review));

@@ -1,12 +1,12 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),F=require('./fixtures/homepage-attention.js');
-const output=path.resolve('test-results/homepage-attention'),url='http://127.0.0.1:8768/';
+const output=process.env.ACCEPTANCE_OUTPUT?path.resolve(process.env.ACCEPTANCE_OUTPUT,'homepage'):path.resolve('test-results/homepage-attention'),url=process.env.BROWSER_ACCEPTANCE_URL||'http://127.0.0.1:8768/';
 (async()=>{
   fs.mkdirSync(output,{recursive:true});
   const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined}),results=[];
   try{
-    for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+    for(const viewport of [{width:1280,height:900},{width:390,height:844},{width:360,height:800}]){
       const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[],external=[];
       page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.dismiss());
       await context.route('**/*',route=>{if(new URL(route.request().url()).origin===new URL(url).origin)return route.continue();external.push(route.request().url());return route.abort()});
@@ -39,8 +39,8 @@ const output=path.resolve('test-results/homepage-attention'),url='http://127.0.0
       await page.screenshot({path:path.join(output,`risk-${viewport.width}.png`),fullPage:true});
       await page.locator('[data-home-attention-action="discussion"]').click();assert.equal(await page.locator('#workspace-tab-ai').getAttribute('aria-selected'),'true');assert.equal(await page.locator('#discussionPromptDialog.show').count(),0);
       await seed(app);await page.locator('[data-home-attention-action="plan"]').click();assert.equal(await page.locator('#workspace-tab-plan').getAttribute('aria-selected'),'true');
-      await seed(app);await page.locator('[data-home-attention-action="technical"]').click();assert.equal(await page.locator('#workspace-tab-technical').getAttribute('aria-selected'),'true');
-      const broken=F.state();broken.stocks[0].priceHistory=[];await seed(broken,F.failedTask());assert.equal(await page.locator('[data-home-attention-item]').count(),1);await page.locator('[data-home-attention-action="technical"]').click();assert.equal(await page.locator('#workspace-tab-technical').getAttribute('aria-selected'),'true');
+      await seed(app);await page.locator('[data-home-attention-action="technical"]').click();assert.equal(await page.locator('#workspace-tab-research').getAttribute('aria-selected'),'true');
+      const broken=F.state();broken.stocks[0].priceHistory=[];await seed(broken,F.failedTask());assert.equal(await page.locator('[data-home-attention-item]').count(),1);await page.locator('[data-home-attention-action="technical"]').click();assert.equal(await page.locator('#workspace-tab-research').getAttribute('aria-selected'),'true');
       await seed(app);assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       assert.equal(external.filter(value=>/deepseek|\/ai\//i.test(value)).length,0);
       results.push({viewport,quiet:true,newsRegressionCount:0,eligibleCount:3,riskFirst:true,firstCardFullyVisible:true,ctaRoutes:['ai','plan','technical','market-task-technical'],noAutoDiscussion:true,noOverflow:true,errors,externalRequestsBlocked:external.length});

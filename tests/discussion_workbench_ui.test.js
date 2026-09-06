@@ -20,7 +20,7 @@ test('existing AI discussion tab is renamed without adding a ninth workspace tab
 
 test('workbench keeps Current State actions and one Plan Center shortcut without duplicate Plan controls',()=>{
   const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
-  for(const label of ['开始讨论','整理结论','导入结论','查看历史','转到计划中心']){assert.match(panel,new RegExp(label));assert.equal((panel.match(new RegExp(`>${label}<`,'g'))||[]).length,1,label)}
+  for(const label of ['开始讨论','整理结论','导入结论','当前 Plan']){assert.match(panel,new RegExp(label));assert.equal((panel.match(new RegExp(`>${label}<`,'g'))||[]).length,1,label)}
   for(const label of ['整理计划','导入计划'])assert.doesNotMatch(panel,new RegExp(`>${label}<`));
   for(const label of ['AI刷新','生成分析','刷新计划'])assert.doesNotMatch(panel,new RegExp(label));
   assert.match(ui,/预览结果/);assert.match(ui,/确认保存/);assert.match(ui,/保存后将成为下次讨论的起点/);
@@ -28,10 +28,10 @@ test('workbench keeps Current State actions and one Plan Center shortcut without
   assert.match(panel,/当前状态/);assert.match(panel,/当前结论/);assert.match(ui,/历史结论/);
 });
 
-test('compact status and controls always precede the latest conclusion and evidence/history',()=>{
+test('current conclusion precedes controls and history is delegated to its workspace',()=>{
   const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
   assert.match(panel,/discussion-status-strip/);assert.match(panel,/discussion-status-warning/);assert.match(panel,/assessTechnicalAnchorReadiness/);
-  assert.match(panel,/return `<div class="discussion-workbench">\$\{hero\}\$\{decision\}\$\{discussionHistoryPanel/);
+  assert.match(panel,/return `<div class="discussion-workbench">\$\{statusStrip\}\$\{decision\}\$\{support\}/);
   assert.doesNotMatch(panel,/decision\+hero/);
   const start=panel.indexOf('>开始讨论<'),archive=panel.indexOf('>整理结论<'),importState=panel.indexOf('>导入结论<');assert.ok(start>=0&&archive>start&&importState>archive);
   assert.match(panel,/开始讨论<\/button><button class="btn small"[^>]*>整理结论/);

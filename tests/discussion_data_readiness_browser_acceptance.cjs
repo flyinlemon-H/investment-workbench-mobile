@@ -1,10 +1,10 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const output=path.resolve('test-results/discussion-data-readiness-v1'),url='http://127.0.0.1:8768/';
+const output=process.env.ACCEPTANCE_OUTPUT?path.resolve(process.env.ACCEPTANCE_OUTPUT,'readiness'):path.resolve('test-results/discussion-data-readiness-v1'),url=process.env.BROWSER_ACCEPTANCE_URL||'http://127.0.0.1:8768/';
 (async()=>{
   fs.mkdirSync(output,{recursive:true});const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined}),results=[];
-  try{for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
+  try{for(const viewport of [{width:1280,height:900},{width:390,height:844},{width:360,height:800}]){
     const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[],dialogs=[],external=[];
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>{dialogs.push(d.message());await d.dismiss()});
     await context.route('**/*',r=>{if(new URL(r.request().url()).origin===new URL(url).origin)return r.continue();external.push(r.request().url());return r.abort()});
@@ -40,11 +40,11 @@ const output=path.resolve('test-results/discussion-data-readiness-v1'),url='http
     await page.locator('.discussion-context-stale [data-detail-action="start-stock-discussion"]').click();assert.notEqual(await page.evaluate(()=>discussionPreparedContexts.get('601138.SS').sourceDiscussionVersion),originalVersion);await page.locator('#discussionPromptCloseBtn').click();
     // All supporting workspaces and Plan have the same return path.
     for(const target of ['fundamental','longterm','valuation','technical','plan']){
-      await page.locator(`#workspace-tab-${target}`).click();assert.equal(await page.locator('.discussion-return').count(),1);await page.locator('[data-detail-action="return-to-discussion"]').click();assert.equal(await page.locator('#workspace-tab-ai').getAttribute('aria-selected'),'true');assert.equal(await page.locator('.discussion-context-stale').count(),0);
+      if(target==='plan')await page.locator('#workspace-tab-plan').click();else{await page.locator('#workspace-tab-research').click();await page.locator(`.research-navigation [data-workspace="${target}"]`).click();}assert.equal(await page.locator('.discussion-return').count(),1);await page.locator('[data-detail-action="return-to-discussion"]').click();assert.equal(await page.locator('#workspace-tab-ai').getAttribute('aria-selected'),'true');assert.equal(await page.locator('.discussion-context-stale').count(),0);
     }
     await page.evaluate(()=>{openStockDetail('readiness-test','news')});assert.equal(await page.locator('.discussion-return').count(),0);
     await page.evaluate(()=>{openStockDetail('readiness-test','ai');state.stocks[0].priceHistory=[];renderStockDetail()});assert.match(await page.locator('.discussion-technical-readiness').innerText(),/缺少完整日K/);assert.match(await page.locator('.discussion-status-warning').innerText(),/当前无法保存/);
-    await page.locator('.discussion-technical-readiness [data-workspace="technical"]').click();assert.equal(await page.locator('#workspace-tab-technical').getAttribute('aria-selected'),'true');await page.locator('[data-detail-action="return-to-discussion"]').click();
+    await page.locator('.discussion-technical-readiness [data-workspace="technical"]').click();assert.equal(await page.locator('#workspace-tab-research').getAttribute('aria-selected'),'true');await page.locator('[data-detail-action="return-to-discussion"]').click();
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await page.evaluate(()=>readinessCalls),0);assert.deepEqual(errors,[]);assert.equal(external.filter(u=>/deepseek|\/ai\/|\/rpc\/|rest\/v1/.test(u)).length,0);
     await page.locator('.discussion-workbench').evaluate(n=>n.scrollIntoView({block:'start'}));await page.screenshot({path:path.join(output,`technical-missing-${viewport.width}.png`),fullPage:true});
     results.push({viewport,compact:true,sameSymbol:true,unchangedAndCancel:true,realNewsSave:true,staleArchiveBlocked:true,regeneration:true,allReturnPaths:true,normalEntryNoReturn:true,noAutomaticAi:true,noOverflow:true,errors,dialogs});await context.close();

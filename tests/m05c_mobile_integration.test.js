@@ -6,11 +6,11 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
-test('M05C scripts load after parser and before UI workflow without changing eight detail tabs',()=>{
+test('M05C scripts load after parser and before UI workflow while retaining the original workspace keys',()=>{
   const index=read('index.html'),ui=read('src/ui-render.js');
   const batch=index.indexOf('src/batch-technical-review.js'),context=index.indexOf('src/portfolio-review-context.js'),contract=index.indexOf('src/portfolio-review-contract.js'),multi=index.indexOf('src/multi-stock-analysis.js'),portfolioUi=index.indexOf('src/portfolio-review-ui.js');
   assert.ok(batch<context&&context<contract&&contract<multi&&multi<portfolioUi);
-  assert.match(ui,/DETAIL_WORKSPACE_TABS=Object\.freeze\(\['ai','plan','operation','technical','news','fundamental','valuation','longterm'\]\)/);
+  assert.match(ui,/DETAIL_WORKSPACE_TABS=Object\.freeze\(\['ai','plan','operation','technical','news','fundamental','valuation','longterm','research','history'\]\)/);
 });
 
 test('M05C mobile workflow exposes short Chinese labels, preview-before-save, and no screenshot or Direct AI UI',()=>{

@@ -98,7 +98,9 @@ const paths=[...new Set([
   'src/discussion-data-readiness.js',
   'src/discussion-workbench.js',
   'src/discussion-state-contract.js',
-  'src/discussion-plan-workflow.js'
+  'src/discussion-plan-workflow.js',
+  'src/workbench-navigation-ui.js',
+  'src/stock-research-ui.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));
 
 const files=paths.map(relativePath=>{
@@ -116,8 +118,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-data-readiness-v1-20260906',
-  dataMode:'Discussion Data Readiness V1 derives technical and optional research context, same-stock local return navigation and stale-session protection; no schema change, homepage age tasks, automatic AI, production cloud writes or market pipeline changes; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'discussion-centric-v1a-20260906',
+  dataMode:'Discussion-Centric UI Simplification V1A groups primary navigation, defaults stocks to Discussion, demotes research and maintenance, and preserves existing business contracts and legacy readers',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

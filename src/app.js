@@ -77,6 +77,7 @@ ensureAnalysisOverviewTab();
 ensureExecutionLogTab();
 ensureEditCenterTab();
 ensureToolsTab();
+initializeWorkbenchNavigation();
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{detailStockId=null;detailSubView='';currentTab=t.dataset.tab;render()}));
 document.getElementById('addBtn').addEventListener('click',()=>openModal(null));
 document.getElementById('importBtn').addEventListener('click',importData);

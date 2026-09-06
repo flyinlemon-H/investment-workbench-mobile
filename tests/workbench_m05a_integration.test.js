@@ -10,9 +10,9 @@ const Multi=require('../src/multi-stock-analysis.js');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
-test('INT-01/02 preserves the eight-tab detail workspace and session preference wiring',()=>{
+test('INT-01/02 preserves legacy workspace keys and preference reader alongside V1A grouping',()=>{
   const source=read('src/ui-render.js');
-  assert.match(source,/DETAIL_WORKSPACE_TABS=Object\.freeze\(\['ai','plan','operation','technical','news','fundamental','valuation','longterm'\]\)/);
+  assert.match(source,/DETAIL_WORKSPACE_TABS=Object\.freeze\(\['ai','plan','operation','technical','news','fundamental','valuation','longterm','research','history'\]\)/);
   assert.match(source,/DETAIL_WORKSPACE_SESSION_KEY='v13_detail_workspace_tab_v1'/);
   for(const label of ['讨论','计划','操作记录','技术面','新闻催化','基本面','估值\/配置','长期逻辑']){
     assert.match(source,new RegExp(`label:'${label}'`));
