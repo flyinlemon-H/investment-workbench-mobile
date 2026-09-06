@@ -116,8 +116,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'homepage-risk-alert-v1-20260906',
-  dataMode:'Homepage Risk Alert V1 derives current risk, meaningful Plan Runtime, relevant technical health and blocking system attention from canonical sources; no research-age tasks, automatic AI, production data writes or contract/pipeline changes; only manifest-allowlisted public browser assets are delivered',
+  assetVersion:'discussion-data-readiness-v1-20260906',
+  dataMode:'Discussion Data Readiness V1 derives technical and optional research context, same-stock local return navigation and stale-session protection; no schema change, homepage age tasks, automatic AI, production cloud writes or market pipeline changes; only manifest-allowlisted public browser assets are delivered',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
