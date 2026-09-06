@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "286b6c7a2c7f48f4f2899f9e0d28848927381d65",
-  "assetVersion": "discussion-data-readiness-v1-20260906",
-  "dataMode": "Discussion Data Readiness V1 derives technical and optional research context, same-stock local return navigation and stale-session protection; no schema change, homepage age tasks, automatic AI, production cloud writes or market pipeline changes; only manifest-allowlisted public browser assets are delivered",
+  "sourceCommit": "d691cd5022aed668b31ac5f2bc293f84a0aa8660",
+  "assetVersion": "discussion-centric-v1a-20260906",
+  "dataMode": "Discussion-Centric UI Simplification V1A groups primary navigation, defaults stocks to Discussion, demotes research and maintenance, and preserves existing business contracts and legacy readers",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 64687,
-      "sha256": "5dea157a7959730f909cba456e020be7920f9bb449e7d43b0feb7404629a8ad5"
+      "bytes": 68124,
+      "sha256": "683aa9790998b7b110a6339a2f67a60256d855fa0b5eebbfade1cd9a84deda12"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +103,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33463,
-      "sha256": "19f15b9904ae541a1a9ade2afd2979c754398b27912af8425838b5f65c697c9a"
+      "bytes": 33496,
+      "sha256": "446b0cb77664e14252243adcb645ef1040314391bcf48aa88261a2c5ef989dae"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -329,6 +329,12 @@
       "sha256": "5149c66164bb710b79b3e986b6810c2464bc9240effa36a675ee4847c6c56ca5"
     },
     {
+      "path": "src/stock-research-ui.js",
+      "role": "Four stock workspace groups and research/history presentation using existing business renderers",
+      "bytes": 2858,
+      "sha256": "0280e0ba1809ffaaa9d07483ccc0ef9b5ecc7cd9748654c666941db4a773877f"
+    },
+    {
       "path": "src/storage/cutover-v1.js",
       "role": "browser runtime dependency",
       "bytes": 24176,
@@ -409,8 +415,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 627457,
-      "sha256": "862a19db1fa152e63c71a68c5c00712ee263a6c06d882ff3e7aa74f5fc6620c1"
+      "bytes": 627829,
+      "sha256": "cf1220009a47811e994c55ab0bda45bd020f5779c8d7febf85735b2e51caa6dd"
     },
     {
       "path": "src/universe-auto-add.js",
@@ -465,6 +471,12 @@
       "role": "pinned Supabase SDK with MIT license; browser Auth and add-only inserts",
       "bytes": 227644,
       "sha256": "4bba3c365fc363f8fadf50396d6536ccbcf1a5ee18709c7ea199a1e322a05584"
+    },
+    {
+      "path": "src/workbench-navigation-ui.js",
+      "role": "Primary navigation, target filters, advanced comparison and maintenance control placement; presentation only",
+      "bytes": 12581,
+      "sha256": "1628cdb93223207cac65d33f47d8b72414beb4abac427d37b9225417768cfd96"
     }
   ]
 }
