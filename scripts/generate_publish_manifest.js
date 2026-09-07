@@ -118,8 +118,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-centric-v1a-20260906',
-  dataMode:'Discussion-Centric UI Simplification V1A groups primary navigation, defaults stocks to Discussion, demotes research and maintenance, and preserves existing business contracts and legacy readers',
+  assetVersion:'discussion-workflow-reliability-v1-20260907',
+  dataMode:'Discussion Workflow Reliability Hotfix V1 shares primary workspace actions across state versions, binds zero-position prompts to canonical holdings, and fails closed on invalid imports while preserving V1A and protected contracts',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

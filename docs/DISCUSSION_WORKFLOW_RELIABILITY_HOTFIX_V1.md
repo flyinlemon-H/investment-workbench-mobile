@@ -79,3 +79,5 @@ No Current State schema or Discussion V3 schema changes. No holdings/trades/oper
 Stock Management Category Unification V1 remains a separate future task. Category names do not determine holding semantics.
 
 Candidate asset version: `discussion-workflow-reliability-v1-20260907`. Prepare local source and release metadata commits, regenerate the manifest, verify asset hashes/dependencies/credential markers and Git push safety gate. **Stop before push and Pages deployment; explicit user authorization is required.**
+
+Release preparation evidence: source commit `ea2e6a9`; candidate Pages artifact validation passed for all 80 delivered files (including effective manifest), browser script dependencies/cache bindings and credential-marker scan. `npm ls --all --offline` succeeded; only expected optional packages for other platforms/optional telemetry are absent. No dependency or lockfile changes. `git diff --check` passed.
