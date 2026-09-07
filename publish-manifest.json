@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "d691cd5022aed668b31ac5f2bc293f84a0aa8660",
-  "assetVersion": "discussion-centric-v1a-20260906",
-  "dataMode": "Discussion-Centric UI Simplification V1A groups primary navigation, defaults stocks to Discussion, demotes research and maintenance, and preserves existing business contracts and legacy readers",
+  "sourceCommit": "60f3c235314c79aa7fc17e62f2bd69145a4c90c0",
+  "assetVersion": "discussion-workflow-reliability-v1-20260907",
+  "dataMode": "Discussion Workflow Reliability Hotfix V1 shares primary workspace actions across state versions, binds zero-position prompts to canonical holdings, and fails closed on invalid imports while preserving V1A and protected contracts",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 68124,
-      "sha256": "683aa9790998b7b110a6339a2f67a60256d855fa0b5eebbfade1cd9a84deda12"
+      "bytes": 69208,
+      "sha256": "2f82207632e282b50adaec0e31a854ab9c6571d2d03bf096e29bd9fd6d8ebe11"
     },
     {
       "path": "social_posts.json",
@@ -145,14 +145,14 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
-      "bytes": 27738,
-      "sha256": "abecd281ddfa0fac423aadd927d93d825a8364777293c2e28680b24fd358da46"
+      "bytes": 28301,
+      "sha256": "90137f53fdd6980088596c104954970de5e670145ed30f2fa6e113debdf7735e"
     },
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 54969,
-      "sha256": "9f5a13a4476aa06570d540861b35c770e4d7aa213294069a250658eb3f790a89"
+      "bytes": 56335,
+      "sha256": "caf5b7bd947c49163feac54652e3e06ddcd8d2a1a4cd64eb45fddeda8df388b0"
     },
     {
       "path": "src/homepage-attention.js",
@@ -415,8 +415,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 627829,
-      "sha256": "cf1220009a47811e994c55ab0bda45bd020f5779c8d7febf85735b2e51caa6dd"
+      "bytes": 629584,
+      "sha256": "3d01c80fe6d0754132cf7ff1651568f807e4ed43f16dae6a5fd7d297e7f92ad1"
     },
     {
       "path": "src/universe-auto-add.js",
