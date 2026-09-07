@@ -28,10 +28,10 @@ test('workbench keeps Current State actions and one Plan Center shortcut without
   assert.match(panel,/当前状态/);assert.match(panel,/当前结论/);assert.match(ui,/历史结论/);
 });
 
-test('current conclusion precedes controls and history is delegated to its workspace',()=>{
+test('workspace controls are independent of conclusion renderer and history is delegated to its workspace',()=>{
   const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
   assert.match(panel,/discussion-status-strip/);assert.match(panel,/discussion-status-warning/);assert.match(panel,/assessTechnicalAnchorReadiness/);
-  assert.match(panel,/return `<div class="discussion-workbench">\$\{statusStrip\}\$\{decision\}\$\{support\}/);
+  assert.match(panel,/return `<div class="discussion-workbench">\$\{statusStrip\}\$\{actions\}\$\{decision\}\$\{support\}/);
   assert.doesNotMatch(panel,/decision\+hero/);
   const start=panel.indexOf('>开始讨论<'),archive=panel.indexOf('>整理结论<'),importState=panel.indexOf('>导入结论<');assert.ok(start>=0&&archive>start&&importState>archive);
   assert.match(panel,/开始讨论<\/button><button class="btn small"[^>]*>整理结论/);

@@ -331,16 +331,30 @@
     if(readiness)context.dataReadiness=readiness.build(stock,options);
     return {context,protectedSnapshot,protectedHash,sourceDiscussionVersion,evidenceHash:readiness?readiness.fingerprint(stock):undefined,references:currentRefs,technicalSnapshot:technical,metrics:null};
   }
+  function holdingPromptRules(context){
+    const shares=context.currentFacts.holding.shares,held=Number(shares)>0;
+    const fact=`当前持仓事实（程序保护，只读）：\n- 当前持仓数量：${shares===null?'未知':shares}\n`;
+    if(held)return fact+'- 当前有持仓。请从持仓视角回答能否继续持有、减仓复核、增加仓位、等待条件及止盈与止损风险。userDecision.holding.status 不得为 not_applicable，actionAssessment.category 不得使用 entry_review。';
+    if(shares!==0)return fact+'持仓事实尚未确认，不得自行假设已有持仓或编造持仓数量。';
+    return fact+[
+      '- 当前为零持仓标的。AI 不得假设用户现在持有该股票。',
+      '当前 canonical 持仓事实优先于历史结论、旧 V1/V2/V3 状态及本轮对话中的持有措辞；历史持仓只作背景，不得沿用为当前决定。标的类别、role、type 均不能替代持仓事实。',
+      '请从建仓视角回答：当前无需操作、暂不建仓、可以继续观察、如果想建仓应等待什么确认、建仓风险。不要描述为增加已有仓位。',
+      '当前决定不得写继续持有、加仓、减仓、降低仓位、保护已有利润、当前仓位继续保持或持仓可继续。userDecision 全部文本也不得出现止盈、止损，包括“不需止盈”等否定措辞；这与严格导入校验一致。',
+      '沿用 User Decision V3：holding、takeProfit、stopLoss.status 必须为 not_applicable，summary 分别使用“当前无持仓。”、“当前无持仓，不适用。”、“尚未持有，无需处理。”，各区块不得逐字重复；positionDirection 使用 not_applicable（保持空仓观察），或有证据的 add_watch/add_review（建仓观察/复核），不得使用 hold/hold_no_add/reduce_review/risk_control 或保留核心仓语义。',
+      'addAssessment 回答“如果想建仓”，使用现有 wait/watch/add_review/avoid/not_applicable；actionAssessment.category 只能为 entry_review、wait_confirmation 或 no_action。不得新增 schema 字段。',
+      '持仓数量、shares、券商状态及保护日期、技术锚点、内部编号均是输入事实，不能由 AI 输出或修正。symbol 与 sourceDiscussionVersion 仅按整理合同原样返回。'
+    ].join('\n');
+  }
   function buildDiscussionRequest(stock,options={}){
     const prepared=options.prepared||buildContext(stock,options),context=prepared.context;
-    if(context.mode==='continuation'&&context.continuity.barMode==='blocked')throw new Error(context.continuity.barMessage||'技术锚点异常，无法生成连续讨论上下文。');
     const publicContext=clone(context);
     const stripInternal=value=>{if(Array.isArray(value)){value.forEach(stripInternal);return}if(!value||typeof value!=='object')return;for(const key of Object.keys(value)){if(['stateId','reviewId','reviewHash','snapshotHash','planSnapshotHash','hash','protectedHash','freshness'].includes(key))delete value[key];else stripInternal(value[key])}};
     stripInternal(publicContext);
     const request=[
       `请和我一起复盘 ${context.name||context.symbol}（${context.symbol}）。这是一场延续性的单股讨论，不是一次性从头分析。`,
       '',
-      '请先从我的仓位视角，用自然中文回答：能否继续持有、是否需要进入减仓复核、现在能否增加仓位、如果不能应等待什么、是否需要关注止盈或止损风险，以及已明确提供的大盘风险是否改变仓位方向。若为零持仓，请改用建仓视角，不要说“继续持有”或“加仓”。',
+      holdingPromptRules(context),
       '再说明从上次已确认结论到现在真正变化了什么，先前关注的判断条件是否已经出现，既有技术判断是仍然稳定、正在变化还是已经失效。专业技术概念只作为判断依据，不要放在第一层结论。',
       '程序提供的持仓、完整日线、技术日期、计划、运行状态和引用关系是受保护事实；不要重算或改写。不要发明新闻、财务、价格、仓位或市场背景，也不要给确定性买卖指令。',
       `如需判断今天盘中强弱，请结合用户随后提供的分时截图；程序当前只提供截至 ${context.currentFacts.technical.technicalAsOf||'尚未确认日期'} 的完整日K事实。`,
@@ -353,9 +367,10 @@
   }
   function buildArchiveRequest(prepared){
     if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
-    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,rawTechnicalDataStatus=text(prepared.context.currentFacts&&prepared.context.currentFacts.technical&&prepared.context.currentFacts.technical.dataStatus),technicalDataStatus=['fresh','stale','unavailable','anomaly'].includes(rawTechnicalDataStatus)?rawTechnicalDataStatus:'unavailable',confidenceRule=technicalDataStatus==='fresh'?'当前技术资料为 fresh；confidence 可根据证据使用 high、medium 或 low，但不得仅因为 fresh 自动使用 high。':`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）；confidence 不得输出 high，只能根据证据使用 medium 或 low。`,example={currentState:{symbol,sourceDiscussionVersion,userDecision:{headline:held?'可以继续持有，暂时没有明显减仓风险。':'当前位置不适合建仓，继续等待。',holding:{status:held?'safe':'not_applicable',summary:held?'持有判断仍然稳定。':'当前无持仓。'},positionDirection:{status:held?'hold_no_add':'not_applicable',summary:held?'持有为主，暂不增加仓位。':'保持空仓观察。'},addAssessment:{status:'wait',summary:held?'等待更合适的机会，不追当前位置。':'等待更合适的建仓机会。'},warning:{summary:'若关键风险明显增强，需要重新复核当前判断。',items:[]},takeProfit:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止盈压力。':'当前无持仓，不适用。'},stopLoss:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止损风险。':'当前无持仓，不适用。'},riskSource:'none'},actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策条件，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前仍在观察区间，关键条件还未确立。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
+    const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,rawTechnicalDataStatus=text(prepared.context.currentFacts&&prepared.context.currentFacts.technical&&prepared.context.currentFacts.technical.dataStatus),technicalDataStatus=['fresh','stale','unavailable','anomaly'].includes(rawTechnicalDataStatus)?rawTechnicalDataStatus:'unavailable',confidenceRule=technicalDataStatus==='fresh'?'当前技术资料为 fresh；confidence 可根据证据使用 high、medium 或 low，但不得仅因为 fresh 自动使用 high。':`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）；confidence 不得输出 high，只能根据证据使用 medium 或 low。`,example={currentState:{symbol,sourceDiscussionVersion,userDecision:{headline:held?'可以继续持有，暂时没有明显减仓风险。':'当前位置不适合建仓，继续等待。',holding:{status:held?'safe':'not_applicable',summary:held?'持有判断仍然稳定。':'当前无持仓。'},positionDirection:{status:held?'hold_no_add':'not_applicable',summary:held?'持有为主，暂不增加仓位。':'保持空仓观察。'},addAssessment:{status:'wait',summary:held?'等待更合适的机会，不追当前位置。':'等待更合适的建仓机会。'},warning:{summary:'若关键风险明显增强，需要重新复核当前判断。',items:[]},takeProfit:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止盈压力。':'当前无持仓，不适用。'},stopLoss:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止损风险。':'尚未持有，无需处理。'},riskSource:'none'},actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策条件，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前仍在观察区间，关键条件还未确立。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
     const request=[
-      '根据本轮讨论形成一个可持续更新的当前状态。先从用户仓位视角回答能否继续持有、是否需要减仓复核、能否增加仓位、应等待什么、止盈和止损风险，再保留技术判断作为依据。',
+      '根据本轮讨论形成一个可持续更新的当前状态。先按当前受保护持仓事实回答用户决定，再保留技术判断作为依据。',
+      holdingPromptRules(prepared.context),
       '只输出唯一一个完整的 ```json 代码块；代码块外不得有任何文字。',
       '代码块内必须是一个完整严格 JSON 对象，顶层只能有 currentState。',
       'JSON 结构键和值必须使用英文半角双引号 "。',
@@ -382,9 +397,8 @@
       'structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason；不得在 structureAssessment 中使用 explanation，不得遗漏必填字段，不得增加未知字段。',
       `structureAssessment 单项形状示例：${JSON.stringify(structureItemExample)}`,
       'actionAssessment.reasons 最多5项，升级/降级条件最多3项；timeframes 与 structureAssessment 最多3项；focusPoints、keyChanges、risks、watchPoints 最多5项。summary 用2–4句，关键变化只写相对上次已确认结论的变化；focusPoints 写当前优先事项，watchPoints 写更广的持续监测，不要重复。',
-      `当前${held?'有持仓':'为零持仓候选'}：${held?'userDecision.holding.status 不得为 not_applicable，actionAssessment 不得使用 entry_review；必须直接回答持有安全、仓位方向、增加仓位、止盈与止损风险。':'holding、takeProfit、stopLoss.status 必须为 not_applicable；category 只能使用 entry_review、wait_confirmation 或 no_action；第一层不得写继续持有、加仓、减仓或假设已有持仓，标题“如果想加仓”在界面会自动改为“如果想建仓”。'}`,
       '只有程序上下文明确提供可用的大盘风险时，才能说大盘风险较高并使用 riskSource=market/both；没有可用市场背景时不得臆测，riskSource 使用 none 或 unclear。个股仍稳定而大盘风险较高时，可以保留持有判断，同时将仓位方向改为暂不增加或进入减仓复核。',
-      'takeProfit 与 stopLoss 只是利润保护和本金风险的复核提示，不是自动卖出。不得引入固定涨跌百分比规则，也不得输出订单、数量或执行动作。',
+      held?'takeProfit 与 stopLoss 只是利润保护和本金风险的复核提示，不是自动卖出。不得引入固定涨跌百分比规则，也不得输出订单、数量或执行动作。':'零持仓的 takeProfit 与 stopLoss 只填写上述不适用语义，不解释已有利润或本金保护。',
       '结构来源必须保持真实：外部软件明确提供的信号用 external_software，图形推断用 ai_chart_judgment，用户陈述用 user_provided；sourceAsOf 有明确日期/时间就保留，否则为空字符串。不同来源冲突时并列说明，不得把 AI 推断冒充软件事实。资料陈旧或缺失时使用条件性判断并降低 confidence。',
       '不得发明结构的 timeframe 或 source。无法确认具体 timeframe 或没有足够证据形成结构项时，使用空的 structureAssessment 数组；有明确周期但结构不明确时，只能按证据使用允许的 none/unclear 表达，并仍完整输出六个必填字段。不得用 explanation 代替缺失字段。',
       '所有中文正文不得暴露英文枚举、字段名或实现术语。保留不确定性。不得修改或声称修改计划、计划复核、持仓、配置或长期逻辑；不得创建仓位数值、股数、订单或确定性买卖命令。高优先级只表示优先复核，不等于自动交易。planRelation.summary 使用自然状态语言，例如“已经到达观察区间，条件还未成熟”“关键条件已经确立”，不要写复核窗口或系统免责声明。',

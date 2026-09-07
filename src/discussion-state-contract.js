@@ -154,6 +154,9 @@ function process(raw,options={}){
     if(rebuilt.protectedHash!==prepared.protectedHash)throw new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。');
     if(prepared.evidenceHash&&rebuilt.evidenceHash!==prepared.evidenceHash)throw new Error('资料已更新，请重新生成本次讨论上下文。');
     if(rebuilt.sourceDiscussionVersion!==prepared.sourceDiscussionVersion)throw new Error('讨论上下文缺失或已过期，请重新开始讨论。');
+    const facts=rebuilt.context.currentFacts;
+    const checked=process(JSON.stringify({currentState:result.currentState}),{expectedSymbol:rebuilt.context.symbol,sourceDiscussionVersion:rebuilt.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,marketRiskAvailable:Boolean(facts.marketRisk.status&&facts.marketRisk.status!=='unavailable'),programProvesFullPlanConditions:false,prepared:rebuilt});
+    if(!checked.ok||!checked.previewReady)throw new Error(checked.message);
   const confirmedAt=(()=>{const raw=options.now instanceof Date?options.now:new Date(options.now||Date.now());if(!Number.isFinite(raw.getTime()))throw new Error('确认时间无效。');return raw.toISOString()})();
     const confirmedDate=Workbench.localCalendarDate(confirmedAt,{timeZone:options.timeZone||'Asia/Shanghai'}),judgment=result.currentState,store=Workbench.normalizeStore(found.stock.discussionState);
     const anchorReadiness=assessTechnicalAnchorReadiness({technicalSnapshot:prepared&&prepared.technicalSnapshot,references:prepared&&prepared.references});
