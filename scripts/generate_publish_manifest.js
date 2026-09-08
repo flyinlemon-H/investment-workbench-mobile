@@ -9,6 +9,10 @@ const root=path.resolve(__dirname,'..');
 const manifestPath=path.join(root,'publish-manifest.json');
 const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
+roleByPath.set('src/plan-context-contract.js','versioned complete Plan definition references, shared context, and independent binding/evidence/applicability guards');
+roleByPath.set('src/discussion-v4.js','program-owned source snapshots and explicit real User Decision with immutable AI judgment history');
+roleByPath.set('src/plan-v4.js','reader-first Plan V4 definitions, same-ID revisions, legacy projection compatibility and atomic audit validation');
+roleByPath.set('src/plan-discussion-v4-ui.js','explicit user decision, Plan draft preview/confirm, source navigation and audit history');
 roleByPath.set('data/supabase_config.js','public Supabase URL and publishable key only');
 roleByPath.set('src/vendor/supabase-client.js','pinned Supabase SDK with MIT license; browser Auth and add-only inserts');
 roleByPath.set('src/supabase-browser-client.js','single browser Supabase client, compatible persistent session and normalized Auth lifecycle');
@@ -61,6 +65,10 @@ roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestrat
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
 
 const paths=[...new Set([
+  'src/plan-context-contract.js',
+  'src/discussion-v4.js',
+  'src/plan-v4.js',
+  'src/plan-discussion-v4-ui.js',
   // Custom Pages workflows do not run Jekyll; upload-pages-artifact excludes dotfiles.
   'data/supabase_config.js',
   'src/vendor/supabase-client.js',
@@ -120,8 +128,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'homepage-pre-discussion-risk-screening-v1-20260908',
-  dataMode:'Homepage Pre-Discussion Risk Screening V1 derives conservative holding-risk attention and existing price Plan triggers from current program facts, preserves accepted Current State priority, and performs no AI calls or business-fact writes',
+  assetVersion:'plan-discussion-v4-core-loop-20260909',
+  dataMode:'Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

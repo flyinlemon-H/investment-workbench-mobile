@@ -1,8 +1,8 @@
 # Plan V4 + Discussion V4 Architecture Investigation
 
-状态：**INVESTIGATION_COMPLETE**  
-调查日期：2026-09-08  
-权威仓库：`investment-workbench-mobile`  
+状态：**INVESTIGATION_COMPLETE**
+调查日期：2026-09-08
+权威仓库：`investment-workbench-mobile`
 调查基线：`main`，HEAD `122be6d1bfd7b88dc0f93b6d1f9eb640cfd34c41`；开始时工作区干净。
 
 本报告只调查和提出方案。唯一交付是本文档；未修改应用代码、schema、migration、prompt、测试、UI、CSS 或发布资产，未 commit、push、deploy，未访问生产账户或修改真实投资数据。用户提供的 Homepage production PASS 作为稳定上游前提；本次没有重新做 production acceptance。Management Category Lifecycle cross-zero option derivation 保持独立 **BLOCKED / deferred**，未调查根因、修改或重新验收。
