@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "6d7b938030bc24b559f13b04578559c1c8e2edcc",
-  "assetVersion": "homepage-action-signal-alignment-v1-20260908",
-  "dataMode": "Homepage Action Signal Alignment V1 derives conservative current action signals from accepted User Decision V3, suppresses routine holding and watch-only profit alerts, and preserves freshness, category lifecycle, Discussion and Plan Runtime contracts",
+  "sourceCommit": "014009d94683aedbbfc8d69ade9d9e8f290d10ad",
+  "assetVersion": "homepage-pre-discussion-risk-screening-v1-20260908",
+  "dataMode": "Homepage Pre-Discussion Risk Screening V1 derives conservative holding-risk attention and existing price Plan triggers from current program facts, preserves accepted Current State priority, and performs no AI calls or business-fact writes",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71255,
-      "sha256": "4ea75354f57fd4fe074736e4714f5b52c36809707cc9764058cfeb847272d1fe"
+      "bytes": 71729,
+      "sha256": "e4d5ae745855599a629791998eb4f1ff4ba7ee81d7cbd84b184e4139d4741b77"
     },
     {
       "path": "social_posts.json",
@@ -156,9 +156,9 @@
     },
     {
       "path": "src/homepage-attention.js",
-      "role": "Derived conservative homepage action selection, strength and suppression from accepted User Decision V3, with preserved freshness, data-health deduplication and Runtime boundaries",
-      "bytes": 18022,
-      "sha256": "48bbbbcd1069d55af51cf1a88ff50eda7021669c0fcfc12b54ac05aec09fb1f0"
+      "role": "Derived pre-discussion program risk and existing price Plan screening with Current State precedence, conservative action mapping, canonical zero shares and preserved freshness/Runtime boundaries",
+      "bytes": 22448,
+      "sha256": "95c923ea2ee770c0e43402fd2678475a54a5c74f2d4672eca45a061e7e338b3c"
     },
     {
       "path": "src/import-export.js",

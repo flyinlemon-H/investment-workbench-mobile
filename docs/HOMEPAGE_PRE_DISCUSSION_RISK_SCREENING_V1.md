@@ -83,3 +83,7 @@ Release boundary: implementation → focused/full regression → desktop/mobile 
 ## Local release preparation
 
 Validated source commit: `a880bb9`. Asset version: `homepage-pre-discussion-risk-screening-v1-20260908`. The subsequent version commit changes only cache/version bindings, manifest-generator metadata, the existing release-version assertion and this record. No dependency, market bridge or business source is changed during version preparation.
+
+Version commit: `014009d94683aedbbfc8d69ade9d9e8f290d10ad`. The generated manifest binds exactly this committed source. Version preparation passed **96/96** focused/publication tests; the final publication-only check passed **10/10**. Exact committed-source artifact validation passed **81 source assets / 82 delivered files**, with matching cache bindings, dependency completeness, hashes and market-bridge consistency. The 8 changed source/test/documentation/version files passed the existing credential scanner with zero findings; the final manifest commit is checked again without regenerating its hashes. Evidence: `test-results/screening-release-validation.json`, `screening-version-tests.log`, `screening-release-tests.log` and `screening-release-artifact/`.
+
+The next local commit records this manifest and gate. Status: **READY_FOR_PUSH**. No push, Pages deployment, production smoke, real portfolio mutation or automatic AI call was performed. The independent production Category Lifecycle blocker remains open and is not cleared by these local results.
