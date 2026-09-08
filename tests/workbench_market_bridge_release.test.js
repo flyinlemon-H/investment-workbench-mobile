@@ -25,10 +25,13 @@ function loadTechnicalRuntime(){
   return context.runtime;
 }
 
-test('release publishes an internally consistent 19-stock market bridge with technical indicators',()=>{
+test('release publishes an internally consistent market bridge with technical indicators',()=>{
   const bridge=loadPublishedBridge();
   assert.match(bridge.generatedAt,/^\d{4}-\d{2}-\d{2}T/);
-  assert.equal(bridge.stocks.length,19);
+  const statusContext={window:{}};vm.runInNewContext(read('data/market_task_status_bridge.js'),statusContext);
+  assert.ok(bridge.stocks.length>0);
+  assert.equal(new Set(bridge.stocks.map(item=>item.symbol)).size,bridge.stocks.length);
+  assert.equal(bridge.stocks.length,statusContext.window.MARKET_TASK_STATUS.latest_run.delivered_stock_count);
   const stock=bridge.stocks.find(item=>item.symbol==='2899.HK');
   assert(stock);
   const lastDate=stock.priceHistory.at(-1).date;

@@ -72,9 +72,10 @@
     const held=Number(expected.holdingShares)>0,holdingKnown=expected.holdingShares!==undefined&&expected.holdingShares!==null;
     if(holdingKnown&&!held){
       if(userDecision.holding.status!=='not_applicable'||userDecision.takeProfit.status!=='not_applicable'||userDecision.stopLoss.status!=='not_applicable')errors.push('零持仓时 holding、takeProfit、stopLoss 必须为 not_applicable');
-      if(/继续持有|加仓|减仓|止盈|止损/.test(primaryText))errors.push('零持仓结论不得假设已有持仓');
+      if(/继续持有|加仓|减仓|止盈|止损|保护已有利润|持仓继续观察/.test(primaryText))errors.push('零持仓结论不得假设已有持仓');
     }
     if(holdingKnown&&held&&userDecision.holding.status==='not_applicable')errors.push('已有持仓时必须回答持有风险');
+    if(holdingKnown&&held&&/(?:当前|目前|现在)(?:并)?(?:没有持仓|无持仓|未持仓|空仓)|保持空仓|等待首次建仓|暂不(?:重新)?建仓/.test(primaryText))errors.push('已有持仓结论不得假设当前没有持仓');
     if(['market','both'].includes(userDecision.riskSource)&&!expected.marketRiskAvailable)errors.push('没有明确市场风险输入时不得归因于大盘');
     return userDecision;
   }
@@ -115,6 +116,8 @@
     if(expected.hasActivePlan===true&&planRelation.status==='no_matching_plan')errors.push('存在有效计划时不能标记为没有对应计划');
     if(expected.technicalDataStatus&&expected.technicalDataStatus!=='fresh'&&confidence==='high')errors.push('技术资料未标记为较新时 confidence 不能为 high');
     const prose=allNaturalText(source),internalTokens=['actionAssessment','attentionLevel','trendAssessment','structureAssessment','validityStatus','planReview','sourceDiscussionVersion','superseded','needs_review','risk_control','reduce_review','hold_watch','wait_confirmation','add_review','entry_review','no_action','uptrend','downtrend','sideways','recovery','rebound','unclear'];
+    if(holdingKnown&&!held&&/继续持有|建议减仓|保护已有利润|持仓继续观察/.test(prose))errors.push('零持仓结论不得假设已有持仓');
+    if(holdingKnown&&held&&/(?:当前|目前|现在)(?:并)?(?:没有持仓|无持仓|未持仓|空仓)|保持空仓|等待首次建仓/.test(prose))errors.push('已有持仓结论不得假设当前没有持仓');
     if(internalTokens.some(token=>new RegExp(`(^|[^A-Za-z_])${token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^A-Za-z_]|$)`,'i').test(prose)))errors.push('中文正文字段包含内部英文枚举或字段名');
     if(/(?:立即|今天必须|必须).{0,12}(?:买入|卖出|加仓|减仓)|买入\s*\d+\s*股|减仓至\s*\d+(?:\.\d+)?%/.test(prose))errors.push('结论包含确定性交易命令或新仓位数值');
     if(!expected.programProvesFullPlanConditions&&hasAffirmativeFullConditionClaim(prose))errors.push('价格触发不能被表述为完整计划条件已满足');
@@ -144,6 +147,47 @@ function process(raw,options={}){
   return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论已通过严格校验，尚未写入。',input:parsed.input,currentState:validation.judgment};
 }
   function findStock(state,symbol){const target=Workbench.canonical(symbol),stocks=array(state&&state.stocks),index=stocks.findIndex(stock=>Workbench.canonical(stock)===target);return {stocks,index,stock:index>=0?stocks[index]:null}}
+  function previewBinding(prepared){return Workbench.stable({sourceDiscussionVersion:prepared.sourceDiscussionVersion,protectedHash:prepared.protectedHash,evidenceHash:prepared.evidenceHash,technicalSnapshot:prepared.technicalSnapshot,references:prepared.references})}
+  // Session-only proof: retain the complete version preimage, and erase exactly shares.
+  // Unknown/missing preimages and every other field remain hard protected.
+  function reconcileContext(prepared,current,options={}){
+    const blocked=(changes=['other_protected_change'])=>({status:'hard_block',changes,message:'受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。'});
+    if(!prepared||!current)return blocked();
+    if(!text(prepared.protectedHash)||!text(prepared.sourceDiscussionVersion)||!current.context?.currentFacts)return blocked();
+    if(prepared.protectedHash===current.protectedHash&&prepared.sourceDiscussionVersion===current.sourceDiscussionVersion&&prepared.evidenceHash===current.evidenceHash)return {status:'no_change',changes:[]};
+    const before=object(prepared.protectedSnapshot),after=object(current.protectedSnapshot),changes=[];
+    const names={symbol:'symbol_changed',technicalAnchor:'technical_anchor_changed',plans:'plan_changed',planReviews:'plan_changed',planRuntime:'runtime_changed',longTermLogic:'long_term_logic_changed'};
+    for(const key of new Set([...Object.keys(before),...Object.keys(after)]))if(key!=='holding'&&Workbench.stable(before[key])!==Workbench.stable(after[key]))changes.push(names[key]||'other_protected_change');
+    for(const key of new Set([...Object.keys(object(before.holding)),...Object.keys(object(after.holding))]))if(key!=='shares'&&Workbench.stable(before.holding?.[key])!==Workbench.stable(after.holding?.[key]))changes.push('other_protected_change');
+    if(prepared.evidenceHash!==current.evidenceHash||prepared.sourceBinding?.currentStateId!==current.sourceBinding?.currentStateId)changes.push('other_protected_change');
+    const oldShares=before.holding?.shares,newShares=after.holding?.shares;
+    if(!Number.isFinite(oldShares)||oldShares<0||!Number.isFinite(newShares)||newShares<0||oldShares===newShares)return blocked(changes.length?changes:undefined);
+    const statusChanged=(oldShares>0)!==(newShares>0);
+    changes.push(statusChanged?'holding_status_changed':'holding_quantity_changed');
+    const validBinding=p=>p.sourceBinding&&Workbench.stable(p.sourceBinding.protectedSnapshot)===Workbench.stable(p.protectedSnapshot)&&p.protectedHash===`discussionctx_${Workbench.hash(p.protectedSnapshot)}`&&p.sourceDiscussionVersion===`discussion_v3_${Workbench.hash(p.sourceBinding)}`;
+    if(options.transport!=='manual'||!validBinding(prepared)||!validBinding(current))return blocked(changes);
+    const oldBinding=clone(prepared.sourceBinding),newBinding=clone(current.sourceBinding);
+    delete oldBinding.protectedSnapshot.holding.shares;delete newBinding.protectedSnapshot.holding.shares;
+    if(Workbench.stable(oldBinding)!==Workbench.stable(newBinding)||prepared.evidenceHash!==current.evidenceHash||Workbench.stable(prepared.technicalSnapshot)!==Workbench.stable(current.technicalSnapshot))return blocked(changes);
+    for(const p of [prepared,current])if(!p.references?.holding||p.references.holding.shares!==p.protectedSnapshot.holding.shares||p.context?.currentFacts?.holding?.shares!==p.protectedSnapshot.holding.shares)return blocked(changes);
+    const oldRefs=clone(prepared.references),newRefs=clone(current.references);
+    for(const refs of [oldRefs,newRefs]){delete refs.holding.shares;delete refs.holding.hash}
+    if(Workbench.stable(oldRefs)!==Workbench.stable(newRefs))return blocked(changes);
+    const title=statusChanged?'持仓状态在本次讨论期间发生变化':'持仓信息已变化';
+    const transition=statusChanged?`当前已由“${oldShares>0?'有持仓':'零持仓'}”变为“${newShares>0?'有持仓':'零持仓'}”。`:'';
+    return {status:'warning_reconcilable',changes,oldShares,newShares,statusChanged,title,message:`讨论开始：${oldShares.toLocaleString('zh-CN')} 股；当前记录：${newShares.toLocaleString('zh-CN')} 股。${transition}程序将按当前持仓事实重新校验结论，请确认 AI 已知晓最新仓位。`,acknowledgment:Workbench.stable({original:previewBinding(prepared),current:previewBinding(current)})};
+  }
+  function processImport(raw,prepared,current,options={}){
+    const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
+    if(current){const anchor=assessTechnicalAnchorReadiness(current);if(!anchor.ready)return {...invalid(anchor.code,anchor.message,parsed.input),reason:anchor.reason}}
+    const reconciliation=reconcileContext(prepared,current,options);
+    if(reconciliation.status==='hard_block')return invalid('context_changed',reconciliation.message,parsed.input);
+    const needsAck=reconciliation.status==='warning_reconcilable'&&options.acknowledgment!==reconciliation.acknowledgment,facts=current.context.currentFacts;
+    const result=process(raw,{prepared:current,expectedSymbol:current.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:needsAck?undefined:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,marketRiskAvailable:Boolean(facts.marketRisk.status&&facts.marketRisk.status!=='unavailable'),programProvesFullPlanConditions:false});
+    if(!result.ok||!result.previewReady)return result;
+    if(needsAck)return {...invalid('holding_acknowledgment_required',reconciliation.message,parsed.input),reconciliation};
+    return {...result,previewBinding:previewBinding(current),reconciliation,acknowledgment:reconciliation.status==='warning_reconcilable'?reconciliation.acknowledgment:null};
+  }
   function buildCandidate(state,result,options={}){
     if(!result||!result.ok||!result.previewReady)throw new Error('必须先完成有效预览。');
     const prepared=options.prepared;
@@ -151,11 +195,13 @@ function process(raw,options={}){
     const candidate=clone(state),found=findStock(candidate,result.currentState.symbol);
     if(!found.stock)throw new Error('找不到本次讨论对应的股票。');
     const rebuilt=Workbench.buildContext(found.stock,{state:candidate,allStocks:candidate.stocks,planReviewStore:candidate.planReviews,planReviewApi:options.planReviewApi,timeZone:options.timeZone,now:options.now});
-    if(rebuilt.protectedHash!==prepared.protectedHash)throw new Error('受保护的持仓、技术锚点、计划或长期逻辑已经变化，请重新开始讨论。');
+    const reconciliation=reconcileContext(prepared,rebuilt,options);
+    if(reconciliation.status==='hard_block')throw new Error(reconciliation.message);
+    if(result.previewBinding&&result.previewBinding!==previewBinding(rebuilt))throw new Error('预览后当前事实已变化，请重新预览并确认持仓信息。');
+    if(reconciliation.status==='warning_reconcilable'&&(!result.previewBinding||result.acknowledgment!==reconciliation.acknowledgment))throw new Error('持仓信息已变化，请重新预览并确认 AI 已知晓最新仓位。');
     if(prepared.evidenceHash&&rebuilt.evidenceHash!==prepared.evidenceHash)throw new Error('资料已更新，请重新生成本次讨论上下文。');
-    if(rebuilt.sourceDiscussionVersion!==prepared.sourceDiscussionVersion)throw new Error('讨论上下文缺失或已过期，请重新开始讨论。');
     const facts=rebuilt.context.currentFacts;
-    const checked=process(JSON.stringify({currentState:result.currentState}),{expectedSymbol:rebuilt.context.symbol,sourceDiscussionVersion:rebuilt.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,marketRiskAvailable:Boolean(facts.marketRisk.status&&facts.marketRisk.status!=='unavailable'),programProvesFullPlanConditions:false,prepared:rebuilt});
+    const checked=process(JSON.stringify({currentState:result.currentState}),{expectedSymbol:rebuilt.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:facts.holding.shares,hasActivePlan:facts.plans.length>0,technicalDataStatus:facts.technical.dataStatus,marketRiskAvailable:Boolean(facts.marketRisk.status&&facts.marketRisk.status!=='unavailable'),programProvesFullPlanConditions:false,prepared:rebuilt});
     if(!checked.ok||!checked.previewReady)throw new Error(checked.message);
   const confirmedAt=(()=>{const raw=options.now instanceof Date?options.now:new Date(options.now||Date.now());if(!Number.isFinite(raw.getTime()))throw new Error('确认时间无效。');return raw.toISOString()})();
     const confirmedDate=Workbench.localCalendarDate(confirmedAt,{timeZone:options.timeZone||'Asia/Shanghai'}),judgment=result.currentState,store=Workbench.normalizeStore(found.stock.discussionState);
@@ -165,7 +211,7 @@ function process(raw,options={}){
       schemaVersion:judgment.userDecision?Workbench.STATE_SCHEMA_VERSION:Workbench.V2_STATE_SCHEMA_VERSION,
       stateId:`discussionstate_${Workbench.hash(`${judgment.symbol}|${judgment.sourceDiscussionVersion}|${confirmedAt}`)}`,
       symbol:judgment.symbol,sourceDiscussionVersion:judgment.sourceDiscussionVersion,...(judgment.userDecision?{userDecision:judgment.userDecision}:{}),actionAssessment:judgment.actionAssessment,attentionLevel:judgment.attentionLevel,trendAssessment:judgment.trendAssessment,structureAssessment:judgment.structureAssessment,stage:judgment.stage,focusPoints:judgment.focusPoints,summary:judgment.summary,keyChanges:judgment.keyChanges,risks:judgment.risks,watchPoints:judgment.watchPoints,planRelation:judgment.planRelation,confidence:judgment.confidence,
-      technicalAsOf:prepared.technicalSnapshot.anchorBar.date,confirmedAt,confirmedDate,technicalSnapshot:prepared.technicalSnapshot,references:prepared.references
+      technicalAsOf:rebuilt.technicalSnapshot.anchorBar.date,confirmedAt,confirmedDate,technicalSnapshot:rebuilt.technicalSnapshot,references:rebuilt.references
     });
     const validation=Workbench.validateState(next);if(!validation.ok)throw new Error(validation.errors.join('；'));
     if(store.current)store.history.push(store.current);
@@ -196,5 +242,5 @@ function process(raw,options={}){
   function list(items){return items.length?`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'无'}
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
-  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,assessTechnicalAnchorReadiness:assessTechnicalAnchorReadiness,process,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
+  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,assessTechnicalAnchorReadiness:assessTechnicalAnchorReadiness,process,reconcileContext,processImport,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
 });

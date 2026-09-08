@@ -29,7 +29,7 @@ const output=path.resolve(process.argv[2]||'.'),url='http://127.0.0.1:8768/';
     },raw);
     await page.locator('#discussionImportText').fill(oldRaw);await page.locator('#discussionImportPreviewBtn').click();
     assert.equal(await page.locator('#discussionImportConfirmBtn').isDisabled(),true);
-    assert.match(await page.locator('#discussionImportMessage').innerText(),/AI结论格式已通过校验.*暂不能保存/);
+    assert.match(await page.locator('#discussionImportMessage').innerText(),/缺少完整日K技术锚点.*暂不能保存/);
     async function visibleStatus(label){
       const box=await page.locator('#discussionImportMessage').boundingBox();assert.ok(box&&box.y>=0&&box.y+box.height<=viewport.height,label);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'document overflow');

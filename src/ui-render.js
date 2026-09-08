@@ -27,6 +27,8 @@ const longTermAiStates=new Map();
 let discussionImportPreview=null;
 let discussionImportPreviewText='';
 let discussionImportSaving=false;
+let discussionHoldingAcknowledgment=null;
+let discussionHoldingWarning=null;
 let discussionPlanImportPreview=null;
 let discussionPromptReturnFocus=null;
 let discussionResearchReturn=null;
@@ -4757,7 +4759,7 @@ function discussionStockKey(stock){return window.DiscussionWorkbench?window.Disc
 function discussionOptions(){return {state,allStocks:state.stocks,planReviewStore:state.planReviews,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'}}
 function discussionContextChanged(stock){
   const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
-  return window.DiscussionDataReadiness&&window.DiscussionDataReadiness.sessionChanged(prepared,window.DiscussionWorkbench.buildContext(stock,discussionOptions()));
+  return Boolean(prepared&&window.DiscussionStateContract.reconcileContext(prepared,window.DiscussionWorkbench.buildContext(stock,discussionOptions()),{transport:'manual'}).status==='hard_block');
 }
 function requireCurrentDiscussionContext(stock){
   if(discussionContextChanged(stock))throw new Error('资料已更新，请重新生成本次讨论上下文。请重新开始讨论并整理结论。');
@@ -4790,7 +4792,7 @@ function startStockDiscussion(stock){
   catch(error){alert(`无法开始讨论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionArchive(stock){
-  try{ensureDiscussionArchiveContext(stock);openDiscussionPromptDialog(stock,'archive')}
+  try{ensureDiscussionArchiveContext(stock,{refreshArchive:true});openDiscussionPromptDialog(stock,'archive')}
   catch(error){alert(`无法整理结论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionPlan(stock){
@@ -4798,14 +4800,19 @@ function prepareDiscussionPlan(stock){
   try{const prepared=window.DiscussionPlanWorkflow.prepare(stock);discussionPlanPreparedContexts.set(discussionStockKey(stock),prepared);openDiscussionPromptDialog(stock,'plan')}
   catch(error){alert(`无法整理计划：${error&&error.message?error.message:error}`)}
 }
-function ensureDiscussionArchiveContext(stock){
+function ensureDiscussionArchiveContext(stock,options={}){
   if(!window.DiscussionWorkbench)throw new Error('讨论工作台模块未加载。');
   requireCurrentDiscussionContext(stock);
   const key=discussionStockKey(stock);let prepared=discussionPreparedContexts.get(key);
   if(!prepared)prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());
   const readiness=window.DiscussionStateContract.assessTechnicalAnchorReadiness(prepared);
   if(!readiness.ready)throw new Error(readiness.message);
-  if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
+  const current=window.DiscussionWorkbench.buildContext(stock,discussionOptions());
+  const reconciliation=window.DiscussionStateContract.reconcileContext(prepared,current,{transport:'manual'});
+  if(reconciliation.status==='warning_reconcilable'&&(!prepared.archive||options.refreshArchive)){
+    // Keep the original source binding while telling the manual conversation today's facts.
+    prepared.archive=window.DiscussionWorkbench.buildArchiveRequest({...current,sourceDiscussionVersion:prepared.sourceDiscussionVersion,context:{...current.context,sourceDiscussionVersion:prepared.sourceDiscussionVersion}});
+  }else if(!prepared.archive)prepared.archive=window.DiscussionWorkbench.buildArchiveRequest(prepared);
   prepared.view='archive';discussionPreparedContexts.set(key,prepared);return prepared;
 }
 function discussionPromptSummary(prepared,kind){
@@ -4894,18 +4901,22 @@ function ensureDiscussionImportDialog(){
   document.getElementById('discussionImportCancelBtn').addEventListener('click',closeDiscussionImportDialog);
   document.getElementById('discussionImportReturnBtn').addEventListener('click',()=>{closeDiscussionImportDialog();document.querySelector('[data-detail-action="start-stock-discussion"]')?.focus()});
   document.getElementById('discussionImportPreviewBtn').addEventListener('click',previewDiscussionImport);
+  const acknowledgment=document.createElement('button');acknowledgment.id='discussionHoldingAcknowledgeBtn';acknowledgment.className='btn';acknowledgment.type='button';acknowledgment.hidden=true;acknowledgment.textContent='确认并继续预览';
+  document.getElementById('discussionImportMessage').after(acknowledgment);
+  acknowledgment.addEventListener('click',()=>{discussionHoldingAcknowledgment=discussionHoldingWarning?.acknowledgment;previewDiscussionImport()});
   document.getElementById('discussionImportConfirmBtn').addEventListener('click',confirmDiscussionImport);
-  document.getElementById('discussionImportText').addEventListener('input',()=>{discussionImportPreview=null;document.getElementById('discussionImportConfirmBtn').disabled=true;document.getElementById('discussionImportPreview').innerHTML='';document.getElementById('discussionImportMessage').textContent='内容已变化，请重新预览。'});
+  document.getElementById('discussionImportText').addEventListener('input',()=>{discussionImportPreview=null;discussionHoldingAcknowledgment=null;discussionHoldingWarning=null;acknowledgment.hidden=true;document.getElementById('discussionImportConfirmBtn').disabled=true;document.getElementById('discussionImportPreview').innerHTML='';document.getElementById('discussionImportMessage').textContent='内容已变化，请重新预览。'});
   return el;
 }
 function openDiscussionImportDialog(stock){
   try{
-    ensureDiscussionArchiveContext(stock);discussionImportPreview=null;
+    ensureDiscussionArchiveContext(stock);discussionImportPreview=null;discussionHoldingAcknowledgment=null;discussionHoldingWarning=null;
     const prepared=discussionPreparedContexts.get(discussionStockKey(stock));
     const el=ensureDiscussionImportDialog(),message=document.getElementById('discussionImportMessage'),confirmButton=document.getElementById('discussionImportConfirmBtn'),readiness=prepared&&window.DiscussionStateContract.assessTechnicalAnchorReadiness(prepared);
     if(el.dataset.stockId!==String(stock.id))document.getElementById('discussionImportText').value='';
     el.dataset.stockId=stock.id;
     document.getElementById('discussionImportReturnBtn').hidden=true;
+    document.getElementById('discussionHoldingAcknowledgeBtn').hidden=true;
     document.getElementById('discussionImportPreview').innerHTML='';
     if(confirmButton)confirmButton.disabled=true;
     if(readiness&&readiness.ready===false){
@@ -4921,6 +4932,8 @@ function closeDiscussionImportDialog(){document.getElementById('discussionImport
 function translateDiscussionImportFailureMessage(error){
   const raw=error&&error.message?String(error.message):'',code=error&&(error.code||error.type);
   if(/零持仓/.test(raw))return 'AI结论与当前零持仓事实冲突，请重新生成结论。当前没有持仓，结论不能使用“继续持有、加仓、减仓、止盈、止损”等持仓措辞。';
+  if(/已有持仓/.test(raw))return 'AI结论与当前持仓事实冲突，无法保存。当前已有持仓，但结论仍假设没有持仓，请修正 AI 结论后重新预览。';
+  if(/预览后当前事实|持仓信息已变化/.test(raw))return raw;
   if(code==='stale_tab'||raw.includes('stale_tab'))return '检测到其它页面已保存更新。当前旧页面不能覆盖最新数据，请重新加载后再试。';
   if(code==='anchor_not_ready'||/technical anchor mismatch|technical anchor bar invalid|完整日K|技术锚点日期|程序确认日期|技术锚点的收盘价/.test(raw))return '当前缺少有效的完整日K技术锚点，无法保存为连续结论。请先刷新技术数据，再重新开始整理。';
   if(/受保护的持仓|讨论上下文缺失或已过期|重新开始讨论/.test(raw))return '持仓、技术锚点、计划或长期逻辑已经变化，请重新开始本次讨论后再保存。';
@@ -4928,6 +4941,7 @@ function translateDiscussionImportFailureMessage(error){
 }
 function showDiscussionImportFailure(message){
   discussionImportPreview=null;
+  const acknowledgment=document.getElementById('discussionHoldingAcknowledgeBtn');if(acknowledgment)acknowledgment.hidden=true;
   const confirmButton=document.getElementById('discussionImportConfirmBtn');if(confirmButton)confirmButton.disabled=true;
   const preview=document.getElementById('discussionImportPreview');if(preview)preview.innerHTML='';
   const recovery=document.getElementById('discussionImportReturnBtn');if(recovery)recovery.hidden=false;
@@ -4943,11 +4957,16 @@ function previewDiscussionImport(){
   document.getElementById('discussionImportConfirmBtn').disabled=true;
   document.getElementById('discussionImportReturnBtn').hidden=true;
   document.getElementById('discussionImportPreview').innerHTML='';
+  document.getElementById('discussionHoldingAcknowledgeBtn').hidden=true;
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock)),message=document.getElementById('discussionImportMessage'),preview=document.getElementById('discussionImportPreview'),confirmButton=document.getElementById('discussionImportConfirmBtn');
   if(!stock||!prepared){message.textContent='本次讨论上下文已丢失，请关闭后重新开始讨论。';confirmButton.disabled=true;return}
-  if(discussionContextChanged(stock)){discussionImportPreview=null;confirmButton.disabled=true;showDiscussionImportFailure('资料已更新，请重新生成本次讨论上下文。');return;}
-  const facts=prepared.context&&prepared.context.currentFacts||{},holding=facts.holding||{},plans=Array.isArray(facts.plans)?facts.plans:[],technical=facts.technical||{},marketRisk=facts.marketRisk||{},result=window.DiscussionStateContract.process(document.getElementById('discussionImportText').value,{expectedSymbol:discussionStockKey(stock),sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:holding.shares,hasActivePlan:plans.length>0,technicalDataStatus:technical.dataStatus,marketRiskAvailable:marketRisk.status&&marketRisk.status!=='unavailable',programProvesFullPlanConditions:false,prepared});
-  if(!result.ok){showDiscussionImportFailure(/零持仓/.test(result.message)?translateDiscussionImportFailureMessage(result):result.message);return}
+  const current=window.DiscussionWorkbench.buildContext(stock,discussionOptions()),result=window.DiscussionStateContract.processImport(document.getElementById('discussionImportText').value,prepared,current,{transport:'manual',acknowledgment:discussionHoldingAcknowledgment});
+  if(result.code==='holding_acknowledgment_required'){
+    discussionHoldingWarning=result.reconciliation;message.textContent=`${result.reconciliation.title}。${result.message}`;
+    document.getElementById('discussionHoldingAcknowledgeBtn').hidden=false;document.getElementById('discussionImportReturnBtn').hidden=false;
+    message.scrollIntoView({block:'center',inline:'nearest'});message.focus({preventScroll:true});return;
+  }
+  if(!result.ok){showDiscussionImportFailure(/零持仓|已有持仓/.test(result.message)?translateDiscussionImportFailureMessage(result):result.message);return}
   discussionImportPreview=result;discussionImportPreviewText=document.getElementById('discussionImportText').value;
   const date=window.DiscussionWorkbench.localCalendarDate(new Date(),{timeZone:'Asia/Shanghai'});message.textContent=result.message;preview.innerHTML=window.DiscussionStateContract.renderPreview(result,{technicalAsOf:prepared.technicalSnapshot?.anchorBar?.date,confirmedDate:date});
   confirmButton.disabled=!result.previewReady;
@@ -4960,7 +4979,7 @@ async function confirmDiscussionImport(){
   if(document.getElementById('discussionImportText').value!==discussionImportPreviewText){showDiscussionImportFailure('内容已变化，请重新预览。');return;}
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));if(!stock||!prepared||!discussionImportPreview||!discussionImportPreview.previewReady){showDiscussionImportFailure('本次结论尚未就绪，请重新开始讨论并预览后再保存。');return;}
   discussionImportSaving=true;document.getElementById('discussionImportConfirmBtn').disabled=true;
-  const original=state,message=document.getElementById('discussionImportMessage'),result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
+  const original=state,message=document.getElementById('discussionImportMessage'),result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,transport:'manual',planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
   discussionImportSaving=false;
   if(result.status!=='completed'){
     showDiscussionImportFailure(translateDiscussionImportFailureMessage(result.error));

@@ -42,7 +42,7 @@ test('first-use actions are enabled and archive/import prepare protected context
   const panel=ui.match(/function aiDiscussionWorkspacePanel\(stock\)\{([\s\S]*?)\n\}/)?.[1]||'';
   assert.doesNotMatch(panel,/data-detail-action="prepare-discussion-archive"[^>]*disabled/);
   assert.doesNotMatch(panel,/data-detail-action="import-discussion-state"[^>]*disabled/);
-  assert.match(ui,/function ensureDiscussionArchiveContext\(stock\)/);
+  assert.match(ui,/function ensureDiscussionArchiveContext\(stock,options=\{\}\)/);
   assert.match(ui,/if\(!prepared\)prepared=window\.DiscussionWorkbench\.buildDiscussionRequest\(stock,discussionOptions\(\)\)/);
   assert.match(ui,/if\(!prepared\.archive\)prepared\.archive=window\.DiscussionWorkbench\.buildArchiveRequest\(prepared\)/);
   assert.match(ui,/本次结论的受保护上下文已准备/);
@@ -110,7 +110,7 @@ test('开始讨论 prepares the current request and opens its modal immediately 
 
 test('整理结论 directly prepares protected archive context and opens the archive modal',()=>{
   const action=ui.slice(ui.indexOf('function prepareDiscussionArchive'),ui.indexOf('function ensureDiscussionArchiveContext'));
-  assert.match(action,/ensureDiscussionArchiveContext\(stock\)/);assert.match(action,/openDiscussionPromptDialog\(stock,'archive'\)/);assert.doesNotMatch(action,/renderStockDetail|scrollIntoView|saveState/);
+  assert.match(action,/ensureDiscussionArchiveContext\(stock,\{refreshArchive:true\}\)/);assert.match(action,/openDiscussionPromptDialog\(stock,'archive'\)/);assert.doesNotMatch(action,/renderStockDetail|scrollIntoView|saveState/);
   assert.match(ui,/整理结论已准备/);assert.match(ui,/用于把刚才的讨论整理成可导入结论，不会修改计划或持仓/);assert.match(ui,/保存前仍需回到程序导入并确认/);
 });
 
