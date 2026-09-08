@@ -16,7 +16,7 @@ const fixtures=require('./fixtures/state-watch-definitions.json');
     await page.goto(url);await ready(page);assert.equal(await page.evaluate(()=>state.stocks.length),0);
     await page.evaluate(async()=>{
       const plan=PlanV2.createPlan({action:'buy',triggerPrice:25,triggerDirection:'below',quantity:100,allocationConstraint:{maxPositionPct:12},note:'合成传统计划'},{now:'2026-09-03T00:00:00Z'});
-      const candidate=createValidatedCandidateSnapshot({stocks:[{id:'watch-acceptance',name:'隔离观察验收',code:'600000.SS',type:'holding',shares:0,avgCost:0,currentPrice:null,capPct:20,plans:[plan]}],updatedAt:null});
+      const candidate=createValidatedCandidateSnapshot({stocks:[{id:'watch-acceptance',name:'隔离观察验收',code:'600000.SS',type:'holding',managementCategory:'candidate',shares:0,avgCost:0,currentPrice:null,capPct:20,plans:[plan]}],updatedAt:null});
       await persistCandidateSnapshot(candidate);state=candidate;render();
       globalThis.phase1bWrites=0;const persist=persistCandidateSnapshot;persistCandidateSnapshot=async candidate=>{const result=await persist(candidate);phase1bWrites++;return result};
       globalThis.phase1bLegacy=JSON.stringify(state.stocks[0].plans[0]);globalThis.phase1bCurrentState=JSON.stringify(state.stocks[0].discussionState);

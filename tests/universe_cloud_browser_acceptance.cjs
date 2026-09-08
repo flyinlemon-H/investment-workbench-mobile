@@ -37,7 +37,7 @@ const config={projectRef:ref,url:origin,publishableKey:'sb_publishable_6bk0BQjpj
       await page.locator('[data-tab="tools"]').click();
       await page.locator('#addBtn').click();await page.locator('#fName').fill('隔离新增验收');
       await page.locator('#fCode').fill(symbol);await page.locator('#fShares').fill('1');
-      await page.locator('#fCost').fill('10');await page.locator('#fCurrentPrice').fill('10');
+      await page.locator('#fManagementCategory').selectOption('core');await page.locator('#fCost').fill('10');await page.locator('#fCurrentPrice').fill('10');
       await page.locator('#saveBtn').click();await page.waitForFunction(()=>!document.getElementById('modal').classList.contains('show'));
       await page.evaluate(()=>UniverseAutoAdd.flush());
     }

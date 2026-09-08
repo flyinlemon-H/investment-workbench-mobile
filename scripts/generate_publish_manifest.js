@@ -99,6 +99,8 @@ const paths=[...new Set([
   'src/discussion-workbench.js',
   'src/discussion-state-contract.js',
   'src/discussion-plan-workflow.js',
+  'src/management-category.js',
+  'src/management-category-ui.js',
   'src/workbench-navigation-ui.js',
   'src/stock-research-ui.js'
 ])].sort((a,b)=>a.localeCompare(b,'en'));

@@ -15,7 +15,7 @@ const output=path.resolve(process.argv[2]||'.'),url='http://127.0.0.1:8768/';
     await page.evaluate(async()=>{
       const base={schemaVersion:'plan.v2',planVersion:7,action:'reduce',triggerDirection:'above',status:'active',validityStatus:'active',createdAt:'2026-08-20T00:00:00Z',updatedAt:'2026-08-27T00:00:00Z',lastReviewedAt:'2026-08-27T00:00:00Z',priceTriggerStatus:'not_triggered',fullConditionStatus:'unproven',source:'manual',conditions:{technical:['合成条件，仅用于隔离验收']}};
       const plans=[{...base,id:'fixture-price-null',triggerPrice:null,quantity:100,note:'既有计划：价格待定'},{...base,id:'fixture-quantity-null',triggerPrice:40,quantity:null,note:'既有计划：数量待定'},{...base,id:'fixture-both-null',triggerPrice:null,quantity:null,note:'既有条件计划：价格与数量待定'},{...base,id:'fixture-watch',planMode:'state_watch',action:'sell',triggerPrice:35,quantity:100,note:'合成状态观察计划，保持只读'}];
-      const candidate=createValidatedCandidateSnapshot({stocks:[{id:'mode-acceptance',name:'隔离兼容验收',code:'600000.SS',type:'holding',shares:0,avgCost:0,currentPrice:34,plans}],updatedAt:null});
+      const candidate=createValidatedCandidateSnapshot({stocks:[{id:'mode-acceptance',name:'隔离兼容验收',code:'600000.SS',type:'holding',managementCategory:'candidate',shares:0,avgCost:0,currentPrice:34,plans}],updatedAt:null});
       await persistCandidateSnapshot(candidate);state=candidate;render();
     });
     const before=await page.evaluate(()=>JSON.stringify(state.stocks[0].plans));

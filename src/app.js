@@ -78,7 +78,7 @@ ensureExecutionLogTab();
 ensureEditCenterTab();
 ensureToolsTab();
 initializeWorkbenchNavigation();
-document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{detailStockId=null;detailSubView='';currentTab=t.dataset.tab;render()}));
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{detailStockId=null;detailSubView='';currentTab=t.dataset.tab;if(currentTab==='targets'){targetFilter='core';targetSearch=''}render()}));
 document.getElementById('addBtn').addEventListener('click',()=>openModal(null));
 document.getElementById('importBtn').addEventListener('click',importData);
 document.getElementById('exportBtn').addEventListener('click',exportData);

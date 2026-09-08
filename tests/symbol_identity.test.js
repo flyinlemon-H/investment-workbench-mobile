@@ -68,5 +68,5 @@ test('new and edited stock save path canonicalizes code and blocks canonical dup
   assert.match(source,/SymbolIdentity\.canonicalMarketSymbol\(rawCode\)/);
   assert.match(source,/SymbolIdentity\.buildStockIndex\(otherStocks\)/);
   assert.match(source,/lookup\.index\.has\(code\)\|\|lookup\.ambiguous\.has\(code\)/);
-  assert.match(source,/const payload=\{type:formType,name,code,/);
+  assert.match(source,/const payload=\{managementCategory:category,type:formType,name,code,/);
 });

@@ -1,11 +1,11 @@
 // Discussion-Centric UI Simplification V1A: presentation only; no persisted contracts.
-let targetFilter='all';
+let targetFilter='core';
 let targetSearch='';
 let comparisonSearch='';
 let comparisonRisk='';
 const maintenanceControlIds=['fxBtn','batchTechnicalReviewBtn','importBtn','exportBtn','socialImportBtn','resetBtn','refreshAllBtn','addBtn','planReviewBatchBtn','analysisFetchBtn','pcSyncControl','syncHint','socialDataStatus','multiStockAnalysisQuickBtn','multiStockAnalysisBtn'];
 function primaryTabFor(tab){return ['holding','etf','watching','targets'].includes(tab)?'targets':['tools','analysis','edit','more'].includes(tab)?'more':tab}
-function navigateWorkbench(tab){detailStockId=null;detailSubView='';currentTab=tab;render()}
+function navigateWorkbench(tab){if(tab==='targets'){targetFilter='core';targetSearch=''}detailStockId=null;detailSubView='';currentTab=tab;render()}
 function initializeWorkbenchNavigation(){
   const tabs=document.querySelector('.tabs');
   tabs.querySelectorAll('[data-tab]').forEach(button=>{button.hidden=true;button.dataset.uiDisposition='hide'});
@@ -25,18 +25,22 @@ function parkMaintenanceControls(){
   const cloud=document.querySelector('.universe-cloud-bar');if(cloud)parking.appendChild(cloud);
 }
 function mountMaintenanceControl(id,mount){const node=document.getElementById(id),target=document.getElementById(mount);if(node&&target)target.appendChild(node)}
-function targetMatches(stock,filter){return filter==='holding'?Number(stock.shares)>0:filter==='watching'?stock.type==='watching':filter==='etf'?stock.type==='etf':filter==='zero'?Number(stock.shares)===0:true}
+function targetMatches(stock,filter){return ManagementCategory.matches(stock,filter)}
 function targetSummaryCard(stock,planMode=false){
   const status=discussionStatusPresentation(stock),current=status.current,plans=v13DisplayActivePlans(stock.plans);
-  return `<article class="card target-card"><button class="link-btn detail-name" data-target-stock="${esc(stock.id)}" type="button">${esc(stock.name||stock.code)}</button><div class="card-note">${esc(stock.code)} · ${Number(stock.shares)>0?'持仓':'零仓'}${stock.type==='etf'?' · ETF':''}</div><p class="text">${esc(planMode?`${plans.length} 条当前计划`:current?.userDecision?.headline||current?.actionAssessment?.headline||current?.summary||'尚无讨论结论')}</p><div class="card-note">${esc(status.label)} · ${plans.length} 条当前计划</div><button class="btn ghost small" data-target-stock="${esc(stock.id)}" type="button">${planMode?'查看计划与运行状态':'进入当前判断'}</button></article>`;
+  return `<article class="card target-card"><button class="link-btn detail-name" data-target-stock="${esc(stock.id)}" type="button">${esc(stock.name||stock.code)}</button><div class="card-note">${esc(stock.code)} · ${Number(stock.shares)>0?'持仓':'无持仓'}${stock.type==='etf'?' · ETF':''}</div><p class="text">${esc(planMode?`${plans.length} 条当前计划`:current?.userDecision?.headline||current?.actionAssessment?.headline||current?.summary||'尚无讨论结论')}</p><div class="card-note">${esc(status.label)} · ${plans.length} 条当前计划</div><button class="btn ghost small" data-target-stock="${esc(stock.id)}" type="button">${planMode?'查看计划与运行状态':'进入当前判断'}</button>${planMode?'':` <button class="btn ghost small" data-target-edit="${esc(stock.id)}" type="button">编辑标的</button>`}</article>`;
 }
 function renderTargets(planMode=false){
+  targetFilter=ManagementCategory.session(targetFilter);
+  const unassigned=state.stocks.filter(ManagementCategory.needsAssignment).length;
   const rows=state.stocks.filter(stock=>(planMode||targetMatches(stock,targetFilter))&&`${stock.name} ${stock.code}`.toLowerCase().includes(targetSearch.toLowerCase()));
   document.getElementById('summary').textContent=planMode?'计划中心':'标的';
-  document.getElementById('main').innerHTML=`<div class="toolbar"><label class="target-search">搜索标的<input id="targetSearch" type="search" value="${esc(targetSearch)}" placeholder="名称或代码"></label>${planMode?'<button class="btn ghost small" id="openPlanReview" type="button">计划批量复核</button>':'<button class="btn ghost small" id="targetAdd" type="button">新增标的</button>'}</div>${planMode?'<p class="card-note">查看正式计划、状态观察与运行状态，按需进行复核。</p>':`<div class="target-filters" aria-label="标的筛选">${[['all','全部'],['holding','持仓'],['watching','观察'],['etf','ETF'],['zero','零仓候选']].map(([key,label])=>`<button class="btn ghost small" data-target-filter="${key}" aria-pressed="${targetFilter===key}" type="button">${label}</button>`).join('')}</div>`}<div class="target-grid">${rows.map(stock=>targetSummaryCard(stock,planMode)).join('')||'<div class="empty">暂无匹配标的</div>'}</div>`;
+  document.getElementById('main').innerHTML=`<div class="toolbar"><label class="target-search">搜索标的<input id="targetSearch" type="search" value="${esc(targetSearch)}" placeholder="名称或代码"></label>${planMode?'<button class="btn ghost small" id="openPlanReview" type="button">计划批量复核</button>':'<button class="btn ghost small" id="targetAdd" type="button">新增标的</button>'}</div>${planMode?'<p class="card-note">查看正式计划、状态观察与运行状态，按需进行复核。</p>':`<div class="target-filters" aria-label="标的筛选">${Object.entries(ManagementCategory.labels).map(([key,label])=>`<button class="btn ghost small" data-target-filter="${key}" aria-pressed="${targetFilter===key}" type="button">${label}</button>`).join('')}</div>`}${!planMode&&unassigned?`<div class="card category-maintenance"><span>有 ${unassigned} 个历史标的尚未完成管理分类</span> <button class="btn ghost small" id="targetAssign" type="button">整理分类</button></div>`:''}<div class="target-grid">${rows.map(stock=>targetSummaryCard(stock,planMode)).join('')||(planMode?'<div class="empty">暂无匹配标的</div>':'<div class="empty">当前分类中没有匹配标的。</div>')}</div>`;
   document.getElementById('targetSearch').addEventListener('input',event=>{targetSearch=event.target.value;const start=event.target.selectionStart;renderTargets(planMode);const input=document.getElementById('targetSearch');input.focus();try{input.setSelectionRange(start,start)}catch(_){}});
   document.querySelectorAll('[data-target-filter]').forEach(button=>button.onclick=()=>{targetFilter=button.dataset.targetFilter;renderTargets()});
   document.querySelectorAll('[data-target-stock]').forEach(button=>button.onclick=()=>openStockDetail(button.dataset.targetStock,planMode?'plan':'ai'));
+  document.querySelectorAll('[data-target-edit]').forEach(button=>button.onclick=()=>openModal(button.dataset.targetEdit));
+  document.getElementById('targetAssign')?.addEventListener('click',openCategoryAssignment);
   document.getElementById('targetAdd')?.addEventListener('click',()=>openModal(null));
   document.getElementById('openPlanReview')?.addEventListener('click',()=>window.PlanReviewUI?.open());
 }
