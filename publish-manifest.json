@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "8d1066e5871a45b3e242c66d5dce463355cb59fa",
-  "assetVersion": "management-category-assignment-hotfix-v1-20260908",
-  "dataMode": "Management Category Legacy Assignment Hotfix V1 excludes established cash/system compatibility rows, binds exact eligible identities for atomic explicit assignment, and preserves Foundation categories and holding/Discussion/Plan/market boundaries",
+  "sourceCommit": "422addbff5ab982690662b6198b1951f213b16dd",
+  "assetVersion": "management-category-lifecycle-v1-20260908",
+  "dataMode": "Management Category Lifecycle Integration V1 atomically confirms canonical holding and user-owned category transitions, preserves legacy/cash read compatibility and Discussion reconciliation, and excludes cloud and market changes",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71650,
-      "sha256": "df97a4d2a19aaf4aed15a9b434c5a4591c304624dcf4d1093ebe122c76aecd4e"
+      "bytes": 71018,
+      "sha256": "68080ff7d06713556a72049c635874082c67810f285ebd6f262071bd208b076a"
     },
     {
       "path": "social_posts.json",
@@ -163,8 +163,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 7969,
-      "sha256": "bf1e439dd0a893e505f34c650cdb551d027ad77faca279b71e0726f473ba786d"
+      "bytes": 8335,
+      "sha256": "4c2a901c5342c84ebf129479848fb11f97d6a56e53efe5f00d37c4b013d569fb"
     },
     {
       "path": "src/long-term-logic-contract.js",
@@ -187,14 +187,14 @@
     {
       "path": "src/management-category-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 6808,
-      "sha256": "56b3bfcf2101af02de5737488065b37f43a411cf78120971fe6752bf3724a69e"
+      "bytes": 10397,
+      "sha256": "a7ed17373cfda43045f1d6681488b04bf3aefeba36485dd12e9a69e5e2d2af45"
     },
     {
       "path": "src/management-category.js",
       "role": "browser runtime dependency",
-      "bytes": 6250,
-      "sha256": "0b1b1b0c14dbdba03c1b9067b6664f5b71c7ebd1635a5bd4413b7146c594cf34"
+      "bytes": 7892,
+      "sha256": "1e7c12e56f15a61e13ecf348a9a413003035972770b680b3ea7fef7f9831a049"
     },
     {
       "path": "src/manual-analysis-sync-cloud.js",
@@ -235,8 +235,8 @@
     {
       "path": "src/operation-entry.js",
       "role": "browser runtime dependency",
-      "bytes": 15492,
-      "sha256": "413024fc63d646c2b8a8bf2a8944810f4b9631c3ea8d04fe8f7c9c9e76678e0d"
+      "bytes": 16723,
+      "sha256": "16f3484d1f20093b84e89461a45378e12adbd7e505b08bb419998e12477b6314"
     },
     {
       "path": "src/plan-generation-gate.js",
@@ -313,8 +313,8 @@
     {
       "path": "src/rebalance.js",
       "role": "Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime",
-      "bytes": 7452,
-      "sha256": "93da1ef23f298f9a540246a067985f159b04eb8117292ade86b0bcf99d813892"
+      "bytes": 8417,
+      "sha256": "f8c1dc9709ac27a55d9abebf5ebee4513845045ff57770ce39e4bc0b508818be"
     },
     {
       "path": "src/social.js",
@@ -391,8 +391,8 @@
     {
       "path": "src/storage/storage-manager.js",
       "role": "browser runtime dependency",
-      "bytes": 14973,
-      "sha256": "4a5142ef1c5313a078101d96c0ea28d32b231545ec5bba382c2a5e9eff91b5bf"
+      "bytes": 15102,
+      "sha256": "503663d016502585cb6be68218e65ec14f38f3ac15ca05c4f8069abd99b52a38"
     },
     {
       "path": "src/storage/storage-validation.js",
@@ -427,8 +427,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 633041,
-      "sha256": "e4bc71466dbcae833d65d807021fb07da17f7fba0f9e80e3244470b64abb9061"
+      "bytes": 634889,
+      "sha256": "9979be943287b2583cb4a4fd5852f39a3346e1d5fe07c1ae496df6b628772774"
     },
     {
       "path": "src/universe-auto-add.js",
@@ -487,8 +487,8 @@
     {
       "path": "src/workbench-navigation-ui.js",
       "role": "Primary navigation, target filters, advanced comparison and maintenance control placement; presentation only",
-      "bytes": 13227,
-      "sha256": "fbb10da58a035124a9023587e0baa5bfb159b358a5c9a69725a5f3d9ecd1c80f"
+      "bytes": 13230,
+      "sha256": "3e59d5318ad59bdb210d6e9ded29e10ba35841fbbd4b08664588e3cfea1ebacf"
     }
   ]
 }
