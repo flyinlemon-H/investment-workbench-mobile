@@ -109,6 +109,52 @@
     return {title,summary:summaries[phase]};
   }
 
+  // Ephemeral events, not User Decisions or Runtime phase transitions. A valid
+  // Current State owns the existing action path, including its quiet decisions.
+  function screenProgramFacts(stock,state,now){
+    const health=technicalHealth(stock,state,now),source=judgmentSource(stock,state,health);
+    if(health.status!=='current'||source.status==='current')return [];
+    if(stock.shares===null||stock.shares===undefined||!Number.isFinite(Number(stock.shares))||Number(stock.shares)<0)return [];
+    const held=Portfolio.holdingFacts(stock).holdingStatus==='held';
+    const bars=array(stock.priceHistory).filter(bar=>bar&&bar.date===health.sourceAsOf);
+    const bar=bars.length===1?bars[0]:null;
+    const positive=value=>typeof value==='number'&&Number.isFinite(value)&&value>0;
+    if(!bar||bar.is_complete_bar!==true||!positive(bar.close))return [];
+    const symbol=Discussion.canonical(stock),signals=[];
+    const base={symbol,requiresDiscussion:true,sourceAsOf:health.sourceAsOf};
+    // Only dated program indicators; never technicalReview, riskFlags, prose,
+    // Current State structures or the mixed AI/program compactTechnical judgment.
+    const facts=stock.technicalIndicators||{},histogram=facts.macd?.histogram;
+    if(held&&facts.last_trade_date===health.sourceAsOf&&positive(facts.ma20)&&positive(facts.ma60)&&
+      typeof histogram==='number'&&Number.isFinite(histogram)&&histogram<0&&bar.close<facts.ma20&&facts.ma20<facts.ma60){
+      signals.push({...base,source:'program_technical_facts',signalType:'technical_risk',code:'technical_risk',action:'hold',strength:'attention',order:7,priority:'medium',title:'注意持仓风险',summary:'最新行情出现持仓风险信号，请进入讨论确认。'});
+    }
+    const today=Discussion.localCalendarDate(new Date(now),{timeZone:'Asia/Shanghai'});
+    const plans=array(stock.plans);
+    for(const plan of Plan.validatePlanCollection(plans).ok?plans:[]){
+      if(!plan||!Plan.validatePlan(plan).ok||!Plan.isLegacyPricePlan(plan)||!active(plan)||
+        Plan.freshness(plan,today)!=='current'||String(plan.invalidationReason||'').trim()||
+        Plan.normalizeConditions(plan.conditions).invalidation.some(condition=>condition.status==='confirmed'))continue;
+      // Canonical buy is entry-capable; add alone is not an entry Plan. Neither
+      // a sell direction nor free text proves a take-profit/stop-loss objective.
+      const buying=held?['buy','add'].includes(plan.action):plan.action==='buy';
+      const reducing=held&&['sell','reduce'].includes(plan.action);
+      if(!buying&&!reducing||buying&&!Plan.hasAllocationPremise(plan))continue;
+      // Use the latest complete close only when it agrees with the canonical
+      // quote used by existing price Plans; do not mix adjusted and quote prices.
+      if(!positive(stock.currentPrice)||Math.abs(stock.currentPrice-bar.close)>Math.max(1,bar.close)*1e-6)continue;
+      const trigger=Plan.evaluatePriceTrigger(plan,bar.close);
+      if(trigger.status!=='triggered')continue;
+      signals.push({...base,source:'plan_runtime',signalType:'plan_trigger',code:'plan_trigger',planId:plan.id,planVersion:plan.planVersion,
+        planAction:reducing?'reduce':held?'increase':'entry',action:reducing?'reduce':held?'add':'build',strength:'consider',order:reducing?2:held?4:5,priority:'high',
+        title:reducing?'可考虑减仓':held?'可以考虑加仓':'可以考虑建仓',summary:'已有计划的价格条件已达到，请进入讨论确认其他条件。',triggerStatus:trigger.status});
+    }
+    // Defensive program events suppress Plan buy reminders, just as defensive
+    // Current State actions suppress opportunities. Keep one screened action.
+    const defensive=signals.some(signal=>signal.action==='hold'||signal.action==='reduce');
+    return signals.filter(signal=>!defensive||!['add','build'].includes(signal.action)).sort((a,b)=>a.order-b.order||String(a.planId||'').localeCompare(String(b.planId||'')));
+  }
+
   function build(state={},options={}){
     const now=options.now??Date.now(),items=[],diagnostics=[];
     const stocks=Portfolio.selectableStocks(state.stocks).map(stock=>{
@@ -135,7 +181,16 @@
       diagnostics.push({stockId:stock.id,...(selection?.debug||{source:'risk_current_state',suppressionReason:'source_'+source.status})});
       if(selection?.primary)add({...selection.primary,actionDebug:selection.debug,secondary:selection.secondary?.title||''},'risk_current_state',source.current.technicalAsOf,'current','discussion',source.current.confirmedAt);
 
+      const screening=screenProgramFacts(stock,state,now);
+      if(screening.length){
+        const signal=screening[0];
+        add(signal,signal.source,signal.sourceAsOf,'current','discussion');
+      }
+
       for(const plan of plans){
+        // A fresh screened event is more useful than an old generic binding
+        // notice. Valid Current State/Runtime behavior is unchanged (no screening).
+        if(screening.length)continue;
         if(!Plan.hasWatchDefinition(plan))continue;
         const runtime=Runtime.runtimeFor(state,plan.id);
         if(!runtime||!Runtime.validateRecord(runtime).ok||!actionablePhases.includes(runtime.phase))continue;
@@ -149,7 +204,7 @@
         const {title,summary}=runtimeLanguage(runtime.phase,held),transition=array(runtime.history).filter(entry=>entry.fromPhase!==entry.toPhase).at(-1);
         add({code:runtime.phase,planId:plan.id,priority,title,summary},'plan_runtime',runtime.updatedAt,'current','plan',transition&&transition.committedAt||runtime.updatedAt);
       }
-      const sourceRank={technical_data:0,risk_current_state:1,plan_runtime:2};
+      const sourceRank={technical_data:0,risk_current_state:1,plan_runtime:2,program_technical_facts:3};
       candidates.sort((a,b)=>rank[a.priority]-rank[b.priority]||sourceRank[a.source]-sourceRank[b.source]||epoch(b.changedAt)-epoch(a.changedAt));
       if(!candidates.length)continue;
       const primary=candidates[0];
@@ -158,5 +213,5 @@
     items.sort((a,b)=>rank[a.priority]-rank[b.priority]||Number(b.held)-Number(a.held)||epoch(b.changedAt)-epoch(a.changedAt)||b.relevance-a.relevance);
     return {items,count:items.length,counts:Object.fromEntries(Object.keys(rank).map(priority=>[priority,items.filter(item=>item.priority===priority).length])),quietText:'今日暂无需要优先关注的风险。',diagnostics};
   }
-  return Object.freeze({build,technicalHealth,judgmentSource,selectActionSignal});
+  return Object.freeze({build,technicalHealth,judgmentSource,selectActionSignal,screenProgramFacts});
 });
