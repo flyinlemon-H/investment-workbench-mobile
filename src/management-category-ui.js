@@ -22,23 +22,26 @@ async function persistManagementCategory(candidate){
 }
 function openCategoryAssignment(){
   document.getElementById('categoryAssignmentDialog')?.remove();
-  const records=ManagementCategory.inventory(state.stocks).filter(row=>row.needsConfirmation);
+  const records=ManagementCategory.inventory(ManagementCategory.pending(state.stocks));
+  const assignmentSession=ManagementCategory.assignmentSession(state.stocks,SymbolIdentity.canonicalMarketSymbol);
   const dialog=document.createElement('dialog');dialog.id='categoryAssignmentDialog';dialog.className='category-dialog';
-  dialog.innerHTML=`<h2>整理标的分类</h2><p class="card-note">逐项选择后预览，确认保存才会生效。旧角色仅供参考。</p><div>${records.map((row,i)=>{const stock=state.stocks.find(s=>(s.code||s.symbol||'')===row.symbol);return `<div class="category-assignment-row"><label for="categoryAssignment${i}">${esc(row.name)} · ${esc(row.symbol)}</label><div class="card-note">当前旧角色：${esc(row.legacyRole||'未记录')} · 持仓 ${esc(row.shares??'未知')} · 旧类型 ${esc(row.assetType==='etf'?'ETF':row.assetType==='watching'?'观察':row.assetType==='holding'?'个股':row.assetType||'未记录')}</div><select id="categoryAssignment${i}" data-category-id="${esc(stock?.id||'')}" data-category-symbol="${esc(SymbolIdentity.canonicalMarketSymbol(row.symbol)||row.symbol)}">${categoryOptions()}</select></div>`}).join('')}</div><p id="categoryAssignmentError" role="alert"></p><div id="categoryAssignmentPreview" aria-live="polite"></div><div class="actions"><button class="btn ghost" id="categoryAssignmentCancel" type="button">取消</button><button class="btn ghost" id="categoryAssignmentReview" type="button">预览</button><button class="btn" id="categoryAssignmentConfirm" type="button" disabled>确认保存</button></div>`;
+  dialog.innerHTML=`<h2>整理标的分类</h2><p class="card-note">逐项选择后预览，确认保存才会生效。旧角色仅供参考。</p><div>${records.map((row,i)=>{return `<div class="category-assignment-row"><label for="categoryAssignment${i}">${esc(row.name)} · ${esc(row.symbol)}</label><div class="card-note">当前旧角色：${esc(row.legacyRole||'未记录')} · 持仓 ${esc(row.shares??'未知')} · 旧类型 ${esc(row.assetType==='etf'?'ETF':row.assetType==='watching'?'观察':row.assetType==='holding'?'个股':row.assetType||'未记录')}</div><select id="categoryAssignment${i}" data-category-id="${esc(row.id||'')}" data-category-symbol="${esc(SymbolIdentity.canonicalMarketSymbol(row.symbol)||row.symbol)}">${categoryOptions()}</select></div>`}).join('')}</div><p id="categoryAssignmentError" role="alert"></p><div id="categoryAssignmentPreview" aria-live="polite"></div><div class="actions"><button class="btn ghost" id="categoryAssignmentCancel" type="button">取消</button><button class="btn ghost" id="categoryAssignmentReview" type="button" disabled>预览</button><button class="btn" id="categoryAssignmentConfirm" type="button" disabled>确认保存</button></div>`;
   document.body.appendChild(dialog);let preview=null,busy=false;
-  const error=dialog.querySelector('#categoryAssignmentError'),confirmButton=dialog.querySelector('#categoryAssignmentConfirm');
+  const error=dialog.querySelector('#categoryAssignmentError'),confirmButton=dialog.querySelector('#categoryAssignmentConfirm'),reviewButton=dialog.querySelector('#categoryAssignmentReview');
   const selections=()=>[...dialog.querySelectorAll('select')].filter(node=>node.value).map(node=>({id:node.dataset.categoryId,symbol:node.dataset.categorySymbol,managementCategory:node.value}));
   const invalidate=()=>{preview=null;confirmButton.disabled=true;dialog.querySelector('#categoryAssignmentPreview').textContent='';error.textContent=''};
-  dialog.onchange=invalidate;dialog.oncancel=event=>{if(busy)event.preventDefault()};dialog.onclose=()=>dialog.remove();
+  const updateReview=()=>{reviewButton.disabled=busy||!records.length||selections().length!==records.length};
+  dialog.onchange=()=>{invalidate();updateReview()};dialog.oncancel=event=>{if(busy)event.preventDefault()};dialog.onclose=()=>dialog.remove();
   dialog.querySelector('#categoryAssignmentCancel').onclick=()=>dialog.close();
-  dialog.querySelector('#categoryAssignmentReview').onclick=()=>{invalidate();try{const assignments=selections();ManagementCategory.buildCandidate(state,assignments,SymbolIdentity.canonicalMarketSymbol);preview={assignments,selectionBinding:JSON.stringify(assignments),stateBinding:JSON.stringify(state)};dialog.querySelector('#categoryAssignmentPreview').innerHTML=`<p>将保存 ${assignments.length} 项分类，其余标的保留原状：</p><ul>${assignments.map(a=>`<li>${esc(state.stocks.find(s=>s.id===a.id).name)} · ${esc(a.symbol)} → ${ManagementCategory.labels[a.managementCategory]}</li>`).join('')}</ul>`;confirmButton.disabled=false}catch(e){error.textContent=e.message}};
+  dialog.querySelector('#categoryAssignmentReview').onclick=()=>{invalidate();try{const assignments=selections();ManagementCategory.buildAssignmentCandidate(state,assignments,SymbolIdentity.canonicalMarketSymbol,assignmentSession);preview={assignments,selectionBinding:JSON.stringify(assignments),stateBinding:JSON.stringify(state)};dialog.querySelector('#categoryAssignmentPreview').innerHTML=`<p>将保存 ${assignments.length} 项管理分类，其他字段保持原状：</p><ul>${assignments.map(a=>`<li>${esc(state.stocks.find(s=>s.id===a.id).name)} · ${esc(a.symbol)} → ${ManagementCategory.labels[a.managementCategory]}</li>`).join('')}</ul>`;confirmButton.disabled=false}catch(e){error.textContent=e.message}};
   confirmButton.onclick=async()=>{
     if(busy||!preview)return;
+    try{ManagementCategory.buildAssignmentCandidate(state,preview.assignments,SymbolIdentity.canonicalMarketSymbol,assignmentSession)}catch(e){invalidate();error.textContent=e.message;return}
     if(preview.selectionBinding!==JSON.stringify(selections())||preview.stateBinding!==JSON.stringify(state)){invalidate();error.textContent='数据或选择已变化，请重新预览。';return}
     busy=true;dialog.querySelectorAll('button,select').forEach(node=>node.disabled=true);
-    try{const candidate=ManagementCategory.buildCandidate(state,preview.assignments,SymbolIdentity.canonicalMarketSymbol);await persistManagementCategory(candidate);dialog.close();render()}
+    try{const candidate=ManagementCategory.buildAssignmentCandidate(state,preview.assignments,SymbolIdentity.canonicalMarketSymbol,assignmentSession);await persistManagementCategory(candidate);dialog.close();render()}
     catch(e){error.textContent=`分类未保存，原数据保留。${e.message||'请重试。'}`}
-    finally{busy=false;dialog.querySelectorAll('button,select').forEach(node=>node.disabled=false)}
+    finally{busy=false;dialog.querySelectorAll('button,select').forEach(node=>node.disabled=false);updateReview();confirmButton.disabled=!preview}
   };
   dialog.showModal();dialog.querySelector('select,button')?.focus();
 }

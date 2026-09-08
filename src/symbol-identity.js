@@ -33,6 +33,14 @@
     return canonicalSymbol(stock&&(stock.code||stock.symbol));
   }
 
+  // Existing position cash ledger and storage compatibility rules, shared verbatim.
+  function isLegacyCashRow(stock){return Boolean(stock&&(stock.id==='cash'||stock.theme==='现金'||stock.role==='现金'))}
+  function isExemptIdentityRow(stock){
+    const type=String(stock&&stock.type||'').trim().toLowerCase();
+    const objectType=String(stock&&stock.objectType||'').trim().toLowerCase();
+    return Boolean(stock&&(stock.isCash===true||stock.isSystem===true||stock.systemRow===true||type==='cash'||type==='system'||objectType==='cash'||objectType==='system'));
+  }
+
   function buildStockIndex(stocks){
     const index=new Map();
     const ambiguous=new Set();
@@ -46,5 +54,5 @@
     return {index,ambiguous};
   }
 
-  return {MARKET_SYMBOL_PATTERN,canonicalSymbol,canonicalMarketSymbol,isSupportedMarketSymbol,stockSymbol,buildStockIndex};
+  return {MARKET_SYMBOL_PATTERN,canonicalSymbol,canonicalMarketSymbol,isSupportedMarketSymbol,stockSymbol,buildStockIndex,isLegacyCashRow,isExemptIdentityRow};
 });

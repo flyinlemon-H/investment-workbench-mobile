@@ -32,7 +32,7 @@ function targetSummaryCard(stock,planMode=false){
 }
 function renderTargets(planMode=false){
   targetFilter=ManagementCategory.session(targetFilter);
-  const unassigned=state.stocks.filter(ManagementCategory.needsAssignment).length;
+  const unassigned=ManagementCategory.pending(state.stocks).length;
   const rows=state.stocks.filter(stock=>(planMode||targetMatches(stock,targetFilter))&&`${stock.name} ${stock.code}`.toLowerCase().includes(targetSearch.toLowerCase()));
   document.getElementById('summary').textContent=planMode?'计划中心':'标的';
   document.getElementById('main').innerHTML=`<div class="toolbar"><label class="target-search">搜索标的<input id="targetSearch" type="search" value="${esc(targetSearch)}" placeholder="名称或代码"></label>${planMode?'<button class="btn ghost small" id="openPlanReview" type="button">计划批量复核</button>':'<button class="btn ghost small" id="targetAdd" type="button">新增标的</button>'}</div>${planMode?'<p class="card-note">查看正式计划、状态观察与运行状态，按需进行复核。</p>':`<div class="target-filters" aria-label="标的筛选">${Object.entries(ManagementCategory.labels).map(([key,label])=>`<button class="btn ghost small" data-target-filter="${key}" aria-pressed="${targetFilter===key}" type="button">${label}</button>`).join('')}</div>`}${!planMode&&unassigned?`<div class="card category-maintenance"><span>有 ${unassigned} 个历史标的尚未完成管理分类</span> <button class="btn ghost small" id="targetAssign" type="button">整理分类</button></div>`:''}<div class="target-grid">${rows.map(stock=>targetSummaryCard(stock,planMode)).join('')||(planMode?'<div class="empty">暂无匹配标的</div>':'<div class="empty">当前分类中没有匹配标的。</div>')}</div>`;

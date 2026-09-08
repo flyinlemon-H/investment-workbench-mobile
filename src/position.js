@@ -16,7 +16,7 @@ function getComparablePrice(s){
 }
 function getMarketValue(s){if(s.type==='etf'){const v=Number(s.currentValue);return (isNaN(v)||v<=0)?null:toCNY(v,s)}const shares=Number(s.shares),cp=Number(s.currentPrice);if(isNaN(shares)||isNaN(cp)||shares<=0||cp<=0)return null;return toCNY(shares*cp,s)}
 function getTotalInvested(){return state.stocks.reduce((sum,s)=>sum+(getMarketValue(s)||0),0)}
-function isCashRow(s){return s.id==='cash'||s.theme==='现金'||s.role==='现金'}
+function isCashRow(s){return SymbolIdentity.isLegacyCashRow(s)}
 function getCashMv(){return state.stocks.filter(isCashRow).reduce((a,s)=>a+(getMarketValue(s)||0),0)}
 function hasCashRow(){return state.stocks.some(isCashRow)}
 function getTrimAction(s,info,total){if(!info||info.actualPct===null||!total)return null;const trim=Number(s.trimPct);if(!(trim>0)||info.actualPct<trim)return null;const to=Number(s.trimToPct);const tgt=(to>0?to:(Number(s.targetPct)||trim));const unitPrice=getComparablePrice(s);const deltaMv=info.mv-total*tgt/100;let sharesTxt='';if(unitPrice>0&&deltaMv>0){const raw=deltaMv/toCNY(unitPrice,s);const rounded=Math.max(100,Math.round(raw/100)*100);sharesTxt=`≈卖 ${fmtInt(rounded)} 股/份`}return {trim,toPct:tgt,deltaMv,sharesTxt}}

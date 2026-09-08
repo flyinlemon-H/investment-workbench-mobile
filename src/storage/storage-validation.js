@@ -21,9 +21,7 @@
     return global.SymbolIdentity.stockSymbol(stock);
   }
   function isExemptIdentityRow(stock){
-    const type=String(stock&&stock.type||'').trim().toLowerCase();
-    const objectType=String(stock&&stock.objectType||'').trim().toLowerCase();
-    return Boolean(stock&&(stock.isCash===true||stock.isSystem===true||stock.systemRow===true||type==='cash'||type==='system'||objectType==='cash'||objectType==='system'));
+    return global.SymbolIdentity.isExemptIdentityRow(stock);
   }
 
   function validateDraftMap(value,kind){
