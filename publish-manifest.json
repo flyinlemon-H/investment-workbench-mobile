@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "b1dfa35e720c92c6c2c1a8a13b3bb791d9f96018",
-  "assetVersion": "stock-management-category-foundation-v1-20260908",
-  "dataMode": "Stock Management Category Foundation V1 provides explicit user-owned core/watch/candidate/etf classification, confirmed atomic legacy assignment, required stock classification, and preserved holding, Discussion, Plan and asset-type boundaries",
+  "sourceCommit": "8d1066e5871a45b3e242c66d5dce463355cb59fa",
+  "assetVersion": "management-category-assignment-hotfix-v1-20260908",
+  "dataMode": "Management Category Legacy Assignment Hotfix V1 excludes established cash/system compatibility rows, binds exact eligible identities for atomic explicit assignment, and preserves Foundation categories and holding/Discussion/Plan/market boundaries",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71571,
-      "sha256": "ea1404454a0efdf480eb928fc7f1eec7c40867b901ea7fea18d9da71ead70e0c"
+      "bytes": 71650,
+      "sha256": "df97a4d2a19aaf4aed15a9b434c5a4591c304624dcf4d1093ebe122c76aecd4e"
     },
     {
       "path": "social_posts.json",
@@ -187,14 +187,14 @@
     {
       "path": "src/management-category-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 6267,
-      "sha256": "a4f1dafb0870d4ae28395853ab86c02e617a36896bbd3d9bbe64fd2c8debc633"
+      "bytes": 6808,
+      "sha256": "56b3bfcf2101af02de5737488065b37f43a411cf78120971fe6752bf3724a69e"
     },
     {
       "path": "src/management-category.js",
       "role": "browser runtime dependency",
-      "bytes": 3511,
-      "sha256": "cdde496ef4751491e30e31e7be7fcbadcf32d9f78b6daaee42fb34013422cde2"
+      "bytes": 6250,
+      "sha256": "0b1b1b0c14dbdba03c1b9067b6664f5b71c7ebd1635a5bd4413b7146c594cf34"
     },
     {
       "path": "src/manual-analysis-sync-cloud.js",
@@ -301,8 +301,8 @@
     {
       "path": "src/position.js",
       "role": "browser runtime dependency",
-      "bytes": 4071,
-      "sha256": "c676049a3701f313484b229ace5bf5ce3480508b22e27c81fe4a228cba5b6ec1"
+      "bytes": 4052,
+      "sha256": "3f3077eac4b354fcf1df1c58efc85dd4a3ecf3ec91293f5030254e651d571aa9"
     },
     {
       "path": "src/price-refresh.js",
@@ -397,8 +397,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards",
-      "bytes": 7136,
-      "sha256": "d9849357b3c5de2e33bced9cf670f6b773bb3ab39df564da940f296c6120e65e"
+      "bytes": 6878,
+      "sha256": "0e93b6cfd1fd78a5139e726cf9c213c858fac22235caed46bdcbe3f6fde5c697"
     },
     {
       "path": "src/strict-ai-json.js",
@@ -415,8 +415,8 @@
     {
       "path": "src/symbol-identity.js",
       "role": "M05B Hotfix 1 canonical symbol identity runtime",
-      "bytes": 1648,
-      "sha256": "39c24d6d17409d1237eb962ef47f4ba9fd1f96c49594112ef5a534869401ee18"
+      "bytes": 2257,
+      "sha256": "e7a02f044a0bebd4e9ac09eab642fe81891b5c8f7ac3d1e7552282e27e4541ae"
     },
     {
       "path": "src/technical-view-ux.js",
@@ -487,8 +487,8 @@
     {
       "path": "src/workbench-navigation-ui.js",
       "role": "Primary navigation, target filters, advanced comparison and maintenance control placement; presentation only",
-      "bytes": 13242,
-      "sha256": "97d97ee4b0e94800926e91f4c7ea4c90c4443abc991d09cd151b6e3468175232"
+      "bytes": 13227,
+      "sha256": "fbb10da58a035124a9023587e0baa5bfb159b358a5c9a69725a5f3d9ecd1c80f"
     }
   ]
 }
