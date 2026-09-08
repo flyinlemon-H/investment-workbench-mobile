@@ -120,8 +120,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'stock-management-category-foundation-v1-20260908',
-  dataMode:'Stock Management Category Foundation V1 provides explicit user-owned core/watch/candidate/etf classification, confirmed atomic legacy assignment, required stock classification, and preserved holding, Discussion, Plan and asset-type boundaries',
+  assetVersion:'management-category-assignment-hotfix-v1-20260908',
+  dataMode:'Management Category Legacy Assignment Hotfix V1 excludes established cash/system compatibility rows, binds exact eligible identities for atomic explicit assignment, and preserves Foundation categories and holding/Discussion/Plan/market boundaries',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
