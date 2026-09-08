@@ -43,8 +43,12 @@ const output=path.resolve('test-results/management-category'),url='http://127.0.
     await page.locator('#fManagementCategory').selectOption('etf');await page.locator('#saveBtn').click();assert.match(await page.locator('#fManagementCategoryError').textContent(),/无持仓/);
     await page.locator('#typeToggle [data-type="etf"]').click();await page.locator('#fManagementCategory').selectOption('candidate');await page.locator('#saveBtn').click();await page.waitForFunction(()=>!document.getElementById('modal').classList.contains('show'));assert.equal(await page.evaluate(()=>categoryWrites),3);
     assert.deepEqual(await page.evaluate(()=>{const s=state.stocks.find(s=>s.code==='510500.SS');return [s.managementCategory,s.type,s.shares]}),['candidate','etf',0]);
-    // Holding edits do not implement Lifecycle. Warning explains outstanding contradiction.
-    await page.evaluate(()=>openModal(state.stocks.find(s=>s.code==='510500.SS').id));await page.locator('#fShares').fill('100');assert.match(await page.locator('#fManagementCategoryError').textContent(),/候选仓/);await page.locator('#saveBtn').click();await page.waitForFunction(()=>!document.getElementById('modal').classList.contains('show'));assert.deepEqual(await page.evaluate(()=>{const s=state.stocks.find(s=>s.code==='510500.SS');return [s.managementCategory,s.shares]}),['candidate',100]);
+    // Lifecycle now requires one combined ETF rebuild confirmation.
+    await page.evaluate(()=>openModal(state.stocks.find(s=>s.code==='510500.SS').id));await page.locator('#fShares').fill('100');await page.locator('#saveBtn').click();
+    assert.deepEqual(await page.locator('#holdingLifecycleCategory option').evaluateAll(nodes=>nodes.map(n=>n.value)),['etf']);
+    assert.equal(await page.evaluate(()=>state.stocks.find(s=>s.code==='510500.SS').shares),0);
+    await page.locator('#holdingLifecycleConfirm').click();await page.waitForFunction(()=>!document.getElementById('modal').classList.contains('show'));
+    assert.deepEqual(await page.evaluate(()=>{const s=state.stocks.find(s=>s.code==='510500.SS');return [s.managementCategory,s.shares]}),['etf',100]);
     // Actual export/restore boundary in isolated canonical storage; legacy still readable.
     await page.evaluate(async()=>{globalThis.backup=alpha3ExportSnapshot(state);const restored=createValidatedCandidateSnapshot(JSON.parse(JSON.stringify(backup)),{touchUpdatedAt:false});await realCategoryPersist(restored);state=restored});
     assert.equal(await page.evaluate(()=>JSON.stringify(state.stocks.map(s=>s.managementCategory))===JSON.stringify(backup.stocks.map(s=>s.managementCategory))),true);
@@ -53,7 +57,7 @@ const output=path.resolve('test-results/management-category'),url='http://127.0.
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.equal(await page.evaluate(()=>new Set([...document.querySelectorAll('[id]')].map(n=>n.id)).size===document.querySelectorAll('[id]').length),true);
     const positions=await page.locator('[data-target-filter]').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));assert.equal(new Set(positions).size,1);assert.deepEqual(errors,[]);
-    results.push({viewport,fourUniqueCategories:true,categoryOnlyAtomic:true,migrationAtomic:true,noSilentMapping:true,requiredAdd:true,backupLegacyRestore:true,lifecycleUnchanged:true,detectedLifecycleDependency:'candidate + 100 shares after explicit shares-only edit; warning shown; Lifecycle V1 must resolve',noOverflow:true,errors});await context.close();
+    results.push({viewport,fourUniqueCategories:true,categoryOnlyAtomic:true,migrationAtomic:true,noSilentMapping:true,requiredAdd:true,backupLegacyRestore:true,lifecycleConfirmed:true,noOverflow:true,errors});await context.close();
   }}finally{await browser.close()}
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
 })().catch(e=>{console.error(e);process.exitCode=1});

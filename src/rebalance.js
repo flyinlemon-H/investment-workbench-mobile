@@ -30,7 +30,13 @@ function stockUrgency(s){
   if(minAbs===Infinity)return {score:Infinity,triggered:0,nearest:null};return {score:triggered>0?-1000+minAbs:minAbs,triggered,nearest};
 }
 
+const executingHoldingPlans=new Set();
 async function executePlan(stockId,planId){
+  const key=stockId+'|'+planId;if(executingHoldingPlans.has(key))return;
+  executingHoldingPlans.add(key);
+  try{return await executePlanOnce(stockId,planId)}finally{executingHoldingPlans.delete(key)}
+}
+async function executePlanOnce(stockId,planId){
   const sourceStock=state.stocks.find(stock=>stock.id===stockId);if(!sourceStock)return;
   const sourcePlan=(sourceStock.plans||[]).find(plan=>plan.id===planId);if(!sourcePlan)return;
   if(Object.prototype.hasOwnProperty.call(sourcePlan,'planMode')&&sourcePlan.planMode!=='legacy_price'){alert('状态观察计划不能记录为交易执行。');return}
@@ -46,13 +52,18 @@ async function executePlan(stockId,planId){
     }else{const trim=Number(sourceStock.trimPct);if(trim>0&&pctAfter>=trim)warn+=`\n提示：卖出后「${sourceStock.name}」仍约 ${pctAfter.toFixed(1)}%（≥削减线 ${trim}%）`}
   }
   const message=`确认已执行「${sourceStock.name}」的${verb}计划？\n\n  目标价 ${price} × ${quantity} 股${plan.note?'\n  备注：'+plan.note:''}${warn?'\n\n—— 纪律检查 ——'+warn:''}\n\n执行后计划会保留在“已完成”历史中。`;
-  if(!confirm(message))return;
   const oldShares=Number(sourceStock.shares)||0,newShares=isBuy?oldShares+quantity:Math.max(0,oldShares-quantity),auto=confirm(`是否自动更新持仓与现金台账？\n\n  股数/份额：${fmtInt(oldShares)} → ${fmtInt(newShares)}${isBuy?'\n  成本价：按 '+price+' 加权摊入':'\n  成本价：保持不变'}\n\n点「取消」则仅记录计划完成，持仓需自行到“编辑”更新。`),authoritativeState=state;
+  const binding=JSON.stringify(state);
+  let category=sourceStock.managementCategory;
+  const boundary=auto&&ManagementCategory.isManagementCategoryTarget(sourceStock)&&((oldShares>0&&newShares===0)||(oldShares===0&&newShares>0));
+  if(boundary){category=await confirmHoldingLifecycle(sourceStock,{...sourceStock,shares:newShares},{message,label:'确认记录并更新持仓'});if(category===null)return}
+  else if(!confirm(message))return;
+  if(binding!==JSON.stringify(state)){alert('数据已变化，请重新预览。');return}
   const result=await PlanV2.commitCandidate(authoritativeState,candidate=>{
     const stock=candidate.stocks.find(item=>item.id===stockId),index=stock?(stock.plans||[]).findIndex(item=>item.id===planId):-1;if(!stock||index<0)throw new Error('计划候选不存在。');const completed=PlanV2.terminatePlan(stock.plans[index],'completed');stock.plans[index]=completed;
     const today=new Date().toISOString().slice(0,10);
-    if(auto){const oldCost=Number(stock.avgCost);if(isBuy){stock.avgCost=oldShares>0&&oldCost>0?Number((((oldCost*oldShares)+(price*quantity))/newShares).toFixed(4)):price}stock.shares=newShares;if(stock.type==='etf'){const currentValue=Number(stock.currentValue)||0;stock.currentValue=Number(Math.max(0,currentValue+(isBuy?1:-1)*price*quantity).toFixed(2));stock.valueUpdatedAt=today}const cashRow=candidate.stocks.find(isCashRow);if(cashRow){const amount=toCNY(price*quantity,stock),cashValue=Number(cashRow.currentValue)||0;cashRow.currentValue=Number((cashValue+(isBuy?-amount:amount)).toFixed(2));cashRow.valueUpdatedAt=today;cashRow.updatedAt=Date.now()}}
+    if(auto){const oldCost=Number(stock.avgCost);if(isBuy){stock.avgCost=oldShares>0&&oldCost>0?Number((((oldCost*oldShares)+(price*quantity))/newShares).toFixed(4)):price}stock.shares=newShares;if(boundary)stock.managementCategory=category;if(stock.type==='etf'){const currentValue=Number(stock.currentValue)||0;stock.currentValue=Number(Math.max(0,currentValue+(isBuy?1:-1)*price*quantity).toFixed(2));stock.valueUpdatedAt=today}const cashRow=candidate.stocks.find(isCashRow);if(cashRow){const amount=toCNY(price*quantity,stock),cashValue=Number(cashRow.currentValue)||0;cashRow.currentValue=Number((cashValue+(isBuy?-amount:amount)).toFixed(2));cashRow.valueUpdatedAt=today;cashRow.updatedAt=Date.now()}}
     (candidate.executionLog=candidate.executionLog||[]).push({t:Date.now(),stock:stock.name,action:isBuy?'buy':'sell',price,shares:quantity,autoUpdated:Boolean(auto),note:plan.note||'',planId:completed.id,planVersion:completed.planVersion});stock.updatedAt=Date.now();return candidate;
-  },{save:candidate=>saveState(candidate,{critical:true}),adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
-  if(result.status!=='completed'){if(typeof criticalWriteFailure==='function')criticalWriteFailure(result.error);else alert('保存失败\n\n数据尚未确认保存\n\n请重试');return}render();
+  },{save:candidate=>{candidate.updatedAt=Math.max(Date.now(),(Number(authoritativeState.updatedAt)||0)+1);return persistCandidateSnapshot(candidate)},adopt:candidate=>{state=candidate},rollback:original=>{state=original}});
+  if(result.status!=='completed'){if(typeof criticalWriteFailure==='function')criticalWriteFailure(result.error);else alert('保存失败\n\n数据尚未确认保存\n\n请重试');return}if(boundary)targetFilter=category;render();
 }

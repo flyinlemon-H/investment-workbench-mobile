@@ -228,6 +228,7 @@
     }
 
     function saveState(value,optionsValue={}){
+      try{if(global.ManagementCategory)global.ManagementCategory.validateState(value)}catch(error){return Promise.reject(error)}
       if(!initialized)return initialize().then(()=>saveState(value,optionsValue));
       let snapshot;
       try{snapshot=cloneState(value)}catch(error){return Promise.reject(error)}

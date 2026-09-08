@@ -2562,11 +2562,21 @@ function collectPlans(capPct){
 }
 async function save(){
   if(categorySaveBusy)return;
-  const category=document.getElementById('fManagementCategory').value;
+  let category=document.getElementById('fManagementCategory').value;
   const previous=editingId?state.stocks.find(s=>s.id===editingId):null;
-  if(!ManagementCategory.valid(category)){categoryFormError('请明确选择一个管理分类。');return}
-  if(!previous||previous.managementCategory!==category){const error=ManagementCategory.compatibility(category,document.getElementById('fShares').value);if(error){categoryFormError(error);return}}
-  if(previous&&categoryFormOriginal===categoryFormSnapshot()){
+  const sharesInput=document.getElementById('fShares').value,afterHolding={...previous,type:formType,shares:sharesInput,managementCategory:category};
+  if(ManagementCategory.isManagementCategoryTarget(afterHolding)&&(sharesInput===''||!Number.isFinite(Number(sharesInput))||Number(sharesInput)<0)){categoryFormError('请填写有效的非负持仓数量。');return}
+  const boundary=previous&&ManagementCategory.isManagementCategoryTarget(previous)&&((Number(previous.shares)>0&&Number(sharesInput)===0)||(Number(previous.shares)===0&&Number(sharesInput)>0));
+  if(previous&&categoryFormState!==JSON.stringify(state)){categoryFormError('数据已变化，请关闭并重新打开编辑。');return}
+  if(boundary){
+    categorySaveBusy=true;setCategoryFormSaving(true);
+    try{category=await confirmHoldingLifecycle(previous,afterHolding)}finally{categorySaveBusy=false;setCategoryFormSaving(false)}
+    if(category===null)return;
+  }
+  if(ManagementCategory.isManagementCategoryTarget(afterHolding)){
+    const error=ManagementCategory.compatibility(category,sharesInput,afterHolding);if(error){categoryFormError(error);return}
+  }
+  if(previous&&ManagementCategory.isManagementCategoryTarget(previous)&&categoryFormOriginal===categoryFormSnapshot()){
     if(categoryFormState!==JSON.stringify(state)){categoryFormError('数据已变化，请关闭并重新打开编辑。');return}
     categorySaveBusy=true;setCategoryFormSaving(true);
     try{const candidate=ManagementCategory.buildCandidate(state,[{id:previous.id,symbol:SymbolIdentity.canonicalMarketSymbol(previous.code||previous.symbol),managementCategory:category}],SymbolIdentity.canonicalMarketSymbol);await persistManagementCategory(candidate);closeModal(true);render()}catch(e){categoryFormError('分类未保存，原数据保留。'+(e.message||'请重试。'))}finally{categorySaveBusy=false;setCategoryFormSaving(false)}
@@ -2577,9 +2587,10 @@ async function save(){
   const name=document.getElementById('fName').value.trim();
   if(!name)return alert('请填写名称');
   const rawCode=document.getElementById('fCode').value.trim();
-  const code=window.SymbolIdentity.canonicalMarketSymbol(rawCode);
-  if(!code)return alert(rawCode?'代码格式不支持。请使用 601138.SS、000858.SZ 或 2899.HK 这类格式。':'请填写有效的股票代码。');
-  if(code){
+  const classifiable=ManagementCategory.isManagementCategoryTarget(afterHolding);
+  const code=classifiable?window.SymbolIdentity.canonicalMarketSymbol(rawCode):previous?.code||'';
+  if(classifiable&&!code)return alert(rawCode?'代码格式不支持。请使用 601138.SS、000858.SZ 或 2899.HK 这类格式。':'请填写有效的股票代码。');
+  if(classifiable&&code){
     const otherStocks=(state.stocks||[]).filter(stock=>stock.id!==editingId);
     const lookup=window.SymbolIdentity.buildStockIndex(otherStocks);
     if(lookup.index.has(code)||lookup.ambiguous.has(code))return alert(`股票代码 ${code} 已存在，请不要重复新建。`);
@@ -2595,6 +2606,7 @@ async function save(){
   const valueChanged=currentValueRaw!=='' && String(nextValue)!==oldValue;
   const capPct=(v=>v===''?'':parseFloat(v))(document.getElementById('fCap').value);let plans;try{plans=collectPlans(capPct)}catch(error){alert(`计划未保存：${error.message}`);return}
   const payload={managementCategory:category,type:formType,name,code,currency:document.getElementById('fCurrency').value,shares:parseFloat(document.getElementById('fShares').value)||0,avgCost:costRaw===''?'':parseFloat(costRaw),targetPct:targetRaw===''?'':parseFloat(targetRaw),trimPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrim').value),trimToPct:(v=>v===''?'':parseFloat(v))(document.getElementById('fTrimTo').value),capPct,currentPrice:nextPrice,currentValue:nextValue,priceUpdatedAt:priceChanged?today:(old?.priceUpdatedAt||''),valueUpdatedAt:valueChanged?today:(old?.valueUpdatedAt||''),role:document.getElementById('fRole').value,theme:document.getElementById('fTheme').value,thesis:document.getElementById('fThesis').value.trim(),sellRule:document.getElementById('fSellRule').value.trim(),notes:document.getElementById('fNotes').value.trim(),plans,updatedAt:Date.now()};
+  if(!classifiable||previous?.managementCategory===category)delete payload.managementCategory;
   payload.dataFreshness=normalizeDataFreshness(old&&old.dataFreshness);
   if(priceChanged||valueChanged)touchDataFreshness(payload,'priceUpdatedAt',today);
   payload.analysisFramework=normalizeAnalysisFramework(old&&old.analysisFramework,payload);
@@ -4766,8 +4778,37 @@ function collectOperationEntryDraft(ctx){
   return {...base,previous_shares:ctx.stock.shares,previous_avg_cost:ctx.stock.avgCost,new_shares:sharesText===''?null:Number(sharesText),new_avg_cost:costText===''?'':Number.isFinite(Number(costText))?Number(costText):costText,operation_date:document.getElementById('operationEntryDate').value,note:document.getElementById('operationEntryNote').value,updated_at:new Date().toISOString()};
 }
 function renderOperationEntryValidation(validation){const box=document.getElementById('operationEntryPreview');if(!box)return;box.innerHTML=`<b>变化判断：</b>${esc(operationChangeLabel(validation.position_change))}${arrSafe(validation.errors).length?`<div class="alert" style="margin-top:8px">${arrSafe(validation.errors).map(esc).join('；')}</div>`:''}${arrSafe(validation.warnings).length?`<div class="card-note" style="margin-top:8px">提醒：${arrSafe(validation.warnings).map(esc).join('；')}</div>`:''}`}
-async function previewOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx||!module.eligible(ctx))return alert('当前标的无法录入操作结果。');const draft=collectOperationEntryDraft(ctx),validation=module.validate(draft,ctx),snapshot=await module.snapshotHash(stock);try{await module.saveDraft(ctx,draft,validation,snapshot)}catch(error){criticalWriteFailure(error);return}renderOperationEntryValidation(validation);return {ctx,draft,validation,snapshot}}
-async function confirmOperationEntry(stock){const prepared=await previewOperationEntry(stock);if(!prepared||!prepared.validation.business_valid)return alert('录入内容尚未通过校验，不能更新正式持仓。');const warningText=arrSafe(prepared.validation.warnings).length?`\n提醒：${arrSafe(prepared.validation.warnings).join('；')}`:'';const name=stock.name||stock.code||stock.symbol||'当前标的',code=stock.code||stock.symbol||'—';const message=`二次确认更新正式持仓：\n标的 ${name}（${code}）\n持仓 ${prepared.draft.previous_shares} → ${prepared.draft.new_shares}\n券商成本 ${prepared.draft.previous_avg_cost} → ${prepared.validation.normalized_new_avg_cost}\n操作日期 ${prepared.draft.operation_date}${warningText}\n\n本操作只更新上述持仓事实并保存审计记录，不会推导成交价、金额、费用、盈亏、交易方向或现金变化。`;if(!confirm(message))return;try{const key=window.OperationEntry.contextKey(prepared.ctx),saved=window.OperationEntry.saved(key);await window.OperationEntry.applyDirectResult(state,prepared.ctx,saved,nextState=>saveState(nextState,{critical:true}));renderStockDetail();alert('正式持仓已更新并保存。')}catch(err){if(err&&err.type==='stale_tab')alert('检测到其它页面已保存更新。当前旧页面不能覆盖最新数据，请重新加载后再试。');else alert(`保存失败，正式持仓尚未更新，请重试。${err&&err.message?'\n'+err.message:''}`)}}
+const operationPreviews=new Map();
+let operationConfirmBusy=false;
+function operationDraftBinding(draft){const copy={...draft};delete copy.updated_at;return JSON.stringify(copy)}
+async function previewOperationEntry(stock){
+  const module=window.OperationEntry,ctx=module&&module.latestContext(stock);
+  if(!ctx||!module.eligible(ctx))return alert('当前标的无法录入操作结果。');
+  const binding=JSON.stringify(state),draft=collectOperationEntryDraft(ctx),validation=module.validate(draft,ctx),snapshot=await module.snapshotHash(stock);
+  try{await module.saveDraft(ctx,draft,validation,snapshot)}catch(error){criticalWriteFailure(error);return}
+  const prepared={ctx,draft,validation,snapshot,binding,draftBinding:operationDraftBinding(draft)};
+  operationPreviews.set(stock.id,prepared);renderOperationEntryValidation(validation);return prepared;
+}
+async function confirmOperationEntry(stock){
+  if(operationConfirmBusy)return;
+  operationConfirmBusy=true;
+  try{
+    const prepared=operationPreviews.get(stock.id)||await previewOperationEntry(stock);
+    if(!prepared||!prepared.validation.business_valid)return alert('录入内容尚未通过校验，不能更新正式持仓。');
+    if(prepared.binding!==JSON.stringify(state)||prepared.draftBinding!==operationDraftBinding(collectOperationEntryDraft(prepared.ctx)))return alert('数据或录入已变化，请重新预览。');
+    const next={...stock,shares:prepared.draft.new_shares};
+    const boundary=ManagementCategory.isManagementCategoryTarget(stock)&&((Number(stock.shares)>0&&next.shares===0)||(Number(stock.shares)===0&&next.shares>0));
+    const message=`持仓 ${stock.shares} → ${next.shares}；券商成本 ${stock.avgCost} → ${prepared.validation.normalized_new_avg_cost}；操作日期 ${prepared.draft.operation_date}。仅更新持仓事实与审计记录。`;
+    let category=stock.managementCategory;
+    if(boundary){category=await confirmHoldingLifecycle(stock,next,{message,label:'确认更新正式持仓'});if(category===null)return}
+    else if(!confirm(message))return;
+    if(prepared.binding!==JSON.stringify(state))throw new Error('数据已变化，请重新预览。');
+    const key=window.OperationEntry.contextKey(prepared.ctx),saved=window.OperationEntry.saved(key);
+    await window.OperationEntry.applyDirectResult(state,prepared.ctx,saved,nextState=>persistCandidateSnapshot(nextState),undefined,{category,confirmed:true,binding:prepared.binding});
+    operationPreviews.delete(stock.id);if(boundary)targetFilter=category;renderStockDetail();alert('正式持仓已更新并保存。');
+  }catch(err){alert(`保存失败，正式持仓尚未更新。${err?.message||'请重试。'}`)}
+  finally{operationConfirmBusy=false}
+}
 async function startOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail();setTimeout(()=>{const input=document.getElementById('operationEntryNewShares');if(input)input.focus()},0)}
 async function abandonOperationEntry(stock){const module=window.OperationEntry,ctx=module&&module.latestContext(stock);if(!ctx)return;if(!confirm('确认放弃本次录入草案？正式持仓不会变化。'))return;try{await module.abandon(module.contextKey(ctx))}catch(error){criticalWriteFailure(error);return}renderStockDetail()}
 function discussionStockKey(stock){return window.DiscussionWorkbench?window.DiscussionWorkbench.canonical(stock):String(stock&&stock.code||stock&&stock.symbol||'')}

@@ -100,18 +100,34 @@
   function directApplyAudit(application,appliedAt){
     return {audit_id:'operation_direct_'+application.application_id,application_id:application.application_id,draft_id:application.draft_id,source_type:application.source_type,source_request_id:application.source_request_id,source_decision_id:application.source_decision_id,source_review_id:application.source_review_id,symbol:application.symbol,result:'applied',status:'applied',previous_shares:application.previous_shares,new_shares:application.new_shares,previous_avg_cost:application.previous_avg_cost,new_avg_cost:application.new_avg_cost,operation_date:application.operation_date,note:application.note,record_source:'manual_operation_entry',createdAt:application.created_at,updatedAt:appliedAt,created_at:application.created_at,updated_at:appliedAt,applied_at:appliedAt};
   }
-  async function applyDirectResult(appState,ctx,savedItem,persistState,appliedAt){
+  const applying=new WeakSet();
+  async function applyDirectResult(appState,ctx,savedItem,persistState,appliedAt,lifecycle={}){
     if(!appState||typeof appState!=='object'||Array.isArray(appState))throw new Error('正式数据状态无效。');
     if(typeof persistState!=='function')throw new Error('正式保存接口不可用。');
-    const before=clone(appState),application=await createApplicationRequest(ctx,savedItem),target=stateStock(appState,ctx);
+    if(applying.has(appState))throw new Error('持仓正在保存，请勿重复确认。');
+    if(arr(appState.operationApplicationAudits).some(a=>a.draft_id===savedItem?.draft?.draft_id))throw new Error('本次录入已保存，请开始新的录入。');
+    applying.add(appState);
+    try{
+    const binding=JSON.stringify(appState),candidate=clone(appState),application=await createApplicationRequest(ctx,savedItem),target=stateStock(candidate,ctx);
+    if(binding!==JSON.stringify(appState))throw new Error('数据已变化，请重新预览。');
     if(target.shares!==application.previous_shares||!valueEqual(target.avgCost,application.previous_avg_cost))throw new Error('当前持仓已变化，请重新加载最新数据后再试。');
     const timestamp=appliedAt||new Date().toISOString(),audit=directApplyAudit(application,timestamp);
+    if(window.ManagementCategory&&window.ManagementCategory.isManagementCategoryTarget(target)){
+      const next={...target,shares:application.new_shares},result=window.ManagementCategory.transition(target,next,lifecycle.category);
+      if(result.kind!=='none'&&(lifecycle.confirmed!==true||lifecycle.binding!==binding))throw new Error('请预览并确认持仓与管理分类调整。');
+      if(result.kind!=='none')target.managementCategory=result.category;
+    }
     target.shares=application.new_shares;
     target.avgCost=application.new_avg_cost;
     target.updatedAt=timestamp;
-    appState.operationApplicationAudits=arr(appState.operationApplicationAudits).filter(item=>item&&item.application_id!==application.application_id).concat([audit]);
-    try{await persistState(appState)}catch(error){restore(appState,before);throw error}
+    candidate.operationApplicationAudits=arr(candidate.operationApplicationAudits).filter(item=>item&&item.application_id!==application.application_id).concat([audit]);
+    candidate.updatedAt=Math.max(Date.now(),(Number(appState.updatedAt)||0)+1);
+    if(window.ManagementCategory)window.ManagementCategory.validateState(candidate);
+    const saved=await persistState(candidate);
+    if(saved===false||saved?.ok===false)throw new Error('存储未确认成功。');
+    restore(appState,candidate);
     return {application,audit};
+    }finally{applying.delete(appState)}
   }
   function appliedStatus(ctx,appState){
     const audit=obj(ctx&&ctx.record&&ctx.record.raw&&ctx.record.raw.operationApplicationAudit);
