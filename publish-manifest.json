@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "422addbff5ab982690662b6198b1951f213b16dd",
-  "assetVersion": "management-category-lifecycle-v1-20260908",
-  "dataMode": "Management Category Lifecycle Integration V1 atomically confirms canonical holding and user-owned category transitions, preserves legacy/cash read compatibility and Discussion reconciliation, and excludes cloud and market changes",
+  "sourceCommit": "6d7b938030bc24b559f13b04578559c1c8e2edcc",
+  "assetVersion": "homepage-action-signal-alignment-v1-20260908",
+  "dataMode": "Homepage Action Signal Alignment V1 derives conservative current action signals from accepted User Decision V3, suppresses routine holding and watch-only profit alerts, and preserves freshness, category lifecycle, Discussion and Plan Runtime contracts",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 2101551,
-      "sha256": "f970771d39a033a3beca87dace87410f2cb515131a56d1d9f19fbecf45ed925b"
+      "bytes": 2105221,
+      "sha256": "a70eac3138c4b579f3ae35964ebc70da999376760aa3bd04ed71c736d7fb0bd9"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 1366,
-      "sha256": "978b510594a302b8a0106dfac9eb809d74ff88a478767d809cacf2df48c33d87"
+      "bytes": 1365,
+      "sha256": "ece2424aace12c81cc5490fa287cef16e9798339408397ac3762e5ee5b29dc13"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71018,
-      "sha256": "68080ff7d06713556a72049c635874082c67810f285ebd6f262071bd208b076a"
+      "bytes": 71255,
+      "sha256": "4ea75354f57fd4fe074736e4714f5b52c36809707cc9764058cfeb847272d1fe"
     },
     {
       "path": "social_posts.json",
@@ -156,9 +156,9 @@
     },
     {
       "path": "src/homepage-attention.js",
-      "role": "Read-only canonical homepage attention eligibility, source applicability, priority, root-cause deduplication and lifecycle",
-      "bytes": 13058,
-      "sha256": "11d46353cd3318839b71b002e3d87f7bf82f5bd909e10d99db5db9c378433ddc"
+      "role": "Derived conservative homepage action selection, strength and suppression from accepted User Decision V3, with preserved freshness, data-health deduplication and Runtime boundaries",
+      "bytes": 18022,
+      "sha256": "48bbbbcd1069d55af51cf1a88ff50eda7021669c0fcfc12b54ac05aec09fb1f0"
     },
     {
       "path": "src/import-export.js",
