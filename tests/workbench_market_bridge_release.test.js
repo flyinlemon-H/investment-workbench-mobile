@@ -103,7 +103,7 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
 
 test('UI Simplification V1A release cache-busts readiness, attention, Discussion, Runtime, Auth and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='discussion-workflow-reliability-v1-20260907';
+  const version='discussion-holding-reconciliation-v1-20260908';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',

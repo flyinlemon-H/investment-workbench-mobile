@@ -118,8 +118,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-workflow-reliability-v1-20260907',
-  dataMode:'Discussion Workflow Reliability Hotfix V1 shares primary workspace actions across state versions, binds zero-position prompts to canonical holdings, and fails closed on invalid imports while preserving V1A and protected contracts',
+  assetVersion:'discussion-holding-reconciliation-v1-20260908',
+  dataMode:'Discussion Holding Context Reconciliation V1 permits acknowledged manual shares-only changes, validates final judgments against current canonical holdings, and preserves protected context, anchor and atomic save guards',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
