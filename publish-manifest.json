@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "60f3c235314c79aa7fc17e62f2bd69145a4c90c0",
-  "assetVersion": "discussion-workflow-reliability-v1-20260907",
-  "dataMode": "Discussion Workflow Reliability Hotfix V1 shares primary workspace actions across state versions, binds zero-position prompts to canonical holdings, and fails closed on invalid imports while preserving V1A and protected contracts",
+  "sourceCommit": "a7d1556212a51243e726710ecee2c42a47849828",
+  "assetVersion": "discussion-holding-reconciliation-v1-20260908",
+  "dataMode": "Discussion Holding Context Reconciliation V1 permits acknowledged manual shares-only changes, validates final judgments against current canonical holdings, and preserves protected context, anchor and atomic save guards",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 1803381,
-      "sha256": "e796f941d8d0b9b8a557c32e0efaa2bfbfb36e6cc26cf2ac5f9a2249de1bdae9"
+      "bytes": 2101551,
+      "sha256": "f970771d39a033a3beca87dace87410f2cb515131a56d1d9f19fbecf45ed925b"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 1365,
-      "sha256": "63e6ea226cd7d27b50d394c3fb32bb80dae08c5b509d5a9479583d98cf096011"
+      "bytes": 1366,
+      "sha256": "978b510594a302b8a0106dfac9eb809d74ff88a478767d809cacf2df48c33d87"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 69208,
-      "sha256": "2f82207632e282b50adaec0e31a854ab9c6571d2d03bf096e29bd9fd6d8ebe11"
+      "bytes": 69362,
+      "sha256": "4f22b962c52909e096f116f53dd15baf23fbb090ebb0f1d2a942f67876ceb4d2"
     },
     {
       "path": "social_posts.json",
@@ -145,14 +145,14 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
-      "bytes": 28301,
-      "sha256": "90137f53fdd6980088596c104954970de5e670145ed30f2fa6e113debdf7735e"
+      "bytes": 35034,
+      "sha256": "173ab504b2507b895142deb303a48800389a79bc129539c0c9039498173a8b2a"
     },
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 56335,
-      "sha256": "caf5b7bd947c49163feac54652e3e06ddcd8d2a1a4cd64eb45fddeda8df388b0"
+      "bytes": 56409,
+      "sha256": "a46bbeb781e528bfc1b8b56b8aa287d18db4527e08e6946911f0d70832fc978f"
     },
     {
       "path": "src/homepage-attention.js",
@@ -415,8 +415,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 629584,
-      "sha256": "3d01c80fe6d0754132cf7ff1651568f807e4ed43f16dae6a5fd7d297e7f92ad1"
+      "bytes": 631439,
+      "sha256": "38b571205f5975697290ad748c5c67a22a6a377121a6df9aa0efc79a438bac02"
     },
     {
       "path": "src/universe-auto-add.js",

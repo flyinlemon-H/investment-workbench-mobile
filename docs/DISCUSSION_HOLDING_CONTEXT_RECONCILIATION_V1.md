@@ -77,6 +77,8 @@ Two existing source-shape assertions were adapted for the explicit archive refre
 
 Dependency validation: `npm ls --all --offline` passes; expected optional platform packages may be absent. No dependencies or lockfiles changed. Release artifact integrity, cache binding, dependencies and credential markers are validated using the existing artifact planner against committed files, and changed source/test/doc files are scanned separately. Release candidate asset: `discussion-holding-reconciliation-v1-20260908`. Source commit, version commit, then manifest commit; final status must stop at **READY_FOR_PUSH**, with no push or Pages deployment until explicit authorization.
 
+Release preparation evidence: source commit `3ac69c7`; version commit `a7d1556212a51243e726710ecee2c42a47849828`. Manifest references that version commit. The existing artifact planner validated all 80 delivered files (79 source assets plus effective manifest), canonical market delivery consistency, browser dependencies, version/cache bindings and credential markers. A local review artifact is under `test-results/holding-release-artifact/`. Changed-file credential scan and `git diff --check` passed. Asset-version-specific tests passed 4/4 after versioning; source/full regression results above remain unchanged.
+
 ## Explicit non-goals
 
 No Current State schema change, V4, Discussion V3 output schema change, AI-owned shares, persistent acknowledgment, category work (core/watch/candidate/ETF), actual operations/trade lifecycle, Homepage behavior, navigation redesign, general evidence reconciliation, Supabase migration/RLS/RPC, DailyMarketUpdate/bridge/provider/pipeline change, or API safety relaxation.
