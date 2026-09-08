@@ -185,6 +185,8 @@ Runtime 老测试样本补齐了与历史 V1 判断一致的真实日 K、techni
 
 发布准备还检查入口依赖顺序、每个入口静态资源的清单覆盖、提交 blob 的 SHA-256／bytes、统一 asset version、git diff --check。新模块必须随同 index 一起发布。
 
+发布资源版本：`plan-discussion-v4-core-loop-20260909`。清单绑定源码提交 `6cf518ad212258771f8343960b8c31caa89f7a95`，包含 85 个源资源，加有效 manifest 共 86 个发布文件。使用生产 `artifactPlan` 校验全部提交内容与入口依赖通过；没有覆盖已有 `_site`，也没有调用部署流程。本地实现提交为 `499b321`，资源版本提交为 `6cf518a`。
+
 ## 12. Known Limitations
 
 1. 手动复制 AI 请求并导入完整 JSON，没有 Plan/Discussion API mode。

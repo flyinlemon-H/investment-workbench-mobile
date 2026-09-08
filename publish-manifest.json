@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "014009d94683aedbbfc8d69ade9d9e8f290d10ad",
-  "assetVersion": "homepage-pre-discussion-risk-screening-v1-20260908",
-  "dataMode": "Homepage Pre-Discussion Risk Screening V1 derives conservative holding-risk attention and existing price Plan triggers from current program facts, preserves accepted Current State priority, and performs no AI calls or business-fact writes",
+  "sourceCommit": "6cf518ad212258771f8343960b8c31caa89f7a95",
+  "assetVersion": "plan-discussion-v4-core-loop-20260909",
+  "dataMode": "Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71729,
-      "sha256": "e4d5ae745855599a629791998eb4f1ff4ba7ee81d7cbd84b184e4139d4741b77"
+      "bytes": 71052,
+      "sha256": "358bfa6df7b07e57ee8b97285968421adfdec5e1fa6c32363146ccf38b070423"
     },
     {
       "path": "social_posts.json",
@@ -139,14 +139,20 @@
     {
       "path": "src/discussion-plan-workflow.js",
       "role": "Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime",
-      "bytes": 40818,
-      "sha256": "85cf7197ae44df0f29590c1e2d55feaa49c3ba36237d2efadea171cff870c96a"
+      "bytes": 52176,
+      "sha256": "6ec89940bc4824dabf419c01f71ea71633668b26c032c6b34ceb3434e1fedc4a"
     },
     {
       "path": "src/discussion-state-contract.js",
       "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
-      "bytes": 35034,
-      "sha256": "173ab504b2507b895142deb303a48800389a79bc129539c0c9039498173a8b2a"
+      "bytes": 35235,
+      "sha256": "e477d1af432d801a062b0eb48f148e0666cd8aec1415824e4f9940e7a9f42a45"
+    },
+    {
+      "path": "src/discussion-v4.js",
+      "role": "program-owned source snapshots and explicit real User Decision with immutable AI judgment history",
+      "bytes": 11738,
+      "sha256": "64d38f6b67f6a0e7b5d06bd42d82be77884957447a8bb4d86c7a1fbb1ca9bbf4"
     },
     {
       "path": "src/discussion-workbench.js",
@@ -163,8 +169,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 8335,
-      "sha256": "4c2a901c5342c84ebf129479848fb11f97d6a56e53efe5f00d37c4b013d569fb"
+      "bytes": 8892,
+      "sha256": "10dafb9c7abd4d79390aee2444aa96ef99433cad9c6dceb0a9edb3ca1154f50b"
     },
     {
       "path": "src/long-term-logic-contract.js",
@@ -239,6 +245,18 @@
       "sha256": "16f3484d1f20093b84e89461a45378e12adbd7e505b08bb419998e12477b6314"
     },
     {
+      "path": "src/plan-context-contract.js",
+      "role": "versioned complete Plan definition references, shared context, and independent binding/evidence/applicability guards",
+      "bytes": 15584,
+      "sha256": "753c2c9af6a84710f99c1759fcf504b24e0702ae195d7cd6f107d4c9f1552886"
+    },
+    {
+      "path": "src/plan-discussion-v4-ui.js",
+      "role": "explicit user decision, Plan draft preview/confirm, source navigation and audit history",
+      "bytes": 12414,
+      "sha256": "2966907a1eb0758fa50ef07155cebc520a789d316bee5f329b0cbee96824e608"
+    },
+    {
       "path": "src/plan-generation-gate.js",
       "role": "browser runtime dependency",
       "bytes": 8319,
@@ -247,26 +265,26 @@
     {
       "path": "src/plan-review-ui.js",
       "role": "Batch Plan Review mobile selection, preview, review history, and explicit Plan action workflow",
-      "bytes": 25544,
-      "sha256": "abeafa1251307ca33142f27819695d1da5f2f0af497f3dcb181cf1f0ce420eb4"
+      "bytes": 25590,
+      "sha256": "e4ca306b6f13922c06e97b66889b57b66f852cefa8aa9ef034fd2e52cf553731"
     },
     {
       "path": "src/plan-review.js",
       "role": "Batch Plan Review schema, strict contract/parser, atomic review snapshots, and confirmed Plan mutation runtime",
-      "bytes": 30485,
-      "sha256": "f3f1fc684f6d2c80345ed639653d61aee080e6cba025f99d41d0471b829b509c"
+      "bytes": 31710,
+      "sha256": "9e07b88a71bb26887e084795021c4e88c6beda4c9e2a86aad8fcbdef38d0a41e"
     },
     {
       "path": "src/plan-runtime-ui.js",
       "role": "Dedicated mobile Runtime Review manual transport, preview, explicit confirmation, status, and compact history UI",
-      "bytes": 10258,
-      "sha256": "ba19b65bc1ef8c2e153da3744f5b1f3852322a798e0cc8a8574853e2ebc72794"
+      "bytes": 10536,
+      "sha256": "9579daff244462a28b7fdae6a13d91b62aae0042fbd58ef1c091d507fa0cdeed"
     },
     {
       "path": "src/plan-runtime.js",
       "role": "Plan Runtime v1 strict lifecycle, protected Plan and Current State binding, bounded history, and atomic candidate commit",
-      "bytes": 28078,
-      "sha256": "d03bb349969cb84b9f5c4bb9648dcb211c59cef803a5dd08e5dc06e684930931"
+      "bytes": 29047,
+      "sha256": "f8e30e5c5dfc17f964dd36354e0f940ac0528564aca8b398b9d157f40395174f"
     },
     {
       "path": "src/plan-update-draft.js",
@@ -279,6 +297,12 @@
       "role": "Plan V2 canonical schema, lifecycle, migration, freshness, and candidate-save runtime",
       "bytes": 34224,
       "sha256": "92da6af69fe6c966eb50e7df8be49e218f363283c8afe6f696549f06896dd08f"
+    },
+    {
+      "path": "src/plan-v4.js",
+      "role": "reader-first Plan V4 definitions, same-ID revisions, legacy projection compatibility and atomic audit validation",
+      "bytes": 14030,
+      "sha256": "115bbe8476522272012c63f89e8c78771b85fec61f6f368c4183646bbb3e663c"
     },
     {
       "path": "src/portfolio-review-context.js",
@@ -343,8 +367,8 @@
     {
       "path": "src/stock-research-ui.js",
       "role": "Four stock workspace groups and research/history presentation using existing business renderers",
-      "bytes": 2858,
-      "sha256": "0280e0ba1809ffaaa9d07483ccc0ef9b5ecc7cd9748654c666941db4a773877f"
+      "bytes": 2981,
+      "sha256": "86c4fe5c48700c638423aa2b3f38b48ace06f6b19c799dad6391a8ac5a524e53"
     },
     {
       "path": "src/storage/cutover-v1.js",
@@ -397,8 +421,8 @@
     {
       "path": "src/storage/storage-validation.js",
       "role": "candidate storage validation including Long-Term Logic audit consistency and preserved Plan safeguards",
-      "bytes": 6878,
-      "sha256": "0e93b6cfd1fd78a5139e726cf9c213c858fac22235caed46bdcbe3f6fde5c697"
+      "bytes": 7545,
+      "sha256": "097ab69102711a741a16ac767a413f4f0e15152e62026980132e5338af599006"
     },
     {
       "path": "src/strict-ai-json.js",
@@ -427,8 +451,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 634889,
-      "sha256": "9979be943287b2583cb4a4fd5852f39a3346e1d5fe07c1ae496df6b628772774"
+      "bytes": 636062,
+      "sha256": "9df6d8f1d689c931fdcd53fedaf0a87b6c550f887b8797c8e1d6e88db71356d5"
     },
     {
       "path": "src/universe-auto-add.js",
