@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),F=require('./fixtures/homepage-attention.js');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),F=require('./fixtures/homepage-action-signal.js');
 const output=process.env.ACCEPTANCE_OUTPUT?path.resolve(process.env.ACCEPTANCE_OUTPUT,'homepage'):path.resolve('test-results/homepage-attention'),url=process.env.BROWSER_ACCEPTANCE_URL||'http://127.0.0.1:8768/';
 (async()=>{
   fs.mkdirSync(output,{recursive:true});
@@ -29,11 +29,29 @@ const output=process.env.ACCEPTANCE_OUTPUT?path.resolve(process.env.ACCEPTANCE_O
       await page.screenshot({path:path.join(output,`quiet-${viewport.width}.png`),fullPage:true});
       await page.evaluate(()=>{state.stocks[0].newsReview={analysisDate:'2026-09-06',summary:'已更新新闻'};state.stocks[0].dataFreshness.newsUpdatedAt='2026-09-06';renderDashboard()});assert.equal(await page.locator('[data-home-attention-count]').innerText(),'0');
 
+      await seed(F.shapes());
+      const shapeCards=page.locator('[data-home-attention-item]');
+      assert.equal(await shapeCards.count(),2);assert.equal(await page.locator('[data-home-attention-count]').innerText(),'2');
+      assert.match(await shapeCards.nth(0).innerText(),/减仓样本丙[\s\S]*可考虑减仓/);
+      assert.match(await shapeCards.nth(1).innerText(),/风险样本乙[\s\S]*注意持仓风险/);
+      assert.doesNotMatch(await page.locator('[data-home-attention]').innerText(),/持有样本甲|开始关注利润保护|MA20|MACD|均线|支撑|放量|技术|承接|复核|阶段|观察窗口/);
+      for(const card of await shapeCards.all()){
+        const box=await card.boundingBox();assert.ok(box.height<260,'compact action card');
+        assert.equal(await card.locator('button').count(),1);
+        assert.ok((await card.innerText()).split('同时关注：').length<=2,'at most one secondary');
+      }
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+      await page.screenshot({path:path.join(output,`three-shapes-${viewport.width}.png`),fullPage:true});
+      const opportunity=F.state({shares:0,name:'建仓样本丁'},{actionAssessment:{category:'entry_review',priority:'high',headline:'当前考虑建仓。',reasons:[],upgradeConditions:[],downgradeConditions:[]},userDecision:{positionDirection:F.section('add_review','当前可以考虑建仓。'),addAssessment:F.section('add_review','当前买入值得考虑。')}});
+      await seed(opportunity);assert.match(await shapeCards.innerText(),/可以考虑建仓/);assert.doesNotMatch(await shapeCards.innerText(),/继续持有|减仓|加仓|止盈|止损/);
+      opportunity.stocks[0].discussionState.current.userDecision.addAssessment=F.section('wait','买入条件尚不成熟。');
+      await seed(opportunity);assert.equal(await shapeCards.count(),0);
+
       const app=await F.runtime('action_review');app.stocks[0].name='紫金矿业';app.stocks[0].id='plan-stock';
       const risk=F.state({id:'risk-stock',code:'601139.SS',name:'工业富联'},{attentionLevel:'focused',userDecision:{stopLoss:{status:'risk_control',summary:'关键风险需要复核。'},riskSource:'stock'}}).stocks[0];
       const missing=F.stock({id:'data-stock',code:'603296.SS',name:'华勤技术',priceHistory:[],technicalData:{technicalDataStatus:'unavailable'}});app.stocks.push(risk,missing);
       await seed(app);assert.equal(await page.locator('[data-home-attention-item]').count(),3);assert.equal(await page.locator('[data-home-attention-count]').innerText(),'3');
-      assert.match(await page.locator('[data-home-attention-item]').first().innerText(),/工业富联[\s\S]*需要风险控制/);
+      assert.match(await page.locator('[data-home-attention-item]').first().innerText(),/工业富联[\s\S]*需关注止损/);
       const firstBox=await page.locator('[data-home-attention-item]').first().boundingBox();assert.ok(firstBox.y+firstBox.height<viewport.height,'first risk card including CTA fits first screen');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       await page.screenshot({path:path.join(output,`risk-${viewport.width}.png`),fullPage:true});
@@ -43,7 +61,7 @@ const output=process.env.ACCEPTANCE_OUTPUT?path.resolve(process.env.ACCEPTANCE_O
       const broken=F.state();broken.stocks[0].priceHistory=[];await seed(broken,F.failedTask());assert.equal(await page.locator('[data-home-attention-item]').count(),1);await page.locator('[data-home-attention-action="technical"]').click();assert.equal(await page.locator('#workspace-tab-research').getAttribute('aria-selected'),'true');
       await seed(app);assert.deepEqual(errors,[]);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       assert.equal(external.filter(value=>/deepseek|\/ai\//i.test(value)).length,0);
-      results.push({viewport,quiet:true,newsRegressionCount:0,eligibleCount:3,riskFirst:true,firstCardFullyVisible:true,ctaRoutes:['ai','plan','technical','market-task-technical'],noAutoDiscussion:true,noOverflow:true,errors,externalRequestsBlocked:external.length});
+      results.push({viewport,threeShapes:['suppressed','注意持仓风险','可考虑减仓'],shapeCount:2,zeroEntryAndWait:true,noTechnicalLanguage:true,quiet:true,newsRegressionCount:0,eligibleCount:3,riskFirst:true,firstCardFullyVisible:true,ctaRoutes:['ai','plan','technical','market-task-technical'],noAutoDiscussion:true,noOverflow:true,errors,externalRequestsBlocked:external.length});
       await context.close();
     }
   }finally{await browser.close()}

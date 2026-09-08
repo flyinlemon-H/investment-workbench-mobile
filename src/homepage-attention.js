@@ -49,32 +49,68 @@
     return {status:unchanged?'current':'stale',current};
   }
 
-  function riskSignals(current,held,relevant){
-    if(!current||current.confidence==='low')return [];
+  // Derived only; never written into Current State. No prose creates an action.
+  function selectActionSignal(current,held,relevant=true){
+    const debug={source:'risk_current_state',primaryDimension:null,primaryStatus:null,secondaryDimension:null,eligibilityReason:null,suppressionReason:null,conflicts:[]};
+    const suppress=reason=>({primary:null,secondary:null,signals:[],debug:{...debug,suppressionReason:reason}});
+    if(!current||current.confidence==='low')return suppress('missing_or_low_confidence');
     const d=current.userDecision,a=current.actionAssessment||{},signals=[];
-    const add=(code,priority,title,summary)=>signals.push({code,priority,title,summary});
+    const add=(dimension,status,code,action,strength,order,priority,title,summary,reason)=>signals.push({dimension,status,code,action,strength,order,priority,title,summary,eligibilityReason:reason});
     if(d){
-      // No inferred broad-market signal: the existing market context has no freshness binding.
-      if(d.riskSource==='market')return [];
+      const enums={holding:Discussion.HOLDING_STATUSES,positionDirection:Discussion.POSITION_DIRECTION_STATUSES,addAssessment:Discussion.ADD_ASSESSMENT_STATUSES,takeProfit:Discussion.TAKE_PROFIT_STATUSES,stopLoss:Discussion.STOP_LOSS_STATUSES};
+      for(const [key,values] of Object.entries(enums))if(!values.includes(d[key]?.status))return suppress('unknown_status:'+key);
+      if(!Discussion.RISK_SOURCES.includes(d.riskSource))return suppress('unknown_risk_source');
+      // Preserve the market-source freshness boundary from Homepage Risk Alert V1.
+      if(d.riskSource==='market')return suppress('market_context_not_freshness_bound');
+      const h=d.holding.status,p=d.positionDirection.status,b=d.addAssessment.status,t=d.takeProfit.status,s=d.stopLoss.status;
+      if(held?h==='not_applicable':h!=='not_applicable'||t!=='not_applicable'||s!=='not_applicable'||!['not_applicable','add_watch','add_review'].includes(p))return suppress('position_mismatch');
+      // A bounded contradiction veto, not NLP action extraction: these literal negative /
+      // future-only constructions can only REMOVE an enum-derived candidate. Unknown prose
+      // never increases its strength. All displayed sentences below are fixed vocabulary.
+      const veto=(dimension,topic)=>{
+        const summary=String(d[dimension]?.summary||''),texts=[summary,String(d.headline||'')];
+        const negative='尚未|还未|暂未|未进入|暂不|无需|不需要|不必|没有|暂无';
+        const denied=texts.some(text=>new RegExp('(?:'+negative+')[^。；！？]{0,18}(?:'+topic+')').test(text)||new RegExp('(?:'+topic+')[^。；！？]{0,8}(?:'+negative+')').test(text))||/^(?:目前|当前|现在)?(?:如果|若|待|等到|一旦)/.test(summary);
+        if(denied)debug.conflicts.push(dimension+':explicit_negative_or_future_only');
+        return denied;
+      };
       if(held){
-        if([d.holding.status,d.positionDirection.status,d.stopLoss.status].includes('risk_control'))add('risk_control','critical','需要风险控制','关键风险上升，需要复核当前仓位的风险控制。');
-        if([d.holding.status,d.positionDirection.status].includes('reduce_review'))add('reduce_review','high','需要减仓复核','当前持有安全判断转弱，仓位值得优先复核。');
-        if(['watch','review'].includes(d.takeProfit.status))add('take_profit','high','开始关注利润保护','当前止盈判断需要关注，复核利润保护条件。');
-        if(d.holding.status==='caution'&&focused(current))add('holding_caution','medium','当前持有安全判断转弱','当前仓位需要重点观察风险变化。');
-        if(d.stopLoss.status==='watch'&&focused(current))add('stop_loss_watch','medium','风险控制条件值得关注','需要重点观察风险是否进一步上升。');
-      }else if(relevant&&d.addAssessment.status==='avoid'&&['stock','both'].includes(d.riskSource)&&focused(current))add('entry_risk','medium','建仓风险需要关注','计划中的建仓需要重新审视下行风险。');
-      if(d.addAssessment.status==='add_review'&&['add_review','entry_review'].includes(a.category)&&a.priority==='high')add('opportunity','high',held?'加仓机会值得复核':'建仓机会值得复核','当前条件值得进一步复核，仍需确认计划约束。');
+        if(s==='risk_control'&&!veto('stopLoss','止损|本金风险|风险控制'))add('stopLoss',s,'stop_loss','stop_loss','consider',0,'critical','需关注止损','当前本金风险需要优先关注。','explicit_capital_risk');
+        if((h==='risk_control'||p==='risk_control')&&!veto(p==='risk_control'?'positionDirection':'holding','风险控制|减仓'))add(p==='risk_control'?'positionDirection':'holding','risk_control','risk_control','hold','attention',1,'critical','注意持仓风险','当前仓位风险需要优先关注。','explicit_risk_control');
+        // Holding safety cannot override an explicit hold direction into a reduction.
+        if(h==='reduce_review'&&p!=='reduce_review')debug.conflicts.push('holding_reduce_without_position_reduce');
+        if(p==='reduce_review'&&!veto('positionDirection','减仓|降低仓位|减少仓位'))add('positionDirection',p,'reduce_review','reduce','consider',2,'high','可考虑减仓','当前判断支持考虑减少仓位。','explicit_current_reduce');
+        // watch is not a current take-profit action, regardless of priority or prose.
+        if(t==='review'&&!veto('takeProfit','止盈|利润保护|保护利润'))add('takeProfit',t,'take_profit','take_profit','consider',3,'high','可以考虑止盈','当前需要关注已有利润的保护。','explicit_take_profit_review');
+      }
+      const defensive=held&&(p==='reduce_review'||p==='risk_control'||h==='risk_control'||s==='risk_control'||t==='review');
+      const opportunity=b==='add_review'&&a.category===(held?'add_review':'entry_review')&&a.priority==='high';
+      if(opportunity&&(defensive||p==='hold_no_add'))debug.conflicts.push('add_opportunity_conflicts_with_defensive_direction');
+      if(opportunity&&!defensive&&p!=='hold_no_add'&&!veto('addAssessment','加仓|建仓|买入'))add('addAssessment',b,'opportunity',held?'add':'build','consider',held?4:5,'high',held?'可以考虑加仓':'可以考虑建仓',held?'当前判断支持考虑增加仓位。':'当前判断支持考虑买入建仓。','explicit_opportunity_high_priority');
+      const meaningfulWait=focused(current)&&a.category==='wait_confirmation'&&['medium','high'].includes(a.priority)&&['wait','watch'].includes(b)&&(held?['hold_no_add','add_watch'].includes(p):['not_applicable','add_watch'].includes(p));
+      const meaningfulAvoid=relevant&&focused(current)&&b==='avoid'&&['stock','both'].includes(d.riskSource);
+      if(meaningfulWait||meaningfulAvoid)add('addAssessment',b,held?'add_restriction':'entry_risk',held?'add':'build','wait',6,'medium',held?'暂不加仓':'暂不建仓',held?'当前应等待，不急于增加仓位。':'当前应等待，不急于买入。',meaningfulWait?'focused_wait_decision':'focused_avoid_risk');
+      if(held&&focused(current)&&(h==='caution'||s==='watch'))add(h==='caution'?'holding':'stopLoss',h==='caution'?h:s,'holding_caution','hold','attention',7,'medium','注意持仓风险','当前持仓有需要重点关注的风险。','focused_holding_risk');
     }else if(current.schemaVersion===Discussion.V2_STATE_SCHEMA_VERSION){
-      // Narrow compatibility for validated V2 judgments, never legacy free-text risk inference.
-      if(held&&a.category==='risk_control'&&a.priority==='high')add('risk_control','critical','需要风险控制','当前风险判断需要优先复核仓位安全。');
-      if(held&&a.category==='reduce_review'&&a.priority==='high')add('reduce_review','high','需要减仓复核','当前仓位值得优先复核。');
-      if(!held&&a.category==='entry_review'&&a.priority==='high')add('opportunity','high','建仓机会值得复核','当前条件值得进一步复核。');
+      if(held&&a.category==='risk_control'&&a.priority==='high')add('actionAssessment',a.category,'risk_control','hold','attention',1,'critical','注意持仓风险','当前仓位风险需要优先关注。','legacy_v2_explicit_risk');
+      if(held&&a.category==='reduce_review'&&a.priority==='high')add('actionAssessment',a.category,'reduce_review','reduce','consider',2,'high','可考虑减仓','当前判断支持考虑减少仓位。','legacy_v2_explicit_reduce');
+      if(!held&&a.category==='entry_review'&&a.priority==='high')add('actionAssessment',a.category,'opportunity','build','consider',5,'high','可以考虑建仓','当前判断支持考虑买入建仓。','legacy_v2_explicit_entry');
     }
-    return signals;
+    signals.sort((a,b)=>a.order-b.order);
+    if(!signals.length)return suppress(debug.conflicts.length?'conflicting_judgment':'no_meaningful_current_action');
+    const primary=signals[0],secondary=signals.find(signal=>signal.action!==primary.action&&signal.title!==primary.title)||null;
+    Object.assign(debug,{primaryDimension:primary.dimension,primaryStatus:primary.status,secondaryDimension:secondary?.dimension||null,eligibilityReason:primary.eligibilityReason});
+    return {primary,secondary,signals,debug};
+  }
+
+  function runtimeLanguage(phase,held){
+    const title=held?'关注持仓安排':'关注建仓安排';
+    const summaries={watch_zone:'操作条件还未成熟，请先等待。',forming:'操作条件还未成熟，请先等待。',confirmed:'结合当前判断，再决定是否调整仓位。',action_review:'结合当前判断，再决定是否调整仓位。',downgraded:'原先的操作依据减弱，请先谨慎等待。',invalidated:'原先的操作依据已失效，请暂停按原计划操作。'};
+    return {title,summary:summaries[phase]};
   }
 
   function build(state={},options={}){
-    const now=options.now??Date.now(),items=[];
+    const now=options.now??Date.now(),items=[],diagnostics=[];
     const stocks=Portfolio.selectableStocks(state.stocks).map(stock=>{
       const held=Portfolio.holdingFacts(stock).holdingStatus==='held',plans=array(stock.plans).filter(plan=>active(plan)&&!['inactive','historical_only'].includes(Plan.freshness(plan,Discussion.localCalendarDate(new Date(now),{timeZone:'Asia/Shanghai'}))));
       const watching=['watching','watchlist'].includes(stock.type),health=technicalHealth(stock,state,now);
@@ -95,7 +131,9 @@
         const explained=(globalFailure&&['stale','pending','unavailable'].includes(health.status))||(syncBlocked&&health.status==='pending');
         if(!explained)add({code:'data_health',priority:held&&plans.some(Plan.hasWatchDefinition)?'critical':'medium',title:health.status==='inconsistent'?'技术数据异常':health.status==='unavailable'?'日K / 技术数据缺失':'行情数据未更新',summary:health.reason},'technical_data',health.sourceAsOf,health.status,'technical');
       }
-      if(source.status==='current')for(const signal of riskSignals(source.current,held,relevant))add(signal,'risk_current_state',source.current.technicalAsOf,'current','discussion',source.current.confirmedAt);
+      const selection=source.status==='current'?selectActionSignal(source.current,held,relevant):null;
+      diagnostics.push({stockId:stock.id,...(selection?.debug||{source:'risk_current_state',suppressionReason:'source_'+source.status})});
+      if(selection?.primary)add({...selection.primary,actionDebug:selection.debug,secondary:selection.secondary?.title||''},'risk_current_state',source.current.technicalAsOf,'current','discussion',source.current.confirmedAt);
 
       for(const plan of plans){
         if(!Plan.hasWatchDefinition(plan))continue;
@@ -103,21 +141,22 @@
         if(!runtime||!Runtime.validateRecord(runtime).ok||!actionablePhases.includes(runtime.phase))continue;
         const binding=Runtime.bindingStatus(state,plan.id);
         if(['definition_changed','current_state_changed'].includes(binding)){
-          add({code:'runtime_binding',planId:plan.id,priority:['confirmed','action_review','invalidated'].includes(runtime.phase)?'high':'medium',title:'计划状态需要重新复核',summary:'计划定义或已保存结论发生变化，原状态不能作为当前依据。'},'plan_runtime',runtime.updatedAt,'stale','plan');continue;
+          add({code:'runtime_binding',planId:plan.id,priority:['confirmed','action_review','invalidated'].includes(runtime.phase)?'high':'medium',title:'原计划需要确认',summary:'操作依据已变化，请先确认原计划是否仍适用。'},'plan_runtime',runtime.updatedAt,'stale','plan');continue;
         }
         if(binding!=='current'||source.status!=='current'||health.status!=='current'||Plan.freshness(plan,Discussion.localCalendarDate(new Date(now),{timeZone:'Asia/Shanghai'}))!=='current')continue;
         if(['watch_zone','forming'].includes(runtime.phase)&&(!relevant||runtime.confidence==='low'||(runtime.phase==='forming'&&!focused(source.current))))continue;
-        const labels={watch_zone:['medium','已到达观察区间','已到达观察区间，条件还未成熟。'],forming:['medium','计划条件正在形成','条件正在形成，需要继续重点观察。'],confirmed:['high','关键条件已经确立','计划已确认关键条件，值得复核下一步。'],action_review:['high','计划进入操作复核','关键条件已经确立，已进入操作复核。'],downgraded:['high','计划条件转弱','条件转弱，计划需要重新观察。'],invalidated:['critical','原有条件失效','原有条件已失效，需要重新复核计划。']};
-        const [priority,title,summary]=labels[runtime.phase],transition=array(runtime.history).filter(entry=>entry.fromPhase!==entry.toPhase).at(-1);
+        const priority={watch_zone:'medium',forming:'medium',confirmed:'high',action_review:'high',downgraded:'high',invalidated:'critical'}[runtime.phase];
+        const {title,summary}=runtimeLanguage(runtime.phase,held),transition=array(runtime.history).filter(entry=>entry.fromPhase!==entry.toPhase).at(-1);
         add({code:runtime.phase,planId:plan.id,priority,title,summary},'plan_runtime',runtime.updatedAt,'current','plan',transition&&transition.committedAt||runtime.updatedAt);
       }
-      candidates.sort((a,b)=>rank[a.priority]-rank[b.priority]||(a.source==='technical_data'?-1:b.source==='technical_data'?1:0)||epoch(b.changedAt)-epoch(a.changedAt));
+      const sourceRank={technical_data:0,risk_current_state:1,plan_runtime:2};
+      candidates.sort((a,b)=>rank[a.priority]-rank[b.priority]||sourceRank[a.source]-sourceRank[b.source]||epoch(b.changedAt)-epoch(a.changedAt));
       if(!candidates.length)continue;
       const primary=candidates[0];
-      items.push({...primary,id:`stock:${Discussion.canonical(stock)}`,stockId:stock.id,name:stock.name||stock.code,held,relevance:plans.some(Plan.hasWatchDefinition)?2:row.watching?1:0,secondary:candidates[1]?candidates[1].title:'',causes:candidates.map(item=>({code:item.code,source:item.source,sourceStatus:item.sourceStatus,sourceAsOf:item.sourceAsOf,planId:item.planId||null}))});
+      items.push({...primary,id:`stock:${Discussion.canonical(stock)}`,stockId:stock.id,name:stock.name||stock.code,held,relevance:plans.some(Plan.hasWatchDefinition)?2:row.watching?1:0,secondary:primary.secondary||(candidates.find(item=>item!==primary&&item.title!==primary.title)?.title||''),causes:candidates.map(item=>({code:item.code,source:item.source,sourceStatus:item.sourceStatus,sourceAsOf:item.sourceAsOf,planId:item.planId||null}))});
     }
     items.sort((a,b)=>rank[a.priority]-rank[b.priority]||Number(b.held)-Number(a.held)||epoch(b.changedAt)-epoch(a.changedAt)||b.relevance-a.relevance);
-    return {items,count:items.length,counts:Object.fromEntries(Object.keys(rank).map(priority=>[priority,items.filter(item=>item.priority===priority).length])),quietText:'今日暂无需要优先关注的风险。'};
+    return {items,count:items.length,counts:Object.fromEntries(Object.keys(rank).map(priority=>[priority,items.filter(item=>item.priority===priority).length])),quietText:'今日暂无需要优先关注的风险。',diagnostics};
   }
-  return Object.freeze({build,technicalHealth,judgmentSource});
+  return Object.freeze({build,technicalHealth,judgmentSource,selectActionSignal});
 });
