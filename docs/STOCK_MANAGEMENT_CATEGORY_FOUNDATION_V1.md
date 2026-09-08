@@ -129,3 +129,8 @@ Existing Discussion Holding Reconciliation, Workflow Reliability, Data Readiness
 Dependency tree validation (`npm ls --all --offline`) passes; missing platform-specific optional packages are expected. Dependencies and lockfile are unchanged. The precommit artifact planner validates **82 delivered files** (81 source assets plus effective manifest), market bridge delivery consistency, cache-version bindings, browser dependencies and credential markers. Changed source/tests/docs also pass the credential scan. `git diff --check` passes. The final committed version/manifest receives the same artifact checks during release preparation.
 
 All automated fixtures use isolated synthetic browser/state storage. Browser routing blocks external requests, and no paid AI calls or real investment data writes occur. Source changes are limited to category model/UI, stock form persistence/navigation wiring, publication manifest generation and tests/docs. Homepage, Discussion contracts, Plan/Runtime schemas, Supabase and market pipeline files remain unchanged.
+
+
+## Local release preparation
+
+Source commit: `19d6365`. Version commit: `b1dfa35e720c92c6c2c1a8a13b3bb791d9f96018`. The final manifest references that version commit and lists 81 source assets. The exact committed asset planner passes for 82 delivered files, including the effective manifest. Release/cache/publication-boundary tests pass **10/10** after versioning. The local review artifact is in `test-results/category-release-artifact/`. No push, Pages run or production smoke has been initiated. Final main/remote/ahead-behind and clean-worktree evidence is reported at the push gate after the manifest commit.

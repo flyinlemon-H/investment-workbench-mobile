@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "a7d1556212a51243e726710ecee2c42a47849828",
-  "assetVersion": "discussion-holding-reconciliation-v1-20260908",
-  "dataMode": "Discussion Holding Context Reconciliation V1 permits acknowledged manual shares-only changes, validates final judgments against current canonical holdings, and preserves protected context, anchor and atomic save guards",
+  "sourceCommit": "b1dfa35e720c92c6c2c1a8a13b3bb791d9f96018",
+  "assetVersion": "stock-management-category-foundation-v1-20260908",
+  "dataMode": "Stock Management Category Foundation V1 provides explicit user-owned core/watch/candidate/etf classification, confirmed atomic legacy assignment, required stock classification, and preserved holding, Discussion, Plan and asset-type boundaries",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 69362,
-      "sha256": "4f22b962c52909e096f116f53dd15baf23fbb090ebb0f1d2a942f67876ceb4d2"
+      "bytes": 71571,
+      "sha256": "ea1404454a0efdf480eb928fc7f1eec7c40867b901ea7fea18d9da71ead70e0c"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +103,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33496,
-      "sha256": "446b0cb77664e14252243adcb645ef1040314391bcf48aa88261a2c5ef989dae"
+      "bytes": 33559,
+      "sha256": "f9578618c9914254788af52cfe31ffe124c25c6a9172f1069688db33f0f36529"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -183,6 +183,18 @@
       "role": "shared Manual/API Long-Term Logic Prompt and strict response processor",
       "bytes": 3991,
       "sha256": "3c97ee94e4e27a8a696ae6a39c8953eddb539d634c944aaf0387197a81ca7299"
+    },
+    {
+      "path": "src/management-category-ui.js",
+      "role": "browser runtime dependency",
+      "bytes": 6267,
+      "sha256": "a4f1dafb0870d4ae28395853ab86c02e617a36896bbd3d9bbe64fd2c8debc633"
+    },
+    {
+      "path": "src/management-category.js",
+      "role": "browser runtime dependency",
+      "bytes": 3511,
+      "sha256": "cdde496ef4751491e30e31e7be7fcbadcf32d9f78b6daaee42fb34013422cde2"
     },
     {
       "path": "src/manual-analysis-sync-cloud.js",
@@ -415,8 +427,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 631439,
-      "sha256": "38b571205f5975697290ad748c5c67a22a6a377121a6df9aa0efc79a438bac02"
+      "bytes": 633041,
+      "sha256": "e4bc71466dbcae833d65d807021fb07da17f7fba0f9e80e3244470b64abb9061"
     },
     {
       "path": "src/universe-auto-add.js",
@@ -475,8 +487,8 @@
     {
       "path": "src/workbench-navigation-ui.js",
       "role": "Primary navigation, target filters, advanced comparison and maintenance control placement; presentation only",
-      "bytes": 12581,
-      "sha256": "1628cdb93223207cac65d33f47d8b72414beb4abac427d37b9225417768cfd96"
+      "bytes": 13242,
+      "sha256": "97d97ee4b0e94800926e91f4c7ea4c90c4443abc991d09cd151b6e3468175232"
     }
   ]
 }
