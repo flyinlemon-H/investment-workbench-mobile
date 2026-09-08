@@ -116,3 +116,9 @@ Dependency validation: `npm ls --all --offline` passes; dependencies/lockfile un
 13. No, managementCategory does not enter Discussion protected context.
 14. Yes, Discussion still uses canonical shares for holding status.
 15. No, AI/Plan/Runtime acquire no authority to modify managementCategory.
+
+## Local release preparation
+
+Validated source commit: `f5b036f`. Precommit artifact validation passed for **82 delivered files** (81 source assets plus effective manifest); credential scan passed for all **13 changed/new source, test and documentation files**. Refetch before source commit still showed origin/main at `16be211`, with zero unexpected source or market bridge divergence. Source acceptance: 881 JavaScript tests, 21 Python tests, 12 accepted browser scripts / 32 viewport runs; two disclosed old-script failures retain baseline signatures.
+
+The following version commit changes only cache/release bindings, the existing release-version assertion and this release record. The final manifest is generated from that committed version. Push, Pages and production smoke remain unperformed.

@@ -120,8 +120,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'management-category-assignment-hotfix-v1-20260908',
-  dataMode:'Management Category Legacy Assignment Hotfix V1 excludes established cash/system compatibility rows, binds exact eligible identities for atomic explicit assignment, and preserves Foundation categories and holding/Discussion/Plan/market boundaries',
+  assetVersion:'management-category-lifecycle-v1-20260908',
+  dataMode:'Management Category Lifecycle Integration V1 atomically confirms canonical holding and user-owned category transitions, preserves legacy/cash read compatibility and Discussion reconciliation, and excludes cloud and market changes',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
