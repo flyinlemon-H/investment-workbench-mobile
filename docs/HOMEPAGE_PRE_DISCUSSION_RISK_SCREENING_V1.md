@@ -79,3 +79,7 @@ The first browser launch found no browser at the bundled Playwright default revi
 The previously reported **Management Category Lifecycle cross-zero option derivation** production failure remains deferred and **BLOCKED**: expected candidate option, actual empty options, before Confirm, zero writes, fail-closed, original holdings/category unchanged. Its root cause is unknown. This task does not repair, investigate further, rerun production smoke or label it flaky. Existing category tests still run as part of the unchanged full JS suite; their local success does not clear the production blocker.
 
 Release boundary: implementation → focused/full regression → desktop/mobile → source commit → asset/version preparation → manifest → **READY_FOR_PUSH** → STOP. No push, Pages deployment or production smoke is authorized by this task.
+
+## Local release preparation
+
+Validated source commit: `a880bb9`. Asset version: `homepage-pre-discussion-risk-screening-v1-20260908`. The subsequent version commit changes only cache/version bindings, manifest-generator metadata, the existing release-version assertion and this record. No dependency, market bridge or business source is changed during version preparation.
