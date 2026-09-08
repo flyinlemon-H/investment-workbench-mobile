@@ -2187,9 +2187,10 @@ function renderDashboard(){
   const attention=window.HomepageAttention.build(state,{marketTask:window.MARKET_TASK_STATUS,syncStatus:window.UniverseAutoAdd?.status()});
   summary.innerHTML=`今日关注 <strong data-home-attention-count>${attention.count}</strong> 项 · 总资产 <strong>${fmtMoney(estAssets||totalMv)}</strong>`;
   main.innerHTML=`${homepageAttentionPanel(attention)}<details class="card" style="margin-top:14px"><summary class="card-title">组合分布</summary><div class="card-note">已投资 ${fmtMoney(totalMv)} · 现金/预留 ${fmt(reserve,1)}% · AI ${fmt(aiPct,1)}% · 黄金资源 ${fmt(resPct,1)}%</div><div class="dash" style="margin-top:12px"><div><div class="card-title">按主题分布</div>${bars(themeRows)}</div><div><div class="card-title">按仓位角色分布</div>${bars(roleRows)}</div></div></details>`;
+  const attentionSources=new Map(attention.items.filter(item=>item.cta.action==='discussion'&&state.stocks.some(stock=>stock.id===item.stockId)).map(item=>[String(item.stockId),window.DiscussionV4?.source(state,item.stockId,item,'homepage')||null]));
   main.querySelectorAll('[data-home-attention-action]').forEach(button=>button.addEventListener('click',()=>{
     const action=button.dataset.homeAttentionAction,id=button.dataset.stockId;
-    if(action==='discussion')openStockDetail(id,'ai');
+    if(action==='discussion'){openStockDetail(id,'ai',{sourceContext:attentionSources.get(String(id))||null});}
     else if(action==='plan')openStockDetail(id,'plan');
     else if(action==='technical'){
       openStockDetail(id,'technical');
@@ -4459,7 +4460,8 @@ function renderAdvancedAnalysisOverview(mountId='main'){
   document.querySelectorAll('[data-analysis-stock]').forEach(row=>row.addEventListener('click',()=>openStockDetail(row.dataset.analysisStock)));
 }
 
-function openStockDetail(id,workspace=''){
+function openStockDetail(id,workspace='',options={}){
+  window.DiscussionV4?.rememberSource(id,options.sourceContext||null);
   discussionResearchReturn=null;
   detailStockId=id;
   detailSubView='';
@@ -4844,7 +4846,7 @@ function discussionReadinessPanel(stock,runtime){
 }
 function startStockDiscussion(stock){
   if(!window.DiscussionWorkbench)return alert('讨论工作台模块未加载。');
-  try{const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);document.querySelector('.discussion-context-stale')?.remove();openDiscussionPromptDialog(stock,'discussion')}
+  try{if(window.DiscussionV4)window.DiscussionV4.revalidateSource(state,stock.id,window.DiscussionV4.sourceFor(stock.id));const prepared=window.DiscussionWorkbench.buildDiscussionRequest(stock,discussionOptions());prepared.sourceContext=window.DiscussionV4?.sourceFor(stock.id)||null;if(window.PlanContextContract)prepared.request+='\n\n长期计划精确绑定与当次适用性（本段三轴状态为准；旧 references 中 freshness 只表示旧快照兼容）：\n'+JSON.stringify(window.PlanContextContract.context(state,stock.id,{planReviewApi:window.PlanReview}));if(prepared.sourceContext)prepared.request+='\n\n进入时原因（历史记录，不能假定现在仍成立）：\n'+JSON.stringify(window.DiscussionV4.revalidateSource(state,stock.id,prepared.sourceContext));prepared.view='discussion';discussionPreparedContexts.set(discussionStockKey(stock),prepared);document.querySelector('.discussion-context-stale')?.remove();openDiscussionPromptDialog(stock,'discussion')}
   catch(error){alert(`无法开始讨论：${error&&error.message?error.message:error}`)}
 }
 function prepareDiscussionArchive(stock){
@@ -5035,7 +5037,7 @@ async function confirmDiscussionImport(){
   if(document.getElementById('discussionImportText').value!==discussionImportPreviewText){showDiscussionImportFailure('内容已变化，请重新预览。');return;}
   const dialog=document.getElementById('discussionImportDialog'),stock=state.stocks.find(item=>String(item.id)===String(dialog&&dialog.dataset.stockId)),prepared=stock&&discussionPreparedContexts.get(discussionStockKey(stock));if(!stock||!prepared||!discussionImportPreview||!discussionImportPreview.previewReady){showDiscussionImportFailure('本次结论尚未就绪，请重新开始讨论并预览后再保存。');return;}
   discussionImportSaving=true;document.getElementById('discussionImportConfirmBtn').disabled=true;
-  const original=state,message=document.getElementById('discussionImportMessage'),result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,transport:'manual',planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
+  const original=state,message=document.getElementById('discussionImportMessage'),result=await window.DiscussionStateContract.commit(discussionImportPreview,state,{saveCandidate:candidate=>saveState(candidate,{critical:true}),adoptCandidate:candidate=>{state=candidate},rollback:candidate=>{state=candidate}},{prepared,sourceContext:prepared.sourceContext||null,transport:'manual',planReviewApi:window.PlanReview,timeZone:'Asia/Shanghai'});
   discussionImportSaving=false;
   if(result.status!=='completed'){
     showDiscussionImportFailure(translateDiscussionImportFailureMessage(result.error));
@@ -5084,7 +5086,7 @@ function aiDiscussionWorkspacePanel(stock){
   const statusStrip=`<div class="discussion-status-strip ${blocking?'is-blocking':''}"><div><span class="card-title">当前状态</span><strong>${esc(status.label)}</strong></div><span class="discussion-status-reason">${esc(status.reason)}</span></div>${warning}`;
   const decision=current?discussionStateCard(current,'当前结论',stock):'';
   const support=`<section class="card discussion-control-card"><div class="actions discussion-secondary-actions"><button class="btn ghost small" data-detail-action="import-discussion-state" type="button">导入结论</button><button class="btn ghost small" data-workspace="plan" type="button">当前 Plan</button></div>${discussionReadinessPanel(stock,runtime)}<details class="discussion-context-details"><summary>数据状态与保存说明</summary><div class="card-note">技术数据截至 ${esc(runtime.context.currentFacts.technical.technicalAsOf||'—')}。只有预览后人工确认的结论或计划会写入。</div></details></section>`;
-  return `<div class="discussion-workbench">${statusStrip}${actions}${decision}${support}</div>`;
+  return `<div class="discussion-workbench">${statusStrip}${actions}${decision}${support}${window.PlanDiscussionV4UI?.decisionPanel(stock)||''}</div>`;
 }
 const DETAIL_WORKSPACE_META=Object.freeze([
   {key:'ai',label:'讨论'},

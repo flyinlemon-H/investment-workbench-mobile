@@ -217,6 +217,7 @@ function process(raw,options={}){
     if(store.current)store.history.push(store.current);
     store.current=validation.state;store.history=store.history.slice(-Workbench.HISTORY_LIMIT);
     const storeValidation=Workbench.validateStore(store);if(!storeValidation.ok)throw new Error(storeValidation.errors.join('；'));
+    const v4=typeof module==='object'&&module.exports?require('./discussion-v4'):globalThis.DiscussionV4;if(v4)v4.recordJudgment(candidate,found.stock.id,validation.state,options.sourceContext||null);
     found.stock.discussionState=store;found.stock.updatedAt=Math.max(Number(found.stock.updatedAt)||0,Date.parse(confirmedAt));
     return {candidate,currentState:validation.state,previous:store.history[store.history.length-1]||null};
   }

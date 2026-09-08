@@ -4,11 +4,12 @@
     node?require('./plan-v2.js'):root.PlanV2,
     node?require('./plan-review.js'):root.PlanReview,
     node?require('./discussion-workbench.js'):root.DiscussionWorkbench,
-    node?require('./strict-ai-json.js'):root.StrictAiJson
+    node?require('./strict-ai-json.js'):root.StrictAiJson,
+    node?require('./plan-context-contract.js'):root.PlanContextContract
   );
   if(node)module.exports=api;
   root.PlanRuntime=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(Plan,PlanReview,Discussion,StrictJson){
+})(typeof globalThis!=='undefined'?globalThis:this,function(Plan,PlanReview,Discussion,StrictJson,Context){
   'use strict';
 
   const SCHEMA_VERSION='plan-runtime.v1';
@@ -135,6 +136,8 @@
   function bindingStatus(state,planId){
     const runtime=runtimeFor(state,planId);if(!runtime)return 'no_runtime';
     const found=findPlan(state,planId);if(!found||!Plan.hasWatchDefinition(found.plan))return 'missing_plan';
+    const proof=Context.assessmentStore(state).byId['runtime:'+planId+':'+runtime.runtimeRevision];
+    if(proof&&Context.binding(state,proof.definitionRef).bindingStatus!=='current')return 'definition_changed';
     const binding=planBinding(found.plan);
     if(runtime.sourcePlanVersion!==binding.planVersion||runtime.sourcePlanSnapshotHash!==binding.snapshotHash)return 'definition_changed';
     const current=usableCurrentState(found.stock);
@@ -146,7 +149,7 @@
   }
   function contextFor(state,stock,plan,current,runtime){
     const binding=planBinding(plan),currentState=currentBinding(current);
-    return {schemaVersion:'plan-runtime.context.v1',symbol:Discussion.canonical(stock),stockId:stock.id,planBinding:binding,planDefinition:Plan.watchDefinition(plan),currentState:compactCurrentState(current),currentStateBinding:currentState,existingRuntime:runtime?{phase:runtime.phase,runtimeRevision:runtime.runtimeRevision,summary:runtime.summary,watchPoints:clone(runtime.watchPoints),confidence:runtime.confidence,lastTransition:clone(runtime.history.at(-1)||null),bindingStatus:bindingStatus(state,plan.id)}:null};
+    return {schemaVersion:'plan-runtime.context.v1',assessmentContext:Context.runtimeContext(state,stock,plan),symbol:Discussion.canonical(stock),stockId:stock.id,planBinding:binding,planDefinition:Plan.watchDefinition(plan),currentState:compactCurrentState(current),currentStateBinding:currentState,existingRuntime:runtime?{phase:runtime.phase,runtimeRevision:runtime.runtimeRevision,summary:runtime.summary,watchPoints:clone(runtime.watchPoints),confidence:runtime.confidence,lastTransition:clone(runtime.history.at(-1)||null),bindingStatus:bindingStatus(state,plan.id)}:null};
   }
   function prepare(state,stockId,planId){
     const stock=array(state&&state.stocks).find(item=>item&&item.id===stockId);if(!stock)throw new Error('找不到需要复核的标的。');
@@ -202,7 +205,7 @@
       if(stable(context)!==registered.fingerprint)throw new Error(context.planBinding.planVersion!==prepared.context.planBinding.planVersion||context.planBinding.snapshotHash!==prepared.context.planBinding.snapshotHash?'计划定义已经变化，请重新复核状态。':'当前结论已经变化，请重新复核状态。');
       const envelope=parsed.value,errors=[];exact(envelope,TOP_FIELDS,'Runtime 输出',errors);if(errors.length)throw new Error(errors.join('；'));
       const runtime=runtimeFor(state,prepared.planId),checked=validateReview(envelope.planRuntimeReview,runtime&&runtime.phase);if(!checked.ok)throw new Error(checked.errors.join('；'));
-      const noChange=bindingStatus(state,prepared.planId)==='current'&&sameJudgment(runtime,checked.review),result=freeze({ok:true,previewReady:true,confirmReady:!noChange,writes:0,outcome:noChange?'no_change':(runtime?'change':'first'),currentPhase:runtime&&runtime.phase||null,review:clone(checked.review),message:noChange?'当前计划状态维持不变，不写入，也不增加 Runtime 版本。':'Runtime 判断已通过校验，请核对后确认。'});
+      const proof=runtime&&Context.assessmentStore(state).byId['runtime:'+prepared.planId+':'+runtime.runtimeRevision],noChange=Boolean(proof)&&Context.binding(state,proof.definitionRef).bindingStatus==='current'&&bindingStatus(state,prepared.planId)==='current'&&sameJudgment(runtime,checked.review),result=freeze({ok:true,previewReady:true,confirmReady:!noChange,writes:0,outcome:noChange?'no_change':(runtime?'change':'first'),currentPhase:runtime&&runtime.phase||null,review:clone(checked.review),message:noChange?'当前计划状态维持不变，不写入，也不增加 Runtime 版本。':'Runtime 判断已通过校验，请核对后确认。'});
       previews.set(result,{raw:JSON.stringify(envelope),prepared});return result;
     }catch(error){return fail(error.message)}
   }
@@ -240,12 +243,12 @@
       const committed=await Plan.commitCandidate(state,candidate=>{
         candidate.planRuntimeStates=normalizeStore(candidate.planRuntimeStates);
         const existing=runtimeFor(candidate,binding.planId),record=buildRecord(existing,fresh.review,binding,committedAt),checked=validateRecord(record);if(!checked.ok)throw new Error(checked.errors.join('；'));
-        candidate.planRuntimeStates.byPlanId[binding.planId]=checked.record;candidate.updatedAt=Math.max(Date.now(),(Number(state.updatedAt)||0)+1);return candidate;
+        candidate.planRuntimeStates.byPlanId[binding.planId]=checked.record;const found=findPlan(candidate,binding.planId);Context.captureAssessment(candidate,'runtime:'+binding.planId+':'+checked.record.runtimeRevision,found.plan,found.stock);candidate.updatedAt=Math.max(Date.now(),(Number(state.updatedAt)||0)+1);return candidate;
       },{save:deps.saveCandidate,adopt:deps.adoptCandidate});
       if(committed.status==='completed'){sessions.get(verified.prepared).used=true;return committed}
       return {...committed,attemptedWrites:committed.writes,writes:0};
     }catch(error){return {status:'failed',writes:0,error}}
     finally{pending.delete(verified.prepared)}
   }
-  return Object.freeze({SCHEMA_VERSION,STORE_SCHEMA_VERSION,HISTORY_LIMIT,PHASES,PHASE_LABELS,ASSESSMENTS,ASSESSMENT_LABELS,CONFIDENCE_LEVELS,CONFIDENCE_LABELS,BINDING_STATUSES,defaultStore,normalizeRecord,validateRecord,normalizeStore,validateStore,runtimeFor,findPlan,usableCurrentState,planBinding,currentBinding,bindingStatus,prepare,release,validateReview,transitionAllowed,process,request,renderPreview,buildRecord,commit,clone,stable,escapeHtml:esc});
+  return Object.freeze({SCHEMA_VERSION,STORE_SCHEMA_VERSION,HISTORY_LIMIT,PHASES,PHASE_LABELS,ASSESSMENTS,ASSESSMENT_LABELS,CONFIDENCE_LEVELS,CONFIDENCE_LABELS,BINDING_STATUSES,assessmentStatus:(state,planId)=>{const r=runtimeFor(state,planId);return Context.assessmentStatus(state,'runtime:'+planId+':'+r?.runtimeRevision,{planId,sourcePlanVersion:r?.sourcePlanVersion,sourcePlanSnapshotHash:r?.sourcePlanSnapshotHash},PlanReview)},defaultStore,normalizeRecord,validateRecord,normalizeStore,validateStore,runtimeFor,findPlan,usableCurrentState,planBinding,currentBinding,bindingStatus,prepare,release,validateReview,transitionAllowed,process,request,renderPreview,buildRecord,commit,clone,stable,escapeHtml:esc});
 });

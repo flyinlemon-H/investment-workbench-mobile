@@ -61,6 +61,9 @@ function createValidatedCandidateSnapshot(value,options={}){
     if(!globalThis.PlanRuntime||typeof globalThis.PlanRuntime.validateStore!=='function')throw new Error('Plan Runtime 校验器不可用。');
     const runtimeValidation=globalThis.PlanRuntime.validateStore(source.planRuntimeStates);if(!runtimeValidation.ok)throw new Error(runtimeValidation.errors.join('；'));
   }
+  if(source.planAssessmentBindings!==undefined){if(!globalThis.PlanContextContract)throw new Error('Assessment 校验器不可用');globalThis.PlanContextContract.validateAssessmentStore(source.planAssessmentBindings)}
+  if(source.discussionDecisionsV4!==undefined){if(!globalThis.DiscussionV4)throw new Error('Discussion V4 校验器不可用');globalThis.DiscussionV4.validate(source.discussionDecisionsV4)}
+  if(source.planDefinitionsV4!==undefined){if(!globalThis.PlanV4)throw new Error('Plan V4 校验器不可用');globalThis.PlanV4.validate(source)}
   const candidate=normalize(importResetClone(source));
   const validation=importResetValidation();
   if(validation&&typeof validation.validateState==='function')validation.validateState(candidate);

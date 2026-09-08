@@ -8,11 +8,11 @@ function researchWorkspacePanel(stock,active){
 }
 function stockHistoryWorkspacePanel(stock,active){
   const status=discussionStatusPresentation(stock);
-  return `${discussionHistoryPanel(stock,status)}${workspaceDetails('相关计划历史',v13PlanCenterHistory(stock))}${workspaceDetails('用户操作记录',stockExecutionRows(stock.name))}${workspaceDetails('既有 AI 处理历史',v13AiDecisionReviewDetailPanel(stock)||'<div class="empty">暂无记录</div>')}<details class="card"${active==='operation'?' open':''}><summary>录入实际操作结果</summary>${operationWorkspacePanel(stock)}</details>`;
+  return `${window.PlanDiscussionV4UI?.auditPanel(stock)||''}${discussionHistoryPanel(stock,status)}${workspaceDetails('相关计划历史',v13PlanCenterHistory(stock))}${workspaceDetails('用户操作记录',stockExecutionRows(stock.name))}${workspaceDetails('既有 AI 处理历史',v13AiDecisionReviewDetailPanel(stock)||'<div class="empty">暂无记录</div>')}<details class="card"${active==='operation'?' open':''}><summary>录入实际操作结果</summary>${operationWorkspacePanel(stock)}</details>`;
 }
 function stockWorkspaceTabs(stock){
   const active=normalizeDetailWorkspace(detailWorkspace),primary=workspacePrimaryKey(active),anchor=`workspace-${active}`;
   const tabs=PRIMARY_WORKSPACE_META.map(item=>`<button class="workspace-tab${item.key===primary?' active':''}" id="workspace-tab-${item.key}" role="tab" type="button" data-workspace-tab="${item.key}" aria-selected="${item.key===primary}" aria-controls="workspace-panel" tabindex="${item.key===primary?'0':'-1'}">${item.label}</button>`).join('');
-  const body=primary==='research'?researchWorkspacePanel(stock,active):primary==='history'?stockHistoryWorkspacePanel(stock,active):activeWorkspacePanel(stock,active);
+  const body=primary==='research'?researchWorkspacePanel(stock,active):primary==='history'?stockHistoryWorkspacePanel(stock,active):(primary==='plan'?(window.PlanDiscussionV4UI?.planPanel(stock)||''):'')+activeWorkspacePanel(stock,active);
   return `<div class="workspace-tabs-shell"><div class="workspace-tablist" role="tablist" aria-label="标的工作区">${tabs}</div><section class="workspace-tabpanel" id="workspace-panel" role="tabpanel" aria-labelledby="workspace-tab-${primary}" data-workspace-section="${esc(active)}" data-v13-detail-anchor="${esc(anchor)}">${v13TargetReviewReturnBanner(stock,anchor)}${discussionReturnBanner(stock,active)}${body}</section></div>`;
 }

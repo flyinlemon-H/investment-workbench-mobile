@@ -303,5 +303,86 @@
     },{save:deps.saveCandidate,adopt:deps.adoptCandidate,rollback:deps.rollback});
   }
 
-  return Object.freeze({SCHEMA_VERSION,OPERATIONS,PLAN_ACTIONS,OPERATION_LABELS,TOP_FIELDS,REQUIRED_TOP_FIELDS,TARGET_FIELDS,PLAN_FIELDS,CONDITION_FIELDS,prepare,process,diff,renderPreview,commit,discussionBinding,currentStateContext,protectedFacts,createDraftSession,sessionBinding,planSnapshotHash,activePlans,compactPlan,planDisplayEntries,planLabelBase,planPatch,planPatchFromCanonical,minTradeUnit,clone});
+  // The V4 profile extends this draft engine; transport parsing remains StrictAiJson.
+  const v4Sessions=new WeakMap(),v4Previews=new WeakMap(),v4Used=new WeakSet(),v4Pending=new WeakSet();
+  const V4_OPERATIONS=['create','update','no_change','cancel','supersede','complete'];
+  function v4Apis(){const node=typeof module==='object'&&module.exports;return node?{C:require('./plan-context-contract'),V:require('./plan-v4'),D:require('./discussion-v4')}:{C:globalThis.PlanContextContract,V:globalThis.PlanV4,D:globalThis.DiscussionV4}}
+  function v4Target(state,planId){
+    if(!planId)return null;const {C,V}=v4Apis(),found=C.exactPlan(state,planId);if(!found)throw new Error('目标计划不存在或不唯一');
+    const view=V.read(state,planId);if(view.compatibility==='conflict')throw new Error('计划定义冲突，请先恢复一致版本');
+    return {planId,definitionRef:view.kind==='v4'?view.planRef:C.readableDefinitionRef(found.plan),legacyPlanVersion:found.plan.planVersion,legacySnapshotHash:planSnapshotHash(found.plan),lifecycle:found.plan.status};
+  }
+  function v4Facts(state,stockId){
+    const {C}=v4Apis(),stock=state.stocks.find(s=>s.id===stockId),context=C.context(state,stockId);
+    // Quantity alone may change. Direction, cost, evidence and concrete quantity limits are rechecked.
+    context.holding={held:context.holding.shares===null?null:context.holding.shares>0,avgCost:context.holding.avgCost};
+    context.evidence.holding=clone(context.holding);
+    return {context,capPct:stock.capPct??null,strategy:clone(stock.strategy||{}),currentWeight:stock.currentWeight??null,currentPrice:stock.currentPrice??null,technicalStatus:stock.technicalData?.technicalDataStatus??null};
+  }
+  function prepareV4(state,stockId,options={}){
+    const {C,V,D}=v4Apis();V.validate(state);D.validate(D.store(state));
+    const stock=state.stocks.find(s=>s.id===stockId),decision=D.store(state).decisions[options.decisionId];
+    if(!stock||!decision||decision.symbol!==DiscussionWorkbench.canonical(stock))throw new Error('请先记录本次真实用户确认');
+    const operation=options.operation||'update',target=v4Target(state,options.planId);
+    if(!V4_OPERATIONS.includes(operation)||operation==='create'&&target||!['create','no_change'].includes(operation)&&!target)throw new Error('请选择明确的操作和目标计划');
+    if(target&&(C.exactPlan(state,target.planId).stock.id!==stockId||target.lifecycle!=='active'))throw new Error('目标计划与标的不一致或已经结束');
+    if(operation!=='no_change'&&decision.planDisposition!=='change')throw new Error('本次用户选择没有提出长期计划变化，请先确认自己的选择');
+    const prepared={stockId,operation,target,decision:clone(decision),facts:v4Facts(state,stockId),draftSessionId:D.uid('plandraft'),definitionContract:V.SCHEMA};
+    prepared.contextHash='sha256:'+C.sha256(C.stable(prepared));
+    const view=target?V.read(state,target.planId):null;
+    prepared.beforeDefinition=view?.kind==='v4'?clone(view.record.revisions.at(-1).definition):null;
+    prepared.example={schemaVersion:SCHEMA_VERSION,definitionContract:V.SCHEMA,draftSessionId:prepared.draftSessionId,contextHash:prepared.contextHash,operation,symbol:decision.symbol,targetRef:target,definition:['create','update','supersede'].includes(operation)?prepared.beforeDefinition:null,reason:'说明长期规则为何需要本次处理',risks:[],unresolvedItems:[]};
+    prepared.requestText=['根据用户本次确认整理长期计划候选。你只提出建议，不确认用户选择，不执行交易，不改变事实。','严格返回以下 JSON 结构；所有身份、上下文和目标字段原样回显。只有 definition / reason / risks / unresolvedItems 可由你提出。','definition 为 {actionIntent,rules}；actionIntent 可选 entry/increase/reduce/hold_watch/risk_review。rules 使用完整既有 legacy_price 或 state_watch 定义，必须包含失效规则；建仓/加仓须有配置约束。缺资料列入 unresolvedItems，不编造。','完整字段与允许值：',JSON.stringify({intents:V.INTENTS,priceRules:C.definition(PlanV2.createPlan({action:'buy'})),watchRules:{planMode:'state_watch',name:'观察主题',applicableConditions:[],entryConditions:[],confirmationConditions:[],invalidationConditions:[],reviewAction:'hold_watch',priceReferences:[],allocationConstraint:{maxPositionPct:null,targetWeightRange:null},note:'',validUntil:null,nextReviewDate:null}}), '当前程序上下文与用户确认：',JSON.stringify({facts:prepared.facts,decision,legacyTarget:target?clone(C.exactPlan(state,target.planId).plan):null,sourceDiscussion:D.store(state).discussions[decision.discussionId]}),'输出结构：',JSON.stringify(prepared.example,null,2)].join('\n');
+    v4Sessions.set(prepared,C.stable(prepared));return prepared;
+  }
+  function v4Revalidate(state,prepared){
+    const {C,D,V}=v4Apis();if(!v4Sessions.has(prepared)||v4Sessions.get(prepared)!==C.stable(prepared)||v4Used.has(prepared))throw new Error('草案会话无效，请重新整理');
+    V.validate(state);D.validate(D.store(state));
+    if(C.stable(v4Facts(state,prepared.stockId))!==C.stable(prepared.facts)||C.stable(v4Target(state,prepared.target?.planId))!==C.stable(prepared.target)||C.stable(D.store(state).decisions[prepared.decision.decisionId])!==C.stable(prepared.decision))throw new Error('目标计划、当前事实或用户确认已变化，请重新整理');
+  }
+  function definitionDiff(before,after,path=''){
+    if(PlanV2.stable(before)===PlanV2.stable(after))return [];
+    if(before&&after&&typeof before==='object'&&typeof after==='object'&&!Array.isArray(before)&&!Array.isArray(after))return [...new Set([...Object.keys(before),...Object.keys(after)])].flatMap(k=>definitionDiff(before[k],after[k],path?path+'.'+k:k));
+    return [{field:path||'definition',before:clone(before??null),after:clone(after??null)}];
+  }
+  function processV4(raw,{state,prepared}={}){
+    const parsed=StrictAiJson.parseStrictAiJson(raw);if(!parsed.ok)return {ok:false,writes:0,message:parsed.userMessage,code:'parse_error'};
+    try{
+      const {C,V}=v4Apis();v4Revalidate(state,prepared);const draft=parsed.value,errors=[];
+      exactFields(draft,['schemaVersion','definitionContract','draftSessionId','contextHash','operation','symbol','targetRef','definition','reason','risks','unresolvedItems'],'V4 Plan draft',errors);
+      for(const key of ['schemaVersion','definitionContract','draftSessionId','contextHash','operation','symbol','targetRef'])if(C.stable(draft?.[key])!==C.stable(prepared.example[key]))errors.push('程序绑定字段不一致：'+key);
+      if(typeof draft?.reason!=='string'||!draft.reason.trim()||draft.reason.length>1000)errors.push('需要明确变更原因');
+      stringList(draft?.risks,'风险',errors);stringList(draft?.unresolvedItems,'待核对项',errors);if(errors.length)throw new Error(errors.join('；'));
+      const changesDefinition=['create','update','supersede'].includes(draft.operation),stock=state.stocks.find(s=>s.id===prepared.stockId),existing=prepared.target?C.exactPlan(state,prepared.target.planId).plan:null;
+      if(changesDefinition){V.validateDefinition(draft.definition);V.assertApplicable(stock,draft.definition,draft.operation==='update'?existing:null);if(draft.operation==='update')V.projection(draft.definition,existing);}
+      else if(draft.definition!==null)throw new Error('生命周期操作不得附带定义修改');
+      const before=prepared.beforeDefinition||(existing?{actionIntent:null,rules:C.readableDefinitionRef(existing)?C.definition(existing):clone(existing)}:null);
+      const result={ok:true,previewReady:true,confirmReady:draft.unresolvedItems.length===0,writes:0,draft:clone(draft),prepared,before:clone(before),after:clone(draft.definition),diff:changesDefinition?definitionDiff(before,draft.definition):[{field:'lifecycle',before:prepared.target?.lifecycle||null,after:{cancel:'cancelled',complete:'completed',supersede:'superseded',no_change:prepared.target?.lifecycle||null}[draft.operation]}],source:{decisionId:prepared.decision.decisionId,discussionId:prepared.decision.discussionId}};
+      v4Previews.set(result,C.stable(result));return result;
+    }catch(error){return {ok:false,previewReady:false,confirmReady:false,writes:0,message:error.message,code:'validation_error'}}
+  }
+  async function commitV4(result,state,deps={},options={}){
+    if(options.confirmed!==true)return {status:'confirmation_required',writes:0};
+    const {C,V,D}=v4Apis();if(!result||!v4Previews.has(result)||v4Previews.get(result)!==C.stable(result)||!result.confirmReady)return {status:'invalid',writes:0};
+    const prepared=result.prepared;if(v4Pending.has(prepared))return {status:'busy',writes:0};v4Pending.add(prepared);
+    try{
+      v4Revalidate(state,prepared);const fresh=processV4(JSON.stringify(result.draft),{state,prepared});if(!fresh.ok||!fresh.confirmReady)throw new Error(fresh.message||'请重新预览');
+      const candidate=clone(state),draft=clone(result.draft),now=new Date(options.now||Date.now()).toISOString(),receiptId=D.uid('planchange'),source={receiptId,...result.source},oldRef=clone(prepared.target),stock=candidate.stocks.find(s=>s.id===prepared.stockId);let newRef=oldRef;
+      if(!candidate.planDefinitionsV4)candidate.planDefinitionsV4=V.empty();
+      if(['create','update','supersede'].includes(draft.operation)){
+        const changed=V.writeRevision(candidate,prepared.stockId,draft.operation==='update'?oldRef.planId:null,draft.definition,source,now);newRef=v4Target(candidate,changed.planRef.planId);
+      }
+      if(['cancel','complete','supersede'].includes(draft.operation)){
+        const index=stock.plans.findIndex(p=>p.id===oldRef.planId),status={cancel:'cancelled',complete:'completed',supersede:'replaced'}[draft.operation];
+        stock.plans[index]=PlanV2.terminatePlan(stock.plans[index],status,{now,reason:draft.reason});const record=candidate.planDefinitionsV4.byId[oldRef.planId];
+        if(record){record.lifecycle=draft.operation==='supersede'?'superseded':status;record.supersededByPlanId=draft.operation==='supersede'?newRef.planId:null;}
+        if(draft.operation==='supersede'){const successor=stock.plans.find(p=>p.id===newRef.planId);successor.legacy={...successor.legacy,discussionPlanSource:{replacesPlanId:oldRef.planId,replacesPlanVersion:oldRef.legacyPlanVersion,receiptId}};newRef=v4Target(candidate,newRef.planId)}else newRef=v4Target(candidate,oldRef.planId);
+      }
+      const receipt={receiptId,symbol:prepared.decision.symbol,confirmedAt:now,operation:draft.operation,source:clone(result.source),draft,priorPlanRef:oldRef,newPlanRef:newRef,before:clone(result.before),after:clone(result.after)};
+      candidate.planDefinitionsV4.receipts[receiptId]=receipt;V.validate(candidate);D.validate(candidate.discussionDecisionsV4);
+      const saved=await deps.saveCandidate(candidate,{critical:true});if(saved===false||saved?.ok===false)throw new Error('安全保存失败，未应用计划变更');
+      v4Used.add(prepared);const next=saved?.state||candidate;deps.adoptCandidate?.(next);return {status:'completed',writes:1,state:next,receipt};
+    }catch(error){return {status:'failed',writes:0,error}}finally{v4Pending.delete(prepared)}
+  }
+  return Object.freeze({prepareV4,processV4,commitV4,definitionDiff,v4Target,V4_OPERATIONS,SCHEMA_VERSION,OPERATIONS,PLAN_ACTIONS,OPERATION_LABELS,TOP_FIELDS,REQUIRED_TOP_FIELDS,TARGET_FIELDS,PLAN_FIELDS,CONDITION_FIELDS,prepare,process,diff,renderPreview,commit,discussionBinding,currentStateContext,protectedFacts,createDraftSession,sessionBinding,planSnapshotHash,activePlans,compactPlan,planDisplayEntries,planLabelBase,planPatch,planPatchFromCanonical,minTradeUnit,clone});
 });

@@ -36,6 +36,9 @@
   function validateState(state){
     if(!isPlainObject(state))fail('validation.state.object');
     if(!Array.isArray(state.stocks))fail('validation.state.stocks');
+    if(state.planAssessmentBindings!==undefined){if(!global.PlanContextContract)fail('validation.assessment.contract');try{global.PlanContextContract.validateAssessmentStore(state.planAssessmentBindings)}catch(_error){fail('validation.assessment.bindings')}}
+    if(state.discussionDecisionsV4!==undefined){if(!global.DiscussionV4)fail('validation.discussionV4.contract');try{global.DiscussionV4.validate(state.discussionDecisionsV4)}catch(_error){fail('validation.discussionV4.store')}}
+    if(state.planDefinitionsV4!==undefined){if(!global.PlanV4)fail('validation.planV4.contract');try{global.PlanV4.validate(state)}catch(_error){fail('validation.planV4.store')}}
     const stocks=state.stocks;
     const symbols=new Set();
     stocks.forEach(stock=>{
