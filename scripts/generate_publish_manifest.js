@@ -120,8 +120,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-holding-reconciliation-v1-20260908',
-  dataMode:'Discussion Holding Context Reconciliation V1 permits acknowledged manual shares-only changes, validates final judgments against current canonical holdings, and preserves protected context, anchor and atomic save guards',
+  assetVersion:'stock-management-category-foundation-v1-20260908',
+  dataMode:'Stock Management Category Foundation V1 provides explicit user-owned core/watch/candidate/etf classification, confirmed atomic legacy assignment, required stock classification, and preserved holding, Discussion, Plan and asset-type boundaries',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

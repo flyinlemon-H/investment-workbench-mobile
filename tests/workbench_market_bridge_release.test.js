@@ -101,9 +101,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('UI Simplification V1A release cache-busts readiness, attention, Discussion, Runtime, Auth and preserved Workbench modules',()=>{
+test('Management Category Foundation release cache-busts category and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='discussion-holding-reconciliation-v1-20260908';
+  const version='stock-management-category-foundation-v1-20260908';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
@@ -120,6 +120,8 @@ test('UI Simplification V1A release cache-busts readiness, attention, Discussion
     'src/symbol-identity.js',
     'src/universe-handoff.js',
     'src/technical-view-ux.js',
+    'src/management-category.js',
+    'src/management-category-ui.js',
     'src/workbench-navigation-ui.js',
     'src/stock-research-ui.js',
     'src/plan-v2.js',
