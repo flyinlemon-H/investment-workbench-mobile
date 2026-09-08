@@ -33,7 +33,7 @@ roleByPath.set('src/universe-handoff.js','REAL MOBILE TRIAL V3 PC sync status an
 roleByPath.set('src/technical-view-ux.js','REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime');
 roleByPath.set('src/state.js','Single Stock Discussion State normalization plus existing Workbench state runtime');
 roleByPath.set('src/ui-render.js','Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces');
-roleByPath.set('src/homepage-attention.js','Read-only canonical homepage attention eligibility, source applicability, priority, root-cause deduplication and lifecycle');
+roleByPath.set('src/homepage-attention.js','Derived conservative homepage action selection, strength and suppression from accepted User Decision V3, with preserved freshness, data-health deduplication and Runtime boundaries');
 roleByPath.set('src/app.js','browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime');
 roleByPath.set('src/portfolio-review-context.js','Portfolio Review local-calendar context with non-authoritative PlanReview judgment and freshness runtime');
 roleByPath.set('src/portfolio-review-contract.js','M05C_1 Real Trial Fix 1 localized contract and atomic snapshot runtime');
@@ -120,8 +120,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'management-category-lifecycle-v1-20260908',
-  dataMode:'Management Category Lifecycle Integration V1 atomically confirms canonical holding and user-owned category transitions, preserves legacy/cash read compatibility and Discussion reconciliation, and excludes cloud and market changes',
+  assetVersion:'homepage-action-signal-alignment-v1-20260908',
+  dataMode:'Homepage Action Signal Alignment V1 derives conservative current action signals from accepted User Decision V3, suppresses routine holding and watch-only profit alerts, and preserves freshness, category lifecycle, Discussion and Plan Runtime contracts',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

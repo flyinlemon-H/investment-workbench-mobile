@@ -101,9 +101,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Management Category Foundation release cache-busts category and preserved Workbench modules',()=>{
+test('Homepage Action Signal Alignment release cache-busts homepage and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='management-category-lifecycle-v1-20260908';
+  const version='homepage-action-signal-alignment-v1-20260908';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'data/backend_config.js',
