@@ -101,11 +101,15 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Homepage Pre-Discussion Screening release cache-busts homepage and preserved Workbench modules',()=>{
+test('Plan Discussion V4 release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='homepage-pre-discussion-risk-screening-v1-20260908';
+  const version='plan-discussion-v4-core-loop-20260909';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'src/plan-context-contract.js',
+    'src/discussion-v4.js',
+    'src/plan-v4.js',
+    'src/plan-discussion-v4-ui.js',
     'data/backend_config.js',
     'data/supabase_config.js',
     'src/vendor/supabase-client.js',
