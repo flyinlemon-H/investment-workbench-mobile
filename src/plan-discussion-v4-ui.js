@@ -14,15 +14,46 @@
   async function persist(candidate){const validated=createValidatedCandidateSnapshot(candidate,{touchUpdatedAt:true});await persistCandidateSnapshot(validated);return {state:validated}}
   const drafts=new Map(),operationLabels={create:'新增独立计划',update:'修改此计划',no_change:'保持计划',cancel:'取消计划',supersede:'以新计划替代',complete:'确认计划完成'},intentLabels={entry:'建仓关注',increase:'加仓关注',reduce:'减仓关注',hold_watch:'持续观察',risk_review:'风险复核'},lifecycleLabels={active:'进行中',cancelled:'已取消',completed:'已完成',superseded:'已替代',replaced:'已替代'};
   function value(v){return v===null?'未设置':typeof v==='object'?JSON.stringify(v):String(v)}
+  function currentDraft(stockId){
+    const item=drafts.get(stockId),stock=state.stocks.find(s=>s.id===stockId);
+    if(!item)return null;
+    const latest=stock&&D.latestDecision(state,root.DiscussionWorkbench.canonical(stock));
+    if(!latest||latest.decisionId!==item.prepared.decision.decisionId||latest.discussionId!==item.prepared.decision.discussionId){drafts.delete(stockId);return null}
+    return item;
+  }
+  function draftAttributes(item){return `data-stock="${esc(item.prepared.stockId)}" data-v4-draft-session="${esc(item.prepared.draftSessionId)}"`}
+  function boundDraft(node){
+    if(!node?.isConnected||node.dataset.stock!==detailStockId)return null;
+    const item=currentDraft(node.dataset.stock),p=item?.prepared;
+    return p&&node.dataset.v4DraftSession===p.draftSessionId&&document.getElementById('v4PlanTarget')?.value===(p.target?.planId||'')&&document.getElementById('v4PlanOperation')?.value===p.operation?item:null;
+  }
+  function updateRaw(item,raw){
+    if(item.raw===raw)return;
+    item.raw=raw;item.preview=null;
+    // Invalidate the displayed candidate without replacing the focused textarea.
+    document.getElementById('v4PlanDraft')?.querySelector('[data-v4-diff]')?.remove();
+    const box=document.getElementById('v4PlanStatus');if(box)box.textContent='内容已变化，请重新预览。';
+  }
+  document.addEventListener('input',event=>{
+    const input=event.target;if(input.id!=='v4PlanInput')return;
+    const item=boundDraft(input);if(item)updateRaw(item,input.value);
+  });
+  document.addEventListener('change',event=>{
+    if(!['v4PlanTarget','v4PlanOperation'].includes(event.target.id))return;
+    const item=currentDraft(detailStockId);if(!item)return;
+    if(document.getElementById('v4PlanTarget').value===(item.prepared.target?.planId||'')&&document.getElementById('v4PlanOperation').value===item.prepared.operation)return;
+    drafts.delete(detailStockId);document.getElementById('v4PlanDraft').innerHTML='';
+    document.getElementById('v4PlanStatus').textContent='处理方式或目标计划已变化，请重新整理草案。';
+  });
   function planPanel(stock){
-    const V=root.PlanV4,decision=D.latestDecision(state,root.DiscussionWorkbench.canonical(stock)),saved=drafts.get(stock.id),plans=stock.plans||[];
+    const V=root.PlanV4,decision=D.latestDecision(state,root.DiscussionWorkbench.canonical(stock)),saved=currentDraft(stock.id),plans=stock.plans||[];
     const rows=plans.map(p=>{const view=V.read(state,p.id),r=view.record,latest=r?.revisions.at(-1);return `<article class="card" data-v4-plan="${esc(p.id)}"><div class="card-title">${esc(p.name||intentLabels[latest?.definition.actionIntent]||root.DiscussionPlanWorkflow.planLabelBase(p))}</div><p>${esc(lifecycleLabels[r?.lifecycle||p.status])}${latest?` · 修订 ${latest.revisionNumber}`:' · 旧格式，正式修改时再确认完整定义'}</p>${latest?`<p>${esc(latest.definition.rules.note)}</p><details><summary>长期条件与约束</summary><div style="overflow-wrap:anywhere">${Object.entries(latest.definition.rules).filter(([k])=>!['planMode','note'].includes(k)).map(([k,v])=>`<p><b>${esc(fieldLabel(k))}</b>：${esc(value(v))}</p>`).join('')}</div></details>`:''}<p class="card-note">判断状态以该计划的独立复核与状态卡为准；长期规划仅由用户确认修改。</p>${latest?.source?`<button class="btn ghost small" type="button" data-v4-audit="${esc(latest.source.receiptId)}" data-stock="${esc(stock.id)}">查看来源讨论与变更记录</button>`:''}<button class="btn ghost small" type="button" data-v4-discuss-plan="${esc(p.id)}" data-stock="${esc(stock.id)}">讨论此计划</button>${view.compatibility==='conflict'?'<div class="alert">计划投影不一致，已阻止修改；请从备份恢复一致版本。</div>':''}</article>`}).join('');
-    return `<section class="card" data-v4-plan-panel><h3>长期计划变化</h3><p class="card-note">先在“当前判断”中记录自己的选择，再整理计划草案。预览后确认才会保存。</p>${decision?`<p>本次确认：${esc(D.LABELS[decision.outcome])}</p>`:'<p>请先记录“我的确认”。</p>'}<button class="btn ghost small" data-workspace="ai" type="button">回到当前判断</button><label>目标计划<select id="v4PlanTarget"><option value="">新增独立计划 / 无具体计划</option>${plans.filter(p=>p.status==='active').map(p=>`<option value="${esc(p.id)}">${esc(p.name||root.DiscussionPlanWorkflow.planLabelBase(p))} · ${esc(p.id.slice(-8))}</option>`).join('')}</select></label><label>本次处理<select id="v4PlanOperation">${Object.entries(operationLabels).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><button class="btn" type="button" data-v4-prepare-plan data-stock="${esc(stock.id)}"${decision?'':' disabled'}>整理计划草案</button><div id="v4PlanStatus" role="status" class="card-note"></div><div id="v4PlanDraft">${saved?draftPanel(saved):''}</div></section>${rows}`;
+    return `<section class="card" data-v4-plan-panel><h3>长期计划变化</h3><p class="card-note">先在“当前判断”中记录自己的选择，再整理计划草案。预览后确认才会保存。</p>${decision?`<p>本次确认：${esc(D.LABELS[decision.outcome])}</p>`:'<p>请先记录“我的确认”。</p>'}<button class="btn ghost small" data-workspace="ai" type="button">回到当前判断</button><label>目标计划<select id="v4PlanTarget"><option value="">新增独立计划 / 无具体计划</option>${plans.filter(p=>p.status==='active').map(p=>`<option value="${esc(p.id)}"${saved?.prepared.target?.planId===p.id?' selected':''}>${esc(p.name||root.DiscussionPlanWorkflow.planLabelBase(p))} · ${esc(p.id.slice(-8))}</option>`).join('')}</select></label><label>本次处理<select id="v4PlanOperation">${Object.entries(operationLabels).map(([k,v])=>`<option value="${k}"${saved?.prepared.operation===k?' selected':''}>${v}</option>`).join('')}</select></label><button class="btn" type="button" data-v4-prepare-plan data-stock="${esc(stock.id)}"${decision?'':' disabled'}>整理计划草案</button><div id="v4PlanStatus" role="status" class="card-note"></div><div id="v4PlanDraft">${saved?draftPanel(saved):''}</div></section>${rows}`;
   }
   const fieldLabels={definition:'长期定义',actionIntent:'规划方向',planMode:'计划模式',action:'动作',triggerPrice:'关注价格',triggerDirection:'价格方向',quantity:'计划数量',conditions:'条件',invalidation:'失效规则',allocationConstraint:'配置约束',maxPositionPct:'仓位上限',targetWeightRange:'目标仓位范围',validUntil:'有效期',nextReviewDate:'下次复核',note:'说明',name:'主题',applicableConditions:'适用前提',entryConditions:'开始观察条件',confirmationConditions:'确认条件',invalidationConditions:'失效规则',reviewAction:'复核方向',priceReferences:'参考价格',lifecycle:'正式状态'};
   function fieldLabel(path){return path.split('.').filter(k=>k!=='rules').map(k=>fieldLabels[k]||k).join(' / ')}
   function draftPanel(item){
-    const r=item.preview;return `<label>复制给 AI 的整理请求<textarea id="v4PlanRequest" readonly rows="5">${esc(item.prepared.requestText)}</textarea></label><p class="card-note">手动发送给 AI，将完整 JSON 结果粘贴到下方。</p><label>候选结果<textarea id="v4PlanInput" rows="6">${esc(item.raw||'')}</textarea></label><button class="btn" type="button" data-v4-preview-plan data-stock="${esc(item.prepared.stockId)}">预览候选变化</button>${r?`<section data-v4-diff><h4>${esc(operationLabels[r.draft.operation])}</h4><p>来源：${esc(D.LABELS[item.prepared.decision.outcome])} · ${esc(item.prepared.decision.confirmedAt)}</p><p>${esc(r.draft.reason)}</p>${r.diff.map(d=>`<div class="card-note" style="overflow-wrap:anywhere"><b>${esc(fieldLabel(d.field))}</b><p>原：${esc(value(d.before))}</p><p>新：${esc(value(d.after))}</p></div>`).join('')}<p>风险：${esc(r.draft.risks.join('；')||'未列出')}</p>${r.draft.unresolvedItems.length?`<div class="alert">仍需核对：${esc(r.draft.unresolvedItems.join('；'))}</div>`:''}<p class="card-note">确认后保存计划变更及来源回执。不会执行交易。</p><button class="btn" type="button" data-v4-confirm-plan data-stock="${esc(item.prepared.stockId)}"${r.confirmReady?'':' disabled'}>确认并保存${esc(operationLabels[r.draft.operation])}</button></section>`:''}`;
+    const r=item.preview;return `<label>复制给 AI 的整理请求<textarea id="v4PlanRequest" readonly rows="5">${esc(item.prepared.requestText)}</textarea></label><p class="card-note">手动发送给 AI，将完整 JSON 结果粘贴到下方。</p><label>候选结果<textarea id="v4PlanInput" ${draftAttributes(item)} rows="6">${esc(item.raw||'')}</textarea></label><button class="btn" type="button" data-v4-preview-plan ${draftAttributes(item)}>预览候选变化</button>${r?`<section data-v4-diff><h4>${esc(operationLabels[r.draft.operation])}</h4><p>来源：${esc(D.LABELS[item.prepared.decision.outcome])} · ${esc(item.prepared.decision.confirmedAt)}</p><p>${esc(r.draft.reason)}</p>${r.diff.map(d=>`<div class="card-note" style="overflow-wrap:anywhere"><b>${esc(fieldLabel(d.field))}</b><p>原：${esc(value(d.before))}</p><p>新：${esc(value(d.after))}</p></div>`).join('')}<p>风险：${esc(r.draft.risks.join('；')||'未列出')}</p>${r.draft.unresolvedItems.length?`<div class="alert">仍需核对：${esc(r.draft.unresolvedItems.join('；'))}</div>`:''}<p class="card-note">确认后保存计划变更及来源回执。不会执行交易。</p><button class="btn" type="button" data-v4-confirm-plan ${draftAttributes(item)}${r.confirmReady?'':' disabled'}>确认并保存${esc(operationLabels[r.draft.operation])}</button></section>`:''}`;
   }
   function auditPanel(stock){
     const s=D.store(state),symbol=root.DiscussionWorkbench.canonical(stock),receipts=Object.values(root.PlanV4.store(state).receipts).filter(r=>r.symbol===symbol).sort((a,b)=>b.confirmedAt.localeCompare(a.confirmedAt)),decisions=Object.values(s.decisions).filter(d=>d.symbol===symbol).sort((a,b)=>b.confirmedAt.localeCompare(a.confirmedAt));
@@ -34,9 +65,12 @@
     try{
       if(button.hasAttribute('data-v4-discuss-plan')){D.rememberSource(stockId,D.source(state,stockId,{planId:button.dataset.v4DiscussPlan,code:'plan_review',sourceAsOf:C.evidenceRef(stock,state).technicalAnchor.date},'plan'));navigateDiscussionWorkspace(stock,'ai');return}
       if(button.hasAttribute('data-v4-audit')){navigateDiscussionWorkspace(stock,'history');const target=document.getElementById('v4-audit-'+button.dataset.v4Audit);if(target){target.closest('details').open=true;target.scrollIntoView({block:'center'})}return}
-      if(button.hasAttribute('data-v4-prepare-plan')){const decision=D.latestDecision(state,root.DiscussionWorkbench.canonical(stock)),prepared=W.prepareV4(state,stockId,{decisionId:decision?.decisionId,operation:document.getElementById('v4PlanOperation').value,planId:document.getElementById('v4PlanTarget').value||null});drafts.set(stockId,{prepared});document.getElementById('v4PlanDraft').innerHTML=draftPanel(drafts.get(stockId));if(box)box.textContent='草案请求已准备，请复制给 AI。';return}
-      const item=drafts.get(stockId);if(!item)throw new Error('请重新整理草案');
-      if(button.hasAttribute('data-v4-preview-plan')){item.raw=document.getElementById('v4PlanInput').value;const result=W.processV4(item.raw,{state,prepared:item.prepared});if(!result.ok){item.preview=null;document.getElementById('v4PlanDraft').innerHTML=draftPanel(item);throw new Error(result.message)}item.preview=result;document.getElementById('v4PlanDraft').innerHTML=draftPanel(item);if(box)box.textContent='请核对变更前后内容。';return}
+      if(button.hasAttribute('data-v4-prepare-plan')){const decision=D.latestDecision(state,root.DiscussionWorkbench.canonical(stock)),prepared=W.prepareV4(state,stockId,{decisionId:decision?.decisionId,operation:document.getElementById('v4PlanOperation').value,planId:document.getElementById('v4PlanTarget').value||null});drafts.set(stockId,{prepared,raw:'',preview:null});document.getElementById('v4PlanDraft').innerHTML=draftPanel(drafts.get(stockId));if(box)box.textContent='草案请求已准备，请复制给 AI。';return}
+      const item=boundDraft(button);if(!item)throw new Error('请重新整理草案');
+      if(button.hasAttribute('data-v4-preview-plan')){updateRaw(item,document.getElementById('v4PlanInput').value);const result=W.processV4(item.raw,{state,prepared:item.prepared});if(!result.ok){item.preview=null;document.getElementById('v4PlanDraft').innerHTML=draftPanel(item);throw new Error(result.message)}item.preview=result;document.getElementById('v4PlanDraft').innerHTML=draftPanel(item);if(box)box.textContent='请核对变更前后内容。';return}
+      const input=document.getElementById('v4PlanInput');if(boundDraft(input)!==item)throw new Error('请重新整理草案');
+      if(input.value!==item.raw)updateRaw(item,input.value);
+      if(!item.preview?.confirmReady)throw new Error('内容已变化，请重新预览。');
       busy=true;const result=await W.commitV4(item.preview,state,{saveCandidate:persist,adoptCandidate:next=>{state=next}},{confirmed:true});if(result.status!=='completed')throw result.error||new Error('未保存，请重新预览');drafts.delete(stockId);renderStockDetail();
     }catch(error){if(box)box.textContent=error.message;else alert(error.message)}finally{busy=false}
   });
