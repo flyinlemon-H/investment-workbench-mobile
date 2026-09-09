@@ -128,8 +128,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'plan-v4-draft-raw-state-fix-v1-20260909',
-  dataMode:'Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync',
+  assetVersion:'discussion-protected-fact-output-reliability-v1-20260909',
+  dataMode:'Discussion protected-fact output guidance with explicit no-echo qualitative judgment contract and manual retry guidance; unchanged strict parser/validator and V4 judgment/user decision separation; preserved Plan Core Loop and Homepage; no automatic AI or execution',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
