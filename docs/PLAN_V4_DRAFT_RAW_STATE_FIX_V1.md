@@ -1,5 +1,7 @@
 **PLAN_V4_DRAFT_RAW_STATE_FIX_COMPLETE**
 
+发布准备状态：**READY_FOR_PUSH**。仅本地提交，未 push / Pages / production re-smoke。
+
 基线：`47925c974a228de506af46b37f035ed2efd2ffdf`。本次修复 V4 candidate textarea 在后台资料完成后的整页重绘中丢失输入，以及编辑后仍保留旧 Preview/Confirm 的问题。
 
 业务修改只涉及 `src/plan-discussion-v4-ui.js`。沿用原 `drafts` Map 和 `prepared.draftSessionId`；没有第二套草稿存储、schema 变更或 whole-page renderer 改造。
@@ -55,6 +57,7 @@ StrictAiJson、Plan V4 Definition/Real User Decision schema、definition hash、
 |修复版后台时机 × 视口|12/12 PASS|
 |原 plan_discussion_v4_browser_acceptance|三个视口 PASS；原子失败、source/audit、localStorage/IndexedDB、刷新、旧标签页保护|
 |ui_simplification_browser_acceptance|PASS；相邻 UI、唯一 ID、导航与备份等原有断言保持|
+|发布边界与严格资源版本测试|10 PASS|
 
 所有新浏览器用例比较显式 fixture setup 后的 shares/holdings、avgCost、trades、orders、executionLog、managementCategory：保持不变。自动 AI 请求 0，允许的非读取网络请求 0。未 Confirm/无效 Preview/stale Confirm 均不改 Plan/receipt；正式 Confirm 才保存授权的合成 Plan 变更。
 
@@ -69,7 +72,9 @@ StrictAiJson、Plan V4 Definition/Real User Decision schema、definition hash、
 
 资源版本：`plan-v4-draft-raw-state-fix-v1-20260909`。index 中统一 cache version、清单生成器和严格 release version 断言一并更新。
 
-源码提交及 manifest 绑定将在生成清单后记录。最终以 Git 提交 blob 执行真实 `artifactPlan`，校验入口依赖、85 个源资源的 bytes/SHA-256、sourceCommit 祖先关系和 86 个有效发布文件。不会覆盖已有 `_site`。
+源码及资源版本提交：`28bbb0820b66e44f7048c6e3c21b69b0dcea2206`，直接继承生产基线 `47925c9`。manifest 的 sourceCommit 精确绑定该源码提交。后续发布准备提交仅包含生成后的 manifest 和本文，不再改变浏览器源资源。
+
+已用 Git 提交 blob 执行真实 `artifactPlan`，校验入口依赖、85 个源资源的 bytes/SHA-256、sourceCommit 祖先关系和 86 个有效发布文件。已有 `_site` 未覆盖。最终 HEAD 的同等校验、完整资源哈希和 clean 工作树证明保存在 `test-results/v4-raw-state-fix/ready-for-push.json`；effective manifest 的 deploymentCommit 在实际发布时使用最终部署提交。
 
 本任务不 push、不触发 Pages、不执行生产 re-smoke。发布准备完成后状态为 **READY_FOR_PUSH**。
 

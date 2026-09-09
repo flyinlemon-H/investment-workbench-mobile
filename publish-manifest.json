@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "6cf518ad212258771f8343960b8c31caa89f7a95",
-  "assetVersion": "plan-discussion-v4-core-loop-20260909",
+  "sourceCommit": "28bbb0820b66e44f7048c6e3c21b69b0dcea2206",
+  "assetVersion": "plan-v4-draft-raw-state-fix-v1-20260909",
   "dataMode": "Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71052,
-      "sha256": "358bfa6df7b07e57ee8b97285968421adfdec5e1fa6c32363146ccf38b070423"
+      "bytes": 71218,
+      "sha256": "d6e400513cad8b14e4f6bd7e4a187f5dbcd57fde3cb980acfa9ce9e21bb681ba"
     },
     {
       "path": "social_posts.json",
@@ -253,8 +253,8 @@
     {
       "path": "src/plan-discussion-v4-ui.js",
       "role": "explicit user decision, Plan draft preview/confirm, source navigation and audit history",
-      "bytes": 12414,
-      "sha256": "2966907a1eb0758fa50ef07155cebc520a789d316bee5f329b0cbee96824e608"
+      "bytes": 14909,
+      "sha256": "37b7a8194328ef5b7dfa6a094ed89400ff81db3942e27da18b4ddb8497523e2c"
     },
     {
       "path": "src/plan-generation-gate.js",
