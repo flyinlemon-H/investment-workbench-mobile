@@ -4989,6 +4989,7 @@ function openDiscussionImportDialog(stock){
 function closeDiscussionImportDialog(){document.getElementById('discussionImportDialog')?.classList.remove('show');discussionImportPreview=null}
 function translateDiscussionImportFailureMessage(error){
   const raw=error&&error.message?String(error.message):'',code=error&&(error.code||error.type);
+  if(/userDecision 不得包含由 AI 重述或发明的精确价格、比例、股数或日期/.test(raw))return raw+'。AI 返回了程序拥有的精确事实。请返回讨论，让 AI 只保留定性判断，不要重复价格、比例、股数、数量、成本或日期，即使来自上下文也不要回显，然后重新输出完整严格 JSON 并预览。';
   if(/零持仓/.test(raw))return 'AI结论与当前零持仓事实冲突，请重新生成结论。当前没有持仓，结论不能使用“继续持有、加仓、减仓、止盈、止损”等持仓措辞。';
   if(/已有持仓/.test(raw))return 'AI结论与当前持仓事实冲突，无法保存。当前已有持仓，但结论仍假设没有持仓，请修正 AI 结论后重新预览。';
   if(/预览后当前事实|持仓信息已变化/.test(raw))return raw;
@@ -5024,7 +5025,7 @@ function previewDiscussionImport(){
     document.getElementById('discussionHoldingAcknowledgeBtn').hidden=false;document.getElementById('discussionImportReturnBtn').hidden=false;
     message.scrollIntoView({block:'center',inline:'nearest'});message.focus({preventScroll:true});return;
   }
-  if(!result.ok){showDiscussionImportFailure(/零持仓|已有持仓/.test(result.message)?translateDiscussionImportFailureMessage(result):result.message);return}
+  if(!result.ok){showDiscussionImportFailure(/零持仓|已有持仓|userDecision 不得包含由 AI 重述或发明的精确价格、比例、股数或日期/.test(result.message)?translateDiscussionImportFailureMessage(result):result.message);return}
   discussionImportPreview=result;discussionImportPreviewText=document.getElementById('discussionImportText').value;
   const date=window.DiscussionWorkbench.localCalendarDate(new Date(),{timeZone:'Asia/Shanghai'});message.textContent=result.message;preview.innerHTML=window.DiscussionStateContract.renderPreview(result,{technicalAsOf:prepared.technicalSnapshot?.anchorBar?.date,confirmedDate:date});
   confirmButton.disabled=!result.previewReady;

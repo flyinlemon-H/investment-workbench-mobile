@@ -347,6 +347,7 @@
       '持仓数量、shares、券商状态及保护日期、技术锚点、内部编号均是输入事实，不能由 AI 输出或修正。symbol 与 sourceDiscussionVersion 仅按整理合同原样返回。'
     ].join('\n');
   }
+  const PROTECTED_FACT_JUDGMENT_RULE='边界原则：PROGRAM OWNS FACTS / AI OWNS JUDGMENTS。AI 只返回判断，不返回或重述程序事实。judgment 文本禁止精确股票价格、计划价格、支撑/压力位、买卖价、股数（shares）、数量（quantity）、仓位/配置百分比（percentage）、成本、日期（dates）及技术锚点、内部 ID/hash/revision/引用值；即使这些数值来自程序输入上下文（program context），也不得回显。判断依赖这些事实时，必须改用定性表达（qualitative wording）。';
   function buildDiscussionRequest(stock,options={}){
     const prepared=options.prepared||buildContext(stock,options),context=prepared.context;
     const publicContext=clone(context);
@@ -355,6 +356,7 @@
     const request=[
       `请和我一起复盘 ${context.name||context.symbol}（${context.symbol}）。这是一场延续性的单股讨论，不是一次性从头分析。`,
       '',
+      PROTECTED_FACT_JUDGMENT_RULE,
       holdingPromptRules(context),
       '再说明从上次已确认结论到现在真正变化了什么，先前关注的判断条件是否已经出现，既有技术判断是仍然稳定、正在变化还是已经失效。专业技术概念只作为判断依据，不要放在第一层结论。',
       '程序提供的持仓、完整日线、技术日期、计划、运行状态和引用关系是受保护事实；不要重算或改写。不要发明新闻、财务、价格、仓位或市场背景，也不要给确定性买卖指令。',
@@ -377,7 +379,7 @@
       'JSON 结构键和值必须使用英文半角双引号 "。',
       'JSON 只能使用标准定义的转义；下划线 _ 不需要也不得转义。不得把 Markdown 转义带进 JSON。正确：discussion_v3_9a35cb46、reduce_review、ai_chart_judgment；错误：discussion\\_v3\\_9a35cb46、reduce\\_review、ai\\_chart\\_judgment。',
       '字符串正文可以正常使用中文标点和中文引号。',
-      '边界原则：PROGRAM OWNS FACTS / AI OWNS JUDGMENTS。程序提供的上下文事实只供判断；AI 只输出 currentState 合同允许的判断字段。',
+      PROTECTED_FACT_JUDGMENT_RULE,
       'currentState 顶层只能包含以下字段，不得新增任何其他字段：symbol、sourceDiscussionVersion、userDecision、actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       '程序上下文中出现的字段不代表它属于输出 schema。只有明确列入上述 currentState allowlist 的程序绑定字段可以输出；其余 input-only context 不得复制到 JSON。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
@@ -392,7 +394,7 @@
       'userDecision 固定值：holding.status 为 safe/caution/reduce_review/risk_control/not_applicable；positionDirection.status 为 hold/hold_no_add/add_watch/add_review/reduce_review/risk_control/not_applicable；addAssessment.status 为 wait/watch/add_review/avoid/not_applicable；takeProfit.status 为 none/watch/review/not_applicable；stopLoss.status 为 none/watch/risk_control/not_applicable；riskSource 为 none/stock/market/both/unclear。',
       'userDecision.headline 最多120字且只写一句；各 summary 最多160字；warning.items 最多3项且每项最多160字。各区块职责不同，不得逐项重复同一句话。',
       '第一层 userDecision 必须使用普通中文，不得以 recovery、pullback、forming、日线修复、60分钟结构、完整条件、价格触发、技术锚点等专业或系统术语作为结论。不得写“不等于、不代表、不能说明、尚不能证明”等低价值免责声明；直接说明条件还未成熟或判断需要复核。',
-      'userDecision 不得包含任何自行给出的精确价格、百分比、股数或日期。程序拥有的 Plan 价格会在界面单独展示；AI 只写定性判断。',
+      'userDecision.headline、holding.summary、positionDirection.summary、addAssessment.summary、warning.summary/items、takeProfit.summary、stopLoss.summary 禁止精确价格、百分比、股数、数量、成本、日期，即使来自 program context 也不得回显；只写定性判断，不用数字编号。status/riskSource 保持固定枚举。',
       '固定值：category 只能为 risk_control/reduce_review/hold_watch/wait_confirmation/add_review/entry_review/no_action；priority 为 high/medium/low；attentionLevel 为 normal/focused/window；趋势 status 为 uptrend/downtrend/sideways/recovery/rebound/unclear；结构 type 为 top/bottom/breakout/pullback/recovery/consolidation/none/unclear，status 为 forming/confirmed/valid/broken/unclear，source 为 program/external_software/ai_chart_judgment/user_provided；planRelation.status 为 aligned/conflict/no_matching_plan/neutral；confidence 为 high/medium/low。',
       'trendAssessment.timeframes 的每项必须且只能包含 timeframe、status、explanation；explanation 只属于趋势周期项。',
       'structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason；不得在 structureAssessment 中使用 explanation，不得遗漏必填字段，不得增加未知字段。',
@@ -404,7 +406,10 @@
       '不得发明结构的 timeframe 或 source。无法确认具体 timeframe 或没有足够证据形成结构项时，使用空的 structureAssessment 数组；有明确周期但结构不明确时，只能按证据使用允许的 none/unclear 表达，并仍完整输出六个必填字段。不得用 explanation 代替缺失字段。',
       '所有中文正文不得暴露英文枚举、字段名或实现术语。保留不确定性。不得修改或声称修改计划、计划复核、持仓、配置或长期逻辑；不得创建仓位数值、股数、订单或确定性买卖命令。高优先级只表示优先复核，不等于自动交易。planRelation.summary 使用自然状态语言，例如“已经到达观察区间，条件还未成熟”“关键条件已经确立”，不要写复核窗口或系统免责声明。',
       '常见禁止输出的 input-only context 包括：technicalDataStatus、technicalAsOf、latestCompleteBar、技术 snapshot/anchor、currentStateId/stateId、contextHash/protectedHash、程序内部时间戳、持仓来源事实、原始 Plan 对象及内部 Plan 标识、内部 references、schema/debug 字段。除 allowlist 明确要求的字段外，不得输出日期、技术锚点、哈希、引用或任何由程序补齐的字段。',
-      JSON.stringify(example,null,2)
+      '以下 JSON contract 的 judgment strings（userDecision 全部正文、actionAssessment 全部正文、trendAssessment 各 explanation、structureAssessment 各 shortReason、stage、summary、risks、watchPoints、keyChanges、focusPoints、planRelation.summary）不得回显上下文中的精确价格、股数、数量、百分比、成本、日期或内部引用。planRelation.summary 禁止计划价格/数量/ID/revision/触发值。',
+      '错误 → 定性表达：“跌破 50 元止损” → “关键防守结构失守时复核止损风险”；“建议减仓 20%” → “当前可进入减仓复核”；“当前持有 100 股” → “持仓可以继续观察”；“9 月 9 日结构恶化” → “最新结构恶化”。零持仓：“在 50 元建仓” → “待低风险结构出现后复核建仓条件”。',
+      '自检定性表达。保护字段仍由程序补齐，不要求 AI 输出。symbol/sourceDiscussionVersion 原样返回；timeframe/source/sourceAsOf 按既有 schema 和证据填写。',
+      JSON.stringify(example)
     ].join('\n');
     return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};
   }
