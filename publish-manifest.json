@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "28bbb0820b66e44f7048c6e3c21b69b0dcea2206",
-  "assetVersion": "plan-v4-draft-raw-state-fix-v1-20260909",
-  "dataMode": "Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync",
+  "sourceCommit": "4a33ee86747598f8edbb241cefbbdd38453f8824",
+  "assetVersion": "discussion-protected-fact-output-reliability-v1-20260909",
+  "dataMode": "Discussion protected-fact output guidance with explicit no-echo qualitative judgment contract and manual retry guidance; unchanged strict parser/validator and V4 judgment/user decision separation; preserved Plan Core Loop and Homepage; no automatic AI or execution",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71218,
-      "sha256": "d6e400513cad8b14e4f6bd7e4a187f5dbcd57fde3cb980acfa9ce9e21bb681ba"
+      "bytes": 72629,
+      "sha256": "cbf0707a9d9049763b2317fffb2211d780747e6bf6feb421a14f742069dbcda1"
     },
     {
       "path": "social_posts.json",
@@ -157,8 +157,8 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 56409,
-      "sha256": "a46bbeb781e528bfc1b8b56b8aa287d18db4527e08e6946911f0d70832fc978f"
+      "bytes": 58112,
+      "sha256": "fe3c9ab66c3b47e12b012474089fcf2b8a38b89fad3e48a0b9194248c4afc27a"
     },
     {
       "path": "src/homepage-attention.js",
@@ -451,8 +451,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 636062,
-      "sha256": "9df6d8f1d689c931fdcd53fedaf0a87b6c550f887b8797c8e1d6e88db71356d5"
+      "bytes": 636521,
+      "sha256": "4451ef25f7848051f46b671ae3aa8a63ba9d97fd61a626fd71fb082b704c5ea3"
     },
     {
       "path": "src/universe-auto-add.js",

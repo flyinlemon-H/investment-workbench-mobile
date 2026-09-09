@@ -68,6 +68,7 @@ archive 在 `userDecision` 字段规则旁再次明确禁止；在实际 JSON ex
 |Discussion technical anchor browser|390×844、1280×900 PASS|
 |Discussion data readiness browser|PASS|
 |UI simplification browser|PASS|
+|发布边界 / 严格资源版本测试|10 PASS|
 
 证据保存在本地忽略目录 `test-results/protected-facts/`，包含 focused.txt、full-js.txt、python.txt、browser/results.json、截图及各已有浏览器脚本日志。已有脚本也保留它们原来的结果目录。已检查手机错误截图，完整指引、返回入口和禁用 Confirm 均可见。
 
@@ -89,4 +90,15 @@ archive 在 `userDecision` 字段规则旁再次明确禁止；在实际 JSON ex
 
 ## Release discipline
 
-本地实现、focused、全量回归和浏览器验收完成后，创建 source commit，再更新 asset/version、生成绑定已提交源码的 manifest，并验证发布文件哈希。最终发布记录在下方补齐。未经明确授权不 push、不 deploy、不执行生产 smoke。
+本地实现、focused、全量回归和浏览器验收完成后创建源码提交，再更新 asset/version，生成绑定已提交源码的 manifest，验证发布文件哈希。未经明确授权不 push、不 deploy、不执行生产 smoke。
+
+- 实现提交：`0003d6ef30ce3908da5b633a502ccf50110623fc`，继承本任务开始时的 `a15ab80`。
+- 资源版本提交 / manifest sourceCommit：`4a33ee86747598f8edbb241cefbbdd38453f8824`。
+- assetVersion：`discussion-protected-fact-output-reliability-v1-20260909`；index 所有脚本统一版本，严格版本测试同步更新。
+- manifest 包含 85 个源文件，真实 `artifactPlan` 验证 86 个发布文件、入口依赖、统一 cache version、字节数与 SHA-256；包含 market bridge 在内全部 85 项另行逐一比对，不覆盖现有 `_site`。
+- 资源版本更新后再次运行完整 JS：1024 PASS；增强导入浏览器三个视口再次 PASS，证据为 `final-full-js.txt`、`final-browser/results.json`。未修改业务代码或校验语义。
+- 最后的准备提交仅更新 manifest 和本文。`test-results/protected-facts/verify-release.cjs --committed` 在最终 HEAD 读取提交 blob，核对 sourceCommit 祖先关系、全部哈希、受保护模块与原基线逐字相等以及 clean working tree；结果写入 `ready-for-push.json`。
+
+完成状态：**DISCUSSION_PROTECTED_FACT_OUTPUT_RELIABILITY_V1_COMPLETE**。
+
+最终停止点：**READY_FOR_PUSH**。没有 push、deploy 或 production smoke。
