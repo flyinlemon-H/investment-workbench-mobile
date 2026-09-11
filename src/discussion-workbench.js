@@ -325,7 +325,7 @@
     const protectedSnapshot={symbol,technicalAnchor:technical.anchorBar,holding:{shares:holding.shares,avgCost:holding.avgCost,role:holding.role,type:holding.type},plans:currentRefs.plans,planReviews:currentRefs.planReviews,planRuntime,marketRisk,longTermLogic:currentRefs.longTermLogic};
     const sourceBinding={protectedSnapshot,currentStateId:current&&current.stateId||null,evidenceHash:getReadiness()?getReadiness().fingerprint(stock):null,technicalReadiness:getReadiness()?getReadiness().technical(stock,options):null};
     const protectedHash=`discussionctx_${hash(protectedSnapshot)}`,sourceDiscussionVersion=`discussion_v3_${hash(sourceBinding)}`;
-    const technicalStatus=text(stock&&stock.technicalData&&stock.technicalData.technicalDataStatus)||'unavailable',limitations=['实际券商持仓、成交和订单具有最终权威。','当前目标仓位尚未确认，不做精确仓位建议。'];
+    const technicalStatus=text(stock&&stock.technicalData&&stock.technicalData.technicalDataStatus)||'unavailable',limitations=['实际券商持仓、成交和订单具有最终权威。','当前目标仓位尚未确认，AI 仓位建议仅为策略提案。'];
     if(technicalStatus!=='fresh')limitations.push('当前技术资料未标记为较新，只能在有限覆盖下谨慎讨论。');
     const context={schemaVersion:CONTEXT_SCHEMA_VERSION,symbol,name:text(stock&&stock.name),mode:current?'continuation':'bootstrap',sourceDiscussionVersion,currentState:compactCurrentState(current,freshness),continuity:{status:freshness.status,reason:freshness.reason,barMode:increment.mode,barMessage:increment.message,warnings:increment.warnings},changes,currentFacts:{holding,allocation:{status:'unconfirmed',message:'当前目标仓位尚未确认'},technical:{technicalAsOf:technical.anchorBar.date,latestCompleteBar:technical.anchorBar.date,dataStatus:technicalStatus,snapshot:technical,bars:increment.bars},plans:activePlans(stock).map(compactPlan),planReviews:currentRefs.planReviews.map(review=>({...review,statusText:review.freshness==='stale'?'计划变更后尚未重新复核':(review.freshness==='current'?'计划复核与当前计划一致':'尚未保存计划复核')})),planRuntime,marketRisk,modules},limitations:limitations.concat(increment.warnings).slice(0,8)};
     const readiness=getReadiness();
@@ -333,20 +333,12 @@
     return {context,protectedSnapshot,protectedHash,sourceBinding:clone(sourceBinding),sourceDiscussionVersion,evidenceHash:readiness?readiness.fingerprint(stock):undefined,references:currentRefs,technicalSnapshot:technical,metrics:null};
   }
   function holdingPromptRules(context){
-    const shares=context.currentFacts.holding.shares,held=Number(shares)>0;
-    const fact=`当前持仓事实（程序保护，只读）：\n- 当前持仓数量：${shares===null?'未知':shares}\n`;
-    if(held)return fact+'- 当前有持仓。请从持仓视角回答能否继续持有、减仓复核、增加仓位、等待条件及止盈与止损风险。userDecision.holding.status 不得为 not_applicable，actionAssessment.category 不得使用 entry_review。';
-    if(shares!==0)return fact+'持仓事实尚未确认，不得自行假设已有持仓或编造持仓数量。';
-    return fact+[
-      '- 当前为零持仓标的。AI 不得假设用户现在持有该股票。',
-      '当前 canonical 持仓事实优先于历史结论、旧 V1/V2/V3 状态及本轮对话中的持有措辞；历史持仓只作背景，不得沿用为当前决定。标的类别、role、type 均不能替代持仓事实。',
-      '请从建仓视角回答：当前无需操作、暂不建仓、可以继续观察、如果想建仓应等待什么确认、建仓风险。不要描述为增加已有仓位。',
-      '当前决定不得写继续持有、加仓、减仓、降低仓位、保护已有利润、当前仓位继续保持或持仓可继续。userDecision 全部文本也不得出现止盈、止损，包括“不需止盈”等否定措辞；这与严格导入校验一致。',
-      '沿用 User Decision V3：holding、takeProfit、stopLoss.status 必须为 not_applicable，summary 分别使用“当前无持仓。”、“当前无持仓，不适用。”、“尚未持有，无需处理。”，各区块不得逐字重复；positionDirection 使用 not_applicable（保持空仓观察），或有证据的 add_watch/add_review（建仓观察/复核），不得使用 hold/hold_no_add/reduce_review/risk_control 或保留核心仓语义。',
-      'addAssessment 回答“如果想建仓”，使用现有 wait/watch/add_review/avoid/not_applicable；actionAssessment.category 只能为 entry_review、wait_confirmation 或 no_action。不得新增 schema 字段。',
-      '持仓数量、shares、券商状态及保护日期、技术锚点、内部编号均是输入事实，不能由 AI 输出或修正。symbol 与 sourceDiscussionVersion 仅按整理合同原样返回。'
-    ].join('\n');
+    const shares=context.currentFacts.holding.shares;
+    return `当前持仓事实（程序保护，只读）：\n- 当前持仓数量：${shares===null?'未知':shares}\n`+
+      (shares===0?'当前为零持仓标的，建议从建仓视角讨论；holding、takeProfit、stopLoss 通常使用 not_applicable。':Number(shares)>0?'当前有持仓，可以明确讨论持有、加仓、减仓和风险。':'持仓事实尚未确认，请区分未知事实和策略假设。')+
+      '当前 canonical 持仓事实优先于历史结论。可以提出未来建仓后的止盈止损参考；建议与当前事实请明确区分。内容差异不会阻断 Discussion 导入。';
   }
+  const PROTECTED_FACT_JUDGMENT_RULE='边界原则：PROGRAM OWNS FACTS / AI OWNS JUDGMENTS。Discussion 是 AI 观点记录层，允许明确持有、建仓、加仓、减仓、等待判断；允许精确价格、价格区间、仓位比例、股数、数量、成本和日期。请区分程序事实与 AI Strategy Proposal，例如“建议关注60–65”“建议仓位3%”“建议卖出1000股”。建议不会自动成为 Official Plan、订单或成交。不得声称“已卖出1000股”“订单已经执行”或“程序已修改持仓”。即使内容与程序事实、技术判断或 Plan 不一致，只要结构可导入仍保存原文，核对提醒在保存后显示。';
   function buildDiscussionRequest(stock,options={}){
     const prepared=options.prepared||buildContext(stock,options),context=prepared.context;
     const publicContext=clone(context);
@@ -355,9 +347,10 @@
     const request=[
       `请和我一起复盘 ${context.name||context.symbol}（${context.symbol}）。这是一场延续性的单股讨论，不是一次性从头分析。`,
       '',
+      PROTECTED_FACT_JUDGMENT_RULE,
       holdingPromptRules(context),
       '再说明从上次已确认结论到现在真正变化了什么，先前关注的判断条件是否已经出现，既有技术判断是仍然稳定、正在变化还是已经失效。专业技术概念只作为判断依据，不要放在第一层结论。',
-      '程序提供的持仓、完整日线、技术日期、计划、运行状态和引用关系是受保护事实；不要重算或改写。不要发明新闻、财务、价格、仓位或市场背景，也不要给确定性买卖指令。',
+      '程序提供的持仓、完整日线、技术日期、计划、运行状态和引用关系是受保护事实；不要重算或改写。不要发明新闻、财务、价格、仓位或市场背景，明确建议仅为 AI 判断，不代表已经执行。',
       `如需判断今天盘中强弱，请结合用户随后提供的分时截图；程序当前只提供截至 ${context.currentFacts.technical.technicalAsOf||'尚未确认日期'} 的完整日K事实。`,
       '基于上次已确认状态和之后新增事实，继续讨论这只股票。先识别哪些旧结论仍成立、哪些发生变化，再结合用户随后提供的分时/截图回答问题。不要自动生成正式存档，除非用户明确要求整理结论。',
       '',
@@ -377,7 +370,7 @@
       'JSON 结构键和值必须使用英文半角双引号 "。',
       'JSON 只能使用标准定义的转义；下划线 _ 不需要也不得转义。不得把 Markdown 转义带进 JSON。正确：discussion_v3_9a35cb46、reduce_review、ai_chart_judgment；错误：discussion\\_v3\\_9a35cb46、reduce\\_review、ai\\_chart\\_judgment。',
       '字符串正文可以正常使用中文标点和中文引号。',
-      '边界原则：PROGRAM OWNS FACTS / AI OWNS JUDGMENTS。程序提供的上下文事实只供判断；AI 只输出 currentState 合同允许的判断字段。',
+      PROTECTED_FACT_JUDGMENT_RULE,
       'currentState 顶层只能包含以下字段，不得新增任何其他字段：symbol、sourceDiscussionVersion、userDecision、actionAssessment、attentionLevel、trendAssessment、structureAssessment、stage、focusPoints、summary、keyChanges、risks、watchPoints、planRelation、confidence。',
       '程序上下文中出现的字段不代表它属于输出 schema。只有明确列入上述 currentState allowlist 的程序绑定字段可以输出；其余 input-only context 不得复制到 JSON。',
       `symbol 必须精确等于 ${symbol}；sourceDiscussionVersion 必须精确等于 ${sourceDiscussionVersion}。`,
@@ -392,19 +385,22 @@
       'userDecision 固定值：holding.status 为 safe/caution/reduce_review/risk_control/not_applicable；positionDirection.status 为 hold/hold_no_add/add_watch/add_review/reduce_review/risk_control/not_applicable；addAssessment.status 为 wait/watch/add_review/avoid/not_applicable；takeProfit.status 为 none/watch/review/not_applicable；stopLoss.status 为 none/watch/risk_control/not_applicable；riskSource 为 none/stock/market/both/unclear。',
       'userDecision.headline 最多120字且只写一句；各 summary 最多160字；warning.items 最多3项且每项最多160字。各区块职责不同，不得逐项重复同一句话。',
       '第一层 userDecision 必须使用普通中文，不得以 recovery、pullback、forming、日线修复、60分钟结构、完整条件、价格触发、技术锚点等专业或系统术语作为结论。不得写“不等于、不代表、不能说明、尚不能证明”等低价值免责声明；直接说明条件还未成熟或判断需要复核。',
-      'userDecision 不得包含任何自行给出的精确价格、百分比、股数或日期。程序拥有的 Plan 价格会在界面单独展示；AI 只写定性判断。',
+      'userDecision 的所有正文允许明确判断与精确数字；status/riskSource 保持固定枚举。',
       '固定值：category 只能为 risk_control/reduce_review/hold_watch/wait_confirmation/add_review/entry_review/no_action；priority 为 high/medium/low；attentionLevel 为 normal/focused/window；趋势 status 为 uptrend/downtrend/sideways/recovery/rebound/unclear；结构 type 为 top/bottom/breakout/pullback/recovery/consolidation/none/unclear，status 为 forming/confirmed/valid/broken/unclear，source 为 program/external_software/ai_chart_judgment/user_provided；planRelation.status 为 aligned/conflict/no_matching_plan/neutral；confidence 为 high/medium/low。',
       'trendAssessment.timeframes 的每项必须且只能包含 timeframe、status、explanation；explanation 只属于趋势周期项。',
       'structureAssessment 的每项必须且只能包含 timeframe、type、status、source、sourceAsOf、shortReason；不得在 structureAssessment 中使用 explanation，不得遗漏必填字段，不得增加未知字段。',
       `structureAssessment 单项形状示例：${JSON.stringify(structureItemExample)}`,
       'actionAssessment.reasons 最多5项，升级/降级条件最多3项；timeframes 与 structureAssessment 最多3项；focusPoints、keyChanges、risks、watchPoints 最多5项。summary 用2–4句，关键变化只写相对上次已确认结论的变化；focusPoints 写当前优先事项，watchPoints 写更广的持续监测，不要重复。',
       '只有程序上下文明确提供可用的大盘风险时，才能说大盘风险较高并使用 riskSource=market/both；没有可用市场背景时不得臆测，riskSource 使用 none 或 unclear。个股仍稳定而大盘风险较高时，可以保留持有判断，同时将仓位方向改为暂不增加或进入减仓复核。',
-      held?'takeProfit 与 stopLoss 只是利润保护和本金风险的复核提示，不是自动卖出。不得引入固定涨跌百分比规则，也不得输出订单、数量或执行动作。':'零持仓的 takeProfit 与 stopLoss 只填写上述不适用语义，不解释已有利润或本金保护。',
+      'takeProfit 与 stopLoss 可以提出价格、比例和数量参考；请说明适用条件，这些内容不自动卖出或执行。',
       '结构来源必须保持真实：外部软件明确提供的信号用 external_software，图形推断用 ai_chart_judgment，用户陈述用 user_provided；sourceAsOf 有明确日期/时间就保留，否则为空字符串。不同来源冲突时并列说明，不得把 AI 推断冒充软件事实。资料陈旧或缺失时使用条件性判断并降低 confidence。',
       '不得发明结构的 timeframe 或 source。无法确认具体 timeframe 或没有足够证据形成结构项时，使用空的 structureAssessment 数组；有明确周期但结构不明确时，只能按证据使用允许的 none/unclear 表达，并仍完整输出六个必填字段。不得用 explanation 代替缺失字段。',
-      '所有中文正文不得暴露英文枚举、字段名或实现术语。保留不确定性。不得修改或声称修改计划、计划复核、持仓、配置或长期逻辑；不得创建仓位数值、股数、订单或确定性买卖命令。高优先级只表示优先复核，不等于自动交易。planRelation.summary 使用自然状态语言，例如“已经到达观察区间，条件还未成熟”“关键条件已经确立”，不要写复核窗口或系统免责声明。',
+      '优先用普通中文表达明确判断，依据不充分时说明不确定性。不得声称程序已经修改计划、持仓或执行交易。planRelation 表达 AI 对计划的看法，不会修改正式 Plan。',
       '常见禁止输出的 input-only context 包括：technicalDataStatus、technicalAsOf、latestCompleteBar、技术 snapshot/anchor、currentStateId/stateId、contextHash/protectedHash、程序内部时间戳、持仓来源事实、原始 Plan 对象及内部 Plan 标识、内部 references、schema/debug 字段。除 allowlist 明确要求的字段外，不得输出日期、技术锚点、哈希、引用或任何由程序补齐的字段。',
-      JSON.stringify(example,null,2)
+      '以下 JSON contract 的 judgment strings 可以保存 AI 原始判断、精确事实描述及策略参数；程序事实的 authority 始终以程序记录为准。',
+      '允许示例：“跌破 50 元止损”“建议减仓 20%”“当前持有 100 股”“9 月 9 日结构恶化”“在 50 元建仓”。请明确事实、建议与条件。',
+      '自检 JSON 结构。保护字段仍由程序补齐，不要求 AI 输出。symbol/sourceDiscussionVersion 原样返回；timeframe/source/sourceAsOf 按既有 schema 和证据填写。',
+      JSON.stringify(example)
     ].join('\n');
     return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};
   }

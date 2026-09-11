@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "28bbb0820b66e44f7048c6e3c21b69b0dcea2206",
-  "assetVersion": "plan-v4-draft-raw-state-fix-v1-20260909",
-  "dataMode": "Local Plan and Discussion V4 confirmed change loop with exact definition/revision binding, separate AI judgment and real User Decision, validated drafts and atomic receipts; preserved Homepage screening and legacy readers; no automatic AI, execution, objective Runtime or cloud sync",
+  "sourceCommit": "2c84d7190fdd7df735a1c107ac56b6077891be2a",
+  "assetVersion": "discussion-permissive-import-diagnostics-v1-20260912",
+  "dataMode": "Discussion-only permissive judgment import with structural safety and import-time holding diagnostics; preserved raw AI content, StrictAiJson, Plan contracts and V4 judgment/user decision separation; no automatic AI or execution",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71218,
-      "sha256": "d6e400513cad8b14e4f6bd7e4a187f5dbcd57fde3cb980acfa9ce9e21bb681ba"
+      "bytes": 72297,
+      "sha256": "bc5dd989fec8256db4aaa54e36ea078cabe3fcbacc07048e6d72fc08f6fa390d"
     },
     {
       "path": "social_posts.json",
@@ -144,9 +144,9 @@
     },
     {
       "path": "src/discussion-state-contract.js",
-      "role": "Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards",
-      "bytes": 35235,
-      "sha256": "e477d1af432d801a062b0eb48f148e0666cd8aec1415824e4f9940e7a9f42a45"
+      "role": "Discussion structural import contract with permissive AI content and snapshot-derived post-import diagnostics",
+      "bytes": 33302,
+      "sha256": "2035f2b6a6c9db73af4ad01affa584561af872b9b1f7bf65d482e2e205bb2e13"
     },
     {
       "path": "src/discussion-v4.js",
@@ -157,8 +157,8 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 56409,
-      "sha256": "a46bbeb781e528bfc1b8b56b8aa287d18db4527e08e6946911f0d70832fc978f"
+      "bytes": 55444,
+      "sha256": "557fae4c66f71097ba39a602199c69a3f067e3283ba718c043235c9c896f65e7"
     },
     {
       "path": "src/homepage-attention.js",
@@ -451,8 +451,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 636062,
-      "sha256": "9df6d8f1d689c931fdcd53fedaf0a87b6c550f887b8797c8e1d6e88db71356d5"
+      "bytes": 635851,
+      "sha256": "bcf0b1b177841ffbb40af56b487a114e7c80331237628c6e5b4567ea8d75f2e2"
     },
     {
       "path": "src/universe-auto-add.js",

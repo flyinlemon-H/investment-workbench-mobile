@@ -169,7 +169,7 @@ test('production input-only boundary fixtures preserve strict schema and freshne
   const validRaw=fixture('production-current-state-input-only-boundary-valid.json.txt'),valid=Contract.process(validRaw,options);
   assert.equal(Contract.parse(validRaw).ok,true);assert.equal(valid.ok,true,valid.message);assert.equal(valid.previewReady,true);assert.equal(valid.writes,0);assert.equal(valid.currentState.confidence,'medium');assert.equal('technicalDataStatus' in valid.currentState,false);
   const freshHighValue=Contract.parse(validRaw).value;freshHighValue.currentState.confidence='high';const freshHigh=Contract.process(JSON.stringify(freshHighValue),{...options,technicalDataStatus:'fresh'});assert.equal(freshHigh.ok,true,freshHigh.message);assert.equal(freshHigh.previewReady,true);assert.equal(freshHigh.writes,0);
-  const staleHigh=Contract.process(JSON.stringify(freshHighValue),options);assert.equal(staleHigh.ok,false);assert.equal(staleHigh.code,'validation_error');assert.equal(staleHigh.previewReady,false);assert.equal(staleHigh.writes,0);assert.match(staleHigh.message,/技术资料未标记为较新时 confidence 不能为 high/);
+  const staleHigh=Contract.process(JSON.stringify(freshHighValue),options);assert.equal(staleHigh.ok,true);assert.equal(staleHigh.code,'valid');assert.equal(staleHigh.previewReady,true);assert.equal(staleHigh.writes,0);
 });
 
 test('600487 production-like missing anchor is blocked at archive readiness with clear explanation',()=>{

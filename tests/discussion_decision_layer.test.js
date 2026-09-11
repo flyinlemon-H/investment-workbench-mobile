@@ -66,34 +66,34 @@ test('scenario F forming bottom waits for confirmation',()=>{
 test('scenario G confirmed bottom uses add review for held and entry review for zero position',()=>{
   const held=process(stock(),{actionAssessment:{category:'add_review',priority:'high',headline:'底部结构确认且趋势修复，进入加仓复核窗口。',reasons:['60分钟底部结构已确认。'],upgradeConditions:['趋势继续恢复后复核完整计划条件。'],downgradeConditions:['底部结构破坏后取消机会复核。']},attentionLevel:'window',structureAssessment:[{timeframe:'60分钟',type:'bottom',status:'confirmed',source:'external_software',sourceAsOf:'2026-09-01',shortReason:'底部结构已确认。'}]});assert.equal(held.result.ok,true,held.result.message);
   const zeroStock=stock({type:'candidate',shares:0,avgCost:0}),zeroDecision={headline:'已经进入值得关注的建仓区域。',holding:{status:'not_applicable',summary:'当前没有持仓。'},positionDirection:{status:'add_review',summary:'保持观察，可以进入建仓复核。'},addAssessment:{status:'add_review',summary:'条件已经成熟，可以复核建仓机会。'},warning:{summary:'若重新走弱，应继续等待。',items:[]},takeProfit:{status:'not_applicable',summary:'当前无持仓，不适用。'},stopLoss:{status:'not_applicable',summary:'尚未持有，不适用。'},riskSource:'none'},zero=process(zeroStock,{userDecision:zeroDecision,actionAssessment:{category:'entry_review',priority:'high',headline:'底部结构确认且趋势修复，进入建仓复核窗口。',reasons:['60分钟底部结构已确认。'],upgradeConditions:['趋势延续后复核完整建仓条件。'],downgradeConditions:['底部结构破坏后取消机会复核。']},attentionLevel:'window',structureAssessment:[{timeframe:'60分钟',type:'bottom',status:'confirmed',source:'external_software',sourceAsOf:'2026-09-01',shortReason:'底部结构已确认。'}],planRelation:{status:'no_matching_plan',summary:'当前没有对应的有效建仓计划，需要单独复核，不自动创建计划。'}});assert.equal(zero.result.ok,true,zero.result.message);
-  const contradiction=process(zeroStock,{actionAssessment:{category:'hold_watch'}});assert.equal(contradiction.result.ok,false);assert.equal(contradiction.result.writes,0);
+  const contradiction=process(zeroStock,{actionAssessment:{category:'hold_watch'}});assert.equal(contradiction.result.ok,true);assert.equal(contradiction.result.writes,0);
 });
 
-test('technical freshness and confidence remain authoritative across fresh, stale, unavailable and anomaly states',()=>{
+test('AI confidence remains importable across fresh, stale, unavailable and anomaly evidence',()=>{
   const freshHigh=process(stock(),{confidence:'high'});assert.equal(freshHigh.result.ok,true,freshHigh.result.message);
-  const staleSource=stock({technicalData:{technicalDataStatus:'stale'}}),staleHigh=process(staleSource,{confidence:'high'}),staleMedium=process(staleSource,{confidence:'medium',summary:'资料时效不足，当前只作条件性观察。'});assert.equal(staleHigh.result.ok,false);assert.equal(staleHigh.result.writes,0);assert.match(staleHigh.result.message,/技术资料未标记为较新时 confidence 不能为 high/);assert.doesNotMatch(staleHigh.result.message,/JSON 格式/);assert.equal(staleMedium.result.ok,true,staleMedium.result.message);
-  for(const technicalDataStatus of ['unavailable','anomaly']){const high=process(stock({technicalData:{technicalDataStatus}}),{confidence:'high'});assert.equal(high.result.ok,false);assert.equal(high.result.writes,0);assert.match(high.result.message,/技术资料未标记为较新时 confidence 不能为 high/)}
+  const staleSource=stock({technicalData:{technicalDataStatus:'stale'}}),staleHigh=process(staleSource,{confidence:'high'}),staleMedium=process(staleSource,{confidence:'medium',summary:'资料时效不足，当前只作条件性观察。'});assert.equal(staleHigh.result.ok,true);assert.equal(staleHigh.result.writes,0);assert.doesNotMatch(staleHigh.result.message,/JSON 格式/);assert.equal(staleMedium.result.ok,true,staleMedium.result.message);
+  for(const technicalDataStatus of ['unavailable','anomaly']){const high=process(stock({technicalData:{technicalDataStatus}}),{confidence:'high'});assert.equal(high.result.ok,true);assert.equal(high.result.writes,0);assert.equal(high.result.currentState.confidence,"high")}
 });
 
 test('production Current State fixture separates parser success from freshness and source-version diagnostics',()=>{
   const raw=fs.readFileSync(path.join(root,'tests','fixtures','production-current-state-risk-window.json.txt'),'utf8'),base={expectedSymbol:'2899.HK',sourceDiscussionVersion:'discussion_v2_fa77d62f',holdingShares:2000,hasActivePlan:true,technicalDataStatus:'fresh',programProvesFullPlanConditions:false},fresh=Contract.process(raw,base);
   assert.equal(fresh.ok,true,fresh.message);assert.equal(fresh.code,'valid');assert.equal(fresh.currentState.sourceDiscussionVersion,'discussion_v2_fa77d62f');assert.equal(fresh.currentState.actionAssessment.category,'risk_control');
-  const stale=Contract.process(raw,{...base,technicalDataStatus:'stale'});assert.equal(stale.ok,false);assert.equal(stale.code,'validation_error');assert.match(stale.message,/技术资料未标记为较新时 confidence 不能为 high/);assert.doesNotMatch(stale.message,/JSON 格式/);
+  const stale=Contract.process(raw,{...base,technicalDataStatus:'stale'});assert.equal(stale.ok,true);assert.equal(stale.code,'valid');assert.doesNotMatch(stale.message,/JSON 格式/);
   const oldSource=Contract.process(raw,{...base,sourceDiscussionVersion:'discussion_v2_newer'});assert.equal(oldSource.ok,false);assert.equal(oldSource.code,'validation_error');assert.match(oldSource.message,/结论来源版本已过期或不一致/);assert.doesNotMatch(oldSource.message,/JSON 格式/);
 });
 
 test('scenarios I and J classify Plan conflict and absence without creating or mutating Plan',()=>{
   const plan={schemaVersion:'plan.v2',id:'p-add',planVersion:1,action:'add',triggerPrice:78,status:'active',validityStatus:'active',fullConditionStatus:'unproven',source:'manual'},withPlan=stock({plans:[plan]}),conflict=process(withPlan,{actionAssessment:{category:'reduce_review',priority:'high',headline:'当前风险状态弱于原加仓计划环境，应优先复核计划。',reasons:['顶部风险与加仓方向冲突。'],upgradeConditions:['支撑失守后升级风险控制复核。'],downgradeConditions:['风险结构破坏后降低警戒。']},attentionLevel:'window',planRelation:{status:'conflict',summary:'当前技术状态弱于原计划环境，不能仅凭价格触发执行加仓计划。'}});assert.equal(conflict.result.ok,true,conflict.result.message);
   const noPlanStock=stock({plans:[]}),absent=process(noPlanStock,{actionAssessment:{category:'reduce_review',priority:'high',headline:'当前需要优先复核仓位风险。',reasons:['顶部风险已确认。'],upgradeConditions:['支撑失守后升级风险控制复核。'],downgradeConditions:['风险结构破坏后降低警戒。']},attentionLevel:'window',planRelation:{status:'no_matching_plan',summary:'当前没有对应的有效减仓计划，需要单独确认风险处理方式，不自动创建计划。'}});assert.equal(absent.result.ok,true,absent.result.message);
-  const invalid=process(noPlanStock,{planRelation:{status:'aligned'}});assert.equal(invalid.result.ok,false);assert.equal(invalid.result.writes,0);assert.deepEqual(withPlan.plans,[plan]);assert.deepEqual(noPlanStock.plans,[]);
+  const invalid=process(noPlanStock,{planRelation:{status:'aligned'}});assert.equal(invalid.result.ok,true);assert.equal(invalid.result.writes,0);assert.deepEqual(withPlan.plans,[plan]);assert.deepEqual(noPlanStock.plans,[]);
 });
 
-test('price trigger never proves full Plan conditions and deterministic order wording is rejected',()=>{
+test('price trigger never proves full Plan conditions and deterministic order wording is accepted as AI content',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source);
-  for(const overrides of [{planRelation:{summary:'当前计划完整条件已经满足。'}},{actionAssessment:{headline:'今天必须卖出并减仓至30%。'}}]){const result=Contract.process(JSON.stringify(decision(prepared,overrides)),options(prepared,source));assert.equal(result.ok,false);assert.equal(result.writes,0)}
+  for(const overrides of [{planRelation:{summary:'当前计划完整条件已经满足。'}},{actionAssessment:{headline:'今天必须卖出并减仓至30%。'}}]){const result=Contract.process(JSON.stringify(decision(prepared,overrides)),options(prepared,source));assert.equal(result.ok,true);assert.equal(result.writes,0)}
 });
 
-test('full-condition semantic guard allows local negation but rejects every affirmative claim',()=>{
+test('full-condition semantic guard allows local negation but accepts affirmative claims without executing',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),allowed=[
     '价格进入计划区域不等于完整条件已经满足。',
     '价格触发不代表完整条件已经满足。',
@@ -109,7 +109,7 @@ test('full-condition semantic guard allows local negation but rejects every affi
     '价格触发不代表完整条件已经满足；但目前完整计划条件已满足。'
   ];
   for(const summary of allowed){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,`${summary} ${result.message}`);assert.equal(result.writes,0)}
-  for(const summary of rejected){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,false,summary);assert.equal(result.code,'validation_error');assert.match(result.message,/价格触发不能被表述为完整计划条件已满足/);assert.equal(result.writes,0)}
+  for(const summary of rejected){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,summary);assert.equal(result.code,'valid');assert.equal(result.writes,0)}
 });
 
 test('legacy v1 state and history remain readable without fabricated decision fields',()=>{
@@ -121,7 +121,7 @@ test('legacy v1 state and history remain readable without fabricated decision fi
 test('next Discussion context carries the compact decision layer and asks lifecycle upgrade questions',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),result=Contract.process(JSON.stringify(decision(prepared)),options(prepared,source)),built=Contract.buildCandidate({stocks:[source]},result,{prepared,now:'2026-09-01T08:00:00Z'}),next=Workbench.buildDiscussionRequest(built.candidate.stocks[0]);
   for(const key of ['userDecision','actionAssessment','attentionLevel','trendAssessment','structureAssessment','focusPoints','planRelation'])assert.ok(Object.prototype.hasOwnProperty.call(next.context.currentState,key),key);
-  assert.match(next.request,/能否继续持有/);assert.match(next.request,/专业技术概念只作为判断依据/);assert.doesNotMatch(next.request,/stateId|reviewHash|snapshotHash/);assert.equal('technicalSnapshot' in next.context.currentState,false);
+  assert.match(next.request,/明确讨论持有/);assert.match(next.request,/专业技术概念只作为判断依据/);assert.doesNotMatch(next.request,/stateId|reviewHash|snapshotHash/);assert.equal('technicalSnapshot' in next.context.currentState,false);
 });
 
 test('candidate save mutates only cloned discussion state and preserves all protected domains',()=>{
@@ -135,9 +135,9 @@ test('import preview and Current State UI put decision, urgency, trend, structur
   const card=ui.slice(ui.indexOf('function discussionStateCard'),ui.indexOf('function discussionHistoryPanel'));for(const label of ['当前结论','仓位方向','如果想建仓','如果想加仓','需要警惕','止盈','止损','判断依据','趋势','结构','与计划关系'])assert.match(card,new RegExp(label));assert.ok(card.lastIndexOf('当前结论')<card.lastIndexOf('判断依据'));assert.match(html,/discussion-user-decision-card/);assert.match(html,/max-width:100%;overflow-wrap:anywhere/);
 });
 
-test('normal UI mappings contain Chinese labels and prose rejects internal English leakage',()=>{
+test('normal UI mappings contain Chinese labels and prose preserves internal English wording',()=>{
   const ui=fs.readFileSync(path.join(root,'src','ui-render.js'),'utf8'),source=stock(),prepared=Workbench.buildDiscussionRequest(source);for(const label of ['风险控制','减仓复核','持有观察','等待确认','加仓复核','建仓复核','暂不操作','普通观察','重点观察','临近窗口'])assert.match(ui,new RegExp(label));
-  const leaked=Contract.process(JSON.stringify(decision(prepared,{summary:'当前 actionAssessment 显示 recovery。'})),options(prepared,source));assert.equal(leaked.ok,false);assert.equal(leaked.writes,0);
+  const leaked=Contract.process(JSON.stringify(decision(prepared,{summary:'当前 actionAssessment 显示 recovery。'})),options(prepared,source));assert.equal(leaked.ok,true);assert.equal(leaked.writes,0);
 });
 
 test('User Decision V3 keeps independent position, add, take-profit and stop-loss dimensions',()=>{
@@ -153,14 +153,14 @@ test('User Decision V3 keeps independent position, add, take-profit and stop-los
   }
 });
 
-test('market-risk override is allowed only with explicit supplied market context',()=>{
+test('market-risk judgment is importable while program market context remains separate',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source),userDecision={headline:'个股本身仍然稳定，但大盘风险偏高，当前不宜继续增加仓位。',holding:{status:'safe',summary:'个股持有判断仍然稳定。'},positionDirection:{status:'hold_no_add',summary:'大盘风险偏高，暂不增加仓位。'},addAssessment:{status:'avoid',summary:'等待市场风险下降后再复核。'},warning:{summary:'若市场风险继续增强，应提高仓位防御。',items:[]},takeProfit:{status:'watch',summary:'开始关注利润保护。'},stopLoss:{status:'none',summary:'个股暂时没有明显止损风险。'},riskSource:'market'};
-  const absent=Contract.process(JSON.stringify(decision(prepared,{userDecision})),options(prepared,source));assert.equal(absent.ok,false);assert.match(absent.message,/不得归因于大盘/);
+  const absent=Contract.process(JSON.stringify(decision(prepared,{userDecision})),options(prepared,source));assert.equal(absent.ok,true);
   const explicit=Contract.process(JSON.stringify(decision(prepared,{userDecision})),options(prepared,source,{marketRiskAvailable:true}));assert.equal(explicit.ok,true,explicit.message);
   const context=Workbench.buildContext(source,{marketRiskContext:{status:'elevated',summary:'用户明确提供大盘风险偏高。',source:'user_provided'}});assert.equal(context.context.currentFacts.marketRisk.status,'elevated');assert.equal(Workbench.buildContext(source).context.currentFacts.marketRisk.status,'unavailable');
 });
 
-test('zero-position perspective, price ownership and concise-language guards fail closed',()=>{
+test('zero-position perspective, price ownership and concise-language content is accepted',()=>{
   const source=stock({type:'candidate',shares:0,avgCost:0}),prepared=Workbench.buildDiscussionRequest(source),base=decision(prepared,{userDecision:{headline:'当前位置不适合建仓，继续等待。',holding:{status:'not_applicable',summary:'当前没有持仓。'},positionDirection:{status:'not_applicable',summary:'保持空仓观察。'},addAssessment:{status:'wait',summary:'等待更合适的建仓机会。'},warning:{summary:'若风险继续增强，应延后建仓复核。',items:[]},takeProfit:{status:'not_applicable',summary:'当前无持仓，不适用。'},stopLoss:{status:'not_applicable',summary:'尚未持有，不适用。'},riskSource:'none'},actionAssessment:{category:'no_action'},planRelation:{status:'no_matching_plan'}});
   const valid=Contract.process(JSON.stringify(base),options(prepared,source));assert.equal(valid.ok,true,valid.message);
   for(const mutate of [
@@ -169,13 +169,13 @@ test('zero-position perspective, price ownership and concise-language guards fai
     value=>value.currentState.userDecision.addAssessment.summary='等待回到 60 元再建仓。',
     value=>value.currentState.userDecision.headline='日线修复仍然有效。',
     value=>value.currentState.userDecision.warning.summary=value.currentState.userDecision.headline
-  ]){const candidate=structuredClone(base);mutate(candidate);const result=Contract.process(JSON.stringify(candidate),options(prepared,source));assert.equal(result.ok,false);assert.equal(result.writes,0)}
+  ]){const candidate=structuredClone(base);mutate(candidate);const result=Contract.process(JSON.stringify(candidate),options(prepared,source));assert.equal(result.ok,true);assert.equal(result.writes,0)}
 });
 
-test('semantic guard accepts negated legacy wording and rejects direct-execution implications',()=>{
+test('semantic guard accepts negated legacy wording and records direct-execution claims without execution',()=>{
   const source=stock(),prepared=Workbench.buildDiscussionRequest(source);
   for(const summary of ['已经到达观察区间，但条件还未成熟。','关键条件尚未确立。','价格进入计划范围不等于完整条件满足。']){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,result.message)}
-  for(const summary of ['价格进入计划区，因此完整条件已经满足。','价格达到计划价，可以直接执行。','既然价格触发，所有确认条件都已完成。']){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,false,summary);assert.equal(result.writes,0)}
+  for(const summary of ['价格进入计划区，因此完整条件已经满足。','价格达到计划价，可以直接执行。','既然价格触发，所有确认条件都已完成。']){const result=Contract.process(JSON.stringify(decision(prepared,{summary})),options(prepared,source));assert.equal(result.ok,true,summary);assert.equal(result.writes,0)}
 });
 
 test('v2 records remain canonical without synthetic userDecision while v3 requires it',()=>{

@@ -1,14 +1,15 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),F=require('./fixtures/discussion-reliability.js');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),F=require('./fixtures/discussion-protected-facts.js');
 const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/discussion-reliability'),url='http://127.0.0.1:8768/';
 (async()=>{
   fs.mkdirSync(output,{recursive:true});const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined}),results=[];
   try{for(const viewport of [{width:360,height:800},{width:390,height:844},{width:1280,height:900}]){
-    const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[];
+    const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[],aiRequests=[];
+    page.on('request',request=>{if(/\/ai\/(?:request|chat|completion)|deepseek|api\.openai\.com/i.test(request.url()))aiRequests.push(request.url())});
     page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
     await context.route('**/*',r=>new URL(r.request().url()).origin===new URL(url).origin?r.continue():r.abort());
-    await page.goto(url);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');
+    await page.goto(url);await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');await page.waitForLoadState('networkidle');
     await page.evaluate(()=>{globalThis.hotfixWrites=0;globalThis.hotfixStarts=0;globalThis.hotfixRealSave=saveState;saveState=async(...args)=>{hotfixWrites++;if(globalThis.hotfixSaveFail)return false;return hotfixRealSave(...args)};const realStart=startStockDiscussion;startStockDiscussion=(...args)=>{hotfixStarts++;return realStart(...args)};if(window.AiApi)window.AiApi=Object.freeze({...window.AiApi,request:()=>{throw new Error('Paid AI forbidden')}})});
     const scenarios=[];
     for(const kind of ['v3','v1','v2','none','historical','pending','stale']){
@@ -33,18 +34,16 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/discussio
       await page.locator('[data-detail-action="import-discussion-state"]').click();
       const prepared=await page.evaluate(()=>discussionPreparedContexts.get(discussionStockKey(state.stocks[0]))),valid=F.judgment(prepared),textarea=page.locator('#discussionImportText'),confirm=page.locator('#discussionImportConfirmBtn');
       assert.equal(await confirm.isDisabled(),true);
-      if(shares===0){for(const headline of ['继续持有，关注止盈','建议减仓','关注止盈']){
-        const invalid=structuredClone(valid);invalid.currentState.userDecision.headline=headline;const raw=JSON.stringify(invalid);
-        await textarea.fill(raw);await page.locator('#discussionImportPreviewBtn').click();
-        assert.match(await page.locator('#discussionImportMessage').innerText(),/AI结论与当前零持仓事实冲突/);assert.equal(await confirm.isDisabled(),true);assert.equal(await page.locator('#discussionImportPreview').innerHTML(),'');assert.equal(await textarea.inputValue(),raw);
-        const messageBox=await page.locator('#discussionImportMessage').boundingBox();assert.ok(messageBox.y>=0&&messageBox.y<viewport.height);
-        assert.ok(Number(await confirm.evaluate(n=>getComputedStyle(n).opacity))<.6);
-        assert.equal(await page.evaluate(raw=>DiscussionStateContract.parse(raw).ok,raw),true);
-        await page.screenshot({path:path.join(output,`invalid-${viewport.width}.png`),fullPage:true});
-        await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
+      await page.evaluate(()=>{globalThis.hotfixBefore=JSON.stringify(state)});
+      for(const [kind,wording] of Object.entries(F.cases)){
+        const raw=JSON.stringify(F.output(prepared,wording));await textarea.fill(raw);await page.locator('#discussionImportPreviewBtn').click();
+        assert.equal(await confirm.isEnabled(),true);assert.equal(await textarea.inputValue(),raw);assert.equal(await page.locator('#discussionImportPreview .discussion-post-import-diagnostics').count(),0);assert.equal(await page.evaluate(()=>hotfixWrites),0);
       }
-      const retained=await textarea.inputValue();await page.locator('#discussionImportReturnBtn').click();assert.equal(await page.locator('#discussionImportDialog').evaluate(n=>n.classList.contains('show')),false);await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await textarea.inputValue(),retained);
-      }
+      // Structural failure still preserves raw input and disables Confirm even after DOM tampering.
+      await textarea.fill('{');await page.locator('#discussionImportPreviewBtn').click();assert.equal(await confirm.isDisabled(),true);
+      await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
+      await page.locator('#discussionImportReturnBtn').click();await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await textarea.inputValue(),'{');
+      valid.currentState.userDecision.warning.summary=F.qualitative;
       await textarea.fill(JSON.stringify(valid));assert.equal(await confirm.isDisabled(),true);await page.locator('#discussionImportPreviewBtn').click();assert.equal(await confirm.isEnabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
       // Direct DOM value changes cannot adopt an old valid preview.
       await page.evaluate(()=>{document.getElementById('discussionImportText').value='{}'});await confirm.click();assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
@@ -54,11 +53,12 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/discussio
       await page.screenshot({path:path.join(output,`valid-${shares}-${viewport.width}.png`),fullPage:true});
       await page.evaluate(()=>Promise.all([confirmDiscussionImport(),confirmDiscussionImport()]));assert.equal(await page.evaluate(()=>hotfixWrites),1);
       assert.equal(await page.evaluate(()=>state.stocks[0].discussionState.current.references.holding.shares),shares);
+      assert.equal(await page.evaluate(()=>Object.keys(DiscussionV4.store(state).decisions).length),0);
       await page.reload();await page.waitForFunction(()=>document.getElementById('main')?.dataset.storageState==='ready');assert.equal(await page.evaluate(()=>state.stocks[0].discussionState.current.references.holding.shares),shares);
       // Restore instrumentation after reload for the next isolated fixture.
       await page.evaluate(()=>{globalThis.hotfixRealSave=saveState;saveState=async(...args)=>{hotfixWrites++;if(globalThis.hotfixSaveFail)return false;return hotfixRealSave(...args)}});
     }
-    assert.deepEqual(errors,[]);results.push({viewport,scenarios,uniqueCTA:true,oneActionPerTap:true,invalidImportDisabled:true,invalidZeroWrites:true,recoveryPreservesInput:true,validZeroAndHeldSave:true,storageFailureAtomic:true,doubleSavePrevented:true,noPageErrors:true});await context.close();
+    assert.deepEqual(errors,[]);assert.deepEqual(aiRequests,[]);results.push({viewport,scenarios,protectedFactCases:Object.keys(F.cases),proposalPreviewZeroWrites:true,structuralRetryPreservesInput:true,realUserDecisionsCreated:0,automaticAiRequests:aiRequests.length,uniqueCTA:true,oneActionPerTap:true,invalidImportDisabled:true,invalidZeroWrites:true,recoveryPreservesInput:true,validZeroAndHeldSave:true,storageFailureAtomic:true,doubleSavePrevented:true,noPageErrors:true});await context.close();
   }}finally{await browser.close()}
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
 })().catch(error=>{console.error(error);process.exitCode=1});

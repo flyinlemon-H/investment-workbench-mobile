@@ -35,11 +35,7 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/holding-r
         await page.locator('#discussionImportReturnBtn').click();await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await input.inputValue(),text);
         await page.locator('#discussionImportPreviewBtn').click();await ack.click();
       }else assert.equal(await ack.isVisible(),false);
-      if(conflict){
-        assert.equal(await confirm.isDisabled(),true);assert.match(await page.locator('#discussionImportMessage').innerText(),after===0?/AI结论与当前零持仓事实冲突/:/AI结论与当前持仓事实冲突/);assert.equal(await input.inputValue(),text);
-        await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>reconciliationWrites),0);
-        await page.screenshot({path:path.join(output,`conflict-${after}-${viewport.width}.png`)});await page.locator('#discussionImportCancelBtn').click();
-      }else{
+      {
         assert.equal(await confirm.isEnabled(),true);assert.equal(await page.evaluate(()=>reconciliationWrites),0);
         if(before===6000){
           // Confirm must refuse a Preview bound to an older canonical quantity.
@@ -51,6 +47,7 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/holding-r
         await page.evaluate(()=>Promise.all([confirmDiscussionImport(),confirmDiscussionImport()]));assert.equal(await page.evaluate(()=>reconciliationWrites),1);
         assert.equal(await page.evaluate(()=>state.stocks[0].discussionState.current.references.holding.shares),before===6000?3300:after);
         assert.equal(await page.evaluate(()=>state.stocks[0].discussionState.current.acknowledgment),undefined);
+        if(conflict)assert.equal(await page.locator('.discussion-post-import-diagnostics').count(),1);
       }
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);cases.push({before,after,conflict,pass:true});
     }

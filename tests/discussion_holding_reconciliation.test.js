@@ -18,13 +18,12 @@ for(const [before,after] of [[6000,3200],[1000,1340],[3200,0],[0,100]])test(`${b
   assert.equal(committed.status,'completed',committed.error?.message);assert.equal(writes,1);assert.equal(saved.stocks[0].discussionState.current.references.holding.shares,after);assert.equal(s.stock.discussionState.current,null);
   assert.equal(saved.stocks[0].discussionState.current.userConfirmedStaleHolding,undefined);assert.equal(saved.stocks[0].discussionState.current.acknowledgment,undefined);assert.equal(JSON.parse(s.raw).currentState.shares,undefined);
 });
-for(const [before,after,headline] of [[3200,0,'继续持有'],[3200,0,'建议减仓'],[3200,0,'保护已有利润'],[3200,0,'持仓继续观察'],[0,100,'当前没有持仓，暂不建仓'],[0,100,'等待首次建仓']])test(`${before} → ${after} proven conflict: ${headline} is zero writes even with forged preview`,async()=>{
+for(const [before,after,headline] of [[3200,0,'继续持有'],[3200,0,'建议减仓'],[3200,0,'保护已有利润'],[3200,0,'持仓继续观察'],[0,100,'当前没有持仓，暂不建仓'],[0,100,'等待首次建仓']])test(`${before} → ${after} conflicting judgment remains importable: ${headline}`,async()=>{
   const s=scenario(before,after),raw=JSON.parse(s.raw);raw.currentState.userDecision.headline=headline;
-  const result=preview(s,JSON.stringify(raw));assert.equal(result.ok,false);assert.match(result.message,/零持仓|已有持仓/);
-  const valid=preview(s),forged={...valid,currentState:raw.currentState};let writes=0;
-  for(const output of [result,forged]){const saved=await C.commit(output,s.state,{saveCandidate:()=>writes++},{prepared:s.prepared,...manual});assert.notEqual(saved.status,'completed')}
-  assert.equal(writes,0);
+  const result=preview(s,JSON.stringify(raw));assert.equal(result.ok,true,result.message);
+  const built=C.buildCandidate(s.state,result,{prepared:s.prepared,...manual});assert.equal(built.currentState.userDecision.headline,headline);assert.equal(built.currentState.references.holding.shares,after);assert.equal(built.candidate.stocks[0].shares,after);
 });
+
 test('unchanged holding has no warning and follows normal Preview',()=>{const s=scenario(3200,3200);const result=C.processImport(s.raw,s.prepared,s.current,manual);assert.equal(result.previewReady,true,result.message);assert.equal(result.reconciliation.status,'no_change');assert.equal(result.acknowledgment,null)});
 for(const kind of ['v1','v2','v3','historical'])test(`historical ${kind} wording never supplies current holding facts`,()=>{const s=scenario(100,0,kind);assert.equal(preview(s).previewReady,true)});
 const otherChanges=[
@@ -53,7 +52,7 @@ for(const alter of [p=>delete p.sourceBinding,p=>delete p.references,p=>p.contex
 test('identical facts with a version mismatch are still blocked',()=>{const s=scenario(100,100);s.prepared.sourceDiscussionVersion+='x';assert.equal(C.reconcileContext(s.prepared,s.current,manual).status,'hard_block')});
 test('wrong symbol or source version in AI JSON cannot use reconciliation',()=>{for(const key of ['symbol','sourceDiscussionVersion']){const s=scenario(100,200),raw=JSON.parse(s.raw);raw.currentState[key]='other';assert.equal(preview(s,JSON.stringify(raw)).ok,false)}});
 test('AI cannot echo or override shares',()=>{const s=scenario(100,200),raw=JSON.parse(s.raw);raw.currentState.shares=200;assert.equal(preview(s,JSON.stringify(raw)).ok,false)});
-test('explicit conflicts in secondary current judgment prose cannot evade holding validation',()=>{for(const [before,after,summary] of [[100,0,'保护已有利润，继续持有。'],[0,100,'当前没有持仓，等待首次建仓。']]){const s=scenario(before,after),raw=JSON.parse(s.raw);raw.currentState.summary=summary;assert.equal(preview(s,JSON.stringify(raw)).ok,false)}});
+test('secondary judgment prose remains importable without changing current facts',()=>{for(const [before,after,summary] of [[100,0,'保护已有利润，继续持有。'],[0,100,'当前没有持仓，等待首次建仓。']]){const s=scenario(before,after),raw=JSON.parse(s.raw);raw.currentState.summary=summary;assert.equal(preview(s,JSON.stringify(raw)).ok,true)}});
 test('schema errors do not create acknowledgment or confirm-ready Preview',()=>{const s=scenario(100,200);for(const raw of ['{}','{','{"currentState":{}}']){const result=C.processImport(raw,s.prepared,s.current,manual);assert.equal(result.ok,false);assert.notEqual(result.code,'holding_acknowledgment_required')}});
 for(const before of [1000,1340])test(`holding changes after Preview (${before}) require renewed acknowledgment`,async()=>{
   const s=scenario(before,1340),result=preview(s);assert.equal(result.previewReady,true);s.stock.shares=1500;let writes=0;
