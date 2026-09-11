@@ -36,20 +36,6 @@
     const action=object(judgment.actionAssessment),trend=object(judgment.trendAssessment),relation=object(judgment.planRelation),decision=object(judgment.userDecision);
     return [decision.headline,object(decision.holding).summary,object(decision.positionDirection).summary,object(decision.addAssessment).summary,object(decision.warning).summary,...array(object(decision.warning).items),object(decision.takeProfit).summary,object(decision.stopLoss).summary,action.headline,...array(action.reasons),...array(action.upgradeConditions),...array(action.downgradeConditions),...array(trend.timeframes).map(item=>item&&item.explanation),...array(judgment.structureAssessment).map(item=>item&&item.shortReason),judgment.stage,...array(judgment.focusPoints),judgment.summary,...array(judgment.keyChanges),...array(judgment.risks),...array(judgment.watchPoints),relation.summary].map(text).join('\n');
   }
-  const FULL_CONDITION_SATISFIED_PATTERN=/(?:完整执行条件|(?:完整)?(?:计划)?条件)(?:已经|已)(?:全部)?满足/g;
-  const LOCAL_NEGATION_SUFFIX_PATTERN=/(?:不等于|不代表|不意味着|并非|尚未|未确认|尚不能(?:确认)?|不能(?:确认)?|无法确认|没有确认|暂未确认)$/;
-  function locallyNegatedFullConditionClaim(source,index){
-    const clauseStart=Math.max(source.lastIndexOf('\n',index-1),source.lastIndexOf('。',index-1),source.lastIndexOf('！',index-1),source.lastIndexOf('？',index-1),source.lastIndexOf('；',index-1),source.lastIndexOf(';',index-1))+1;
-    return LOCAL_NEGATION_SUFFIX_PATTERN.test(source.slice(clauseStart,index).trimEnd());
-  }
-  function hasAffirmativeFullConditionClaim(source){
-    FULL_CONDITION_SATISFIED_PATTERN.lastIndex=0;
-    let match;
-    while((match=FULL_CONDITION_SATISFIED_PATTERN.exec(source))){
-      if(!locallyNegatedFullConditionClaim(source,match.index))return true;
-    }
-    return /(?:达到|进入|触发).{0,12}(?:可以|可).{0,4}直接执行|(?:所有|全部)(?:确认)?条件(?:都)?(?:已经|已)(?:完成|成立)/.test(source);
-  }
   function validateDecisionSection(decision,key,statuses,errors){
     const source=object(decision[key]),normalized={status:text(source.status),summary:text(source.summary)};
     exactFields(decision[key],['status','summary'],`userDecision.${key}`,errors);
@@ -64,26 +50,26 @@
     if(!userDecision.headline||userDecision.headline.length>120||/[\r\n]/.test(userDecision.headline))errors.push('userDecision.headline 必须为1至120字的单行文字');
     if(!userDecision.warning.summary||userDecision.warning.summary.length>160)errors.push('userDecision.warning.summary 必须为1至160字');
     if(!Workbench.RISK_SOURCES.includes(userDecision.riskSource))errors.push('userDecision.riskSource 为未知固定值');
-    const primary=[userDecision.headline,userDecision.holding.summary,userDecision.positionDirection.summary,userDecision.addAssessment.summary,userDecision.warning.summary,...userDecision.warning.items,userDecision.takeProfit.summary,userDecision.stopLoss.summary].map(text),primaryText=primary.join('\n');
-    if(/\b(?:recovery|pullback|forming|sourceDiscussionVersion|snapshotHash|technical anchor)\b/i.test(primaryText)||/(?:日线修复|60分钟结构|完整条件|价格触发|技术锚点)/.test(primaryText))errors.push('userDecision 第一层文字包含技术或系统术语');
-    if(/(?:不等于|不代表|不能说明|尚不能证明)/.test(primaryText))errors.push('userDecision 第一层文字应直接表达判断，不使用系统免责声明');
-    if(/[0-9０-９]|[零〇一二两三四五六七八九十百千万]+\s*(?:元|块|股|成|百分之)/.test(primaryText))errors.push('userDecision 不得包含由 AI 重述或发明的精确价格、比例、股数或日期');
-    const meaningful=primary.filter(Boolean),seen=new Set();if(meaningful.some(item=>seen.has(item)||!seen.add(item)))errors.push('userDecision 各区块不得逐字重复同一判断');
-    const held=Number(expected.holdingShares)>0,holdingKnown=expected.holdingShares!==undefined&&expected.holdingShares!==null;
-    if(holdingKnown&&!held){
-      if(userDecision.holding.status!=='not_applicable'||userDecision.takeProfit.status!=='not_applicable'||userDecision.stopLoss.status!=='not_applicable')errors.push('零持仓时 holding、takeProfit、stopLoss 必须为 not_applicable');
-      if(/继续持有|加仓|减仓|止盈|止损|保护已有利润|持仓继续观察/.test(primaryText))errors.push('零持仓结论不得假设已有持仓');
-    }
-    if(holdingKnown&&held&&userDecision.holding.status==='not_applicable')errors.push('已有持仓时必须回答持有风险');
-    if(holdingKnown&&held&&/(?:当前|目前|现在)(?:并)?(?:没有持仓|无持仓|未持仓|空仓)|保持空仓|等待首次建仓|暂不(?:重新)?建仓/.test(primaryText))errors.push('已有持仓结论不得假设当前没有持仓');
-    if(['market','both'].includes(userDecision.riskSource)&&!expected.marketRiskAvailable)errors.push('没有明确市场风险输入时不得归因于大盘');
     return userDecision;
+  }
+  const STRING_FIELDS=new Set(['symbol','sourceDiscussionVersion','headline','summary','status','riskSource','category','priority','attentionLevel','overall','timeframe','explanation','type','source','sourceAsOf','shortReason','stage','confidence']);
+  function validateStringTypes(value,errors,path='currentState'){
+    if(!value||typeof value!=='object')return;
+    for(const [key,item] of Object.entries(value)){
+      const at=path+'.'+key;
+      if(STRING_FIELDS.has(key)&&typeof item!=='string'){errors.push(at+' 必须是字符串');continue}
+      if(item&&typeof item==='object'){
+        if(Array.isArray(item))item.forEach((row,i)=>{if(row&&typeof row==='object'&&!Array.isArray(row))validateStringTypes(row,errors,at+'['+i+']');else if(typeof row!=='string')errors.push(at+' 必须包含字符串或指定对象')});
+        else validateStringTypes(item,errors,at);
+      }else if(typeof item!=='string')errors.push(at+' 必须是字符串');
+    }
   }
   function validateJudgment(value,expected={}){
     const source=object(value),errors=[],requiresDecision=text(expected.sourceDiscussionVersion).startsWith('discussion_v3_'),fields=requiresDecision?RESULT_FIELDS:RESULT_FIELDS.filter(key=>key!=='userDecision'),keys=Object.keys(source),extra=keys.filter(key=>!fields.includes(key)&&!(key==='userDecision'&&!requiresDecision)),missing=fields.filter(key=>!Object.prototype.hasOwnProperty.call(source,key));
+    validateStringTypes(value,errors);
     if(extra.length)errors.push(`currentState contains unknown fields: ${extra.join(', ')}`);
     if(missing.length)errors.push(`currentState missing fields: ${missing.join(', ')}`);
-    const symbol=Workbench.canonical(source.symbol),sourceDiscussionVersion=text(source.sourceDiscussionVersion),stage=text(source.stage),summary=text(source.summary),confidence=text(source.confidence),actionSource=object(source.actionAssessment),trendSource=object(source.trendAssessment),relationSource=object(source.planRelation),userDecision=source.userDecision?validateUserDecision(source.userDecision,expected,errors):null;
+    const symbol=Workbench.canonical(source.symbol),sourceDiscussionVersion=text(source.sourceDiscussionVersion),stage=text(source.stage),summary=text(source.summary),confidence=text(source.confidence),actionSource=object(source.actionAssessment),trendSource=object(source.trendAssessment),relationSource=object(source.planRelation),userDecision=Object.prototype.hasOwnProperty.call(source,'userDecision')?validateUserDecision(source.userDecision,expected,errors):null;
     if(!symbol||symbol!==Workbench.canonical(expected.symbol))errors.push('symbol 与本次讨论不一致');
     if(!sourceDiscussionVersion||sourceDiscussionVersion!==text(expected.sourceDiscussionVersion))errors.push('结论来源版本已过期或不一致');
     if(!stage||stage.length>40||/[\r\n]/.test(stage))errors.push('stage 必须是不超过40字的单行文字');
@@ -93,7 +79,6 @@
     if(!Workbench.ACTION_CATEGORIES.includes(actionAssessment.category))errors.push('category 为未知固定值');
     if(!Workbench.ACTION_PRIORITIES.includes(actionAssessment.priority))errors.push('priority 为未知固定值');
     if(!actionAssessment.headline||actionAssessment.headline.length>140||/[\r\n]/.test(actionAssessment.headline))errors.push('headline 必须为1至140字的单行文字');
-    if(!actionAssessment.reasons.length)errors.push('reasons 至少需要1项因果依据');
     const attentionLevel=text(source.attentionLevel);if(!Workbench.ATTENTION_LEVELS.includes(attentionLevel))errors.push('attentionLevel 为未知固定值');
     exactFields(source.trendAssessment,['overall','timeframes'],'trendAssessment',errors);
     const trendAssessment={overall:text(trendSource.overall),timeframes:[]};
@@ -108,19 +93,6 @@
     const planRelation={status:text(relationSource.status),summary:text(relationSource.summary)};
     if(!Workbench.PLAN_RELATION_STATUSES.includes(planRelation.status)||!planRelation.summary||planRelation.summary.length>300)errors.push('planRelation 无效');
     if(!Workbench.CONFIDENCE_LEVELS.includes(confidence))errors.push('confidence 只能为 high、medium、low');
-    const held=Number(expected.holdingShares)>0,holdingKnown=expected.holdingShares!==undefined&&expected.holdingShares!==null;
-    if(holdingKnown&&!held&& !['entry_review','wait_confirmation','no_action'].includes(actionAssessment.category))errors.push('零持仓候选的操作倾向与持仓事实冲突');
-    if(holdingKnown&&held&&actionAssessment.category==='entry_review')errors.push('已有持仓不能显示建仓复核');
-    if(userDecision&&actionAssessment.category==='risk_control'&&userDecision.holding.status==='safe'&&userDecision.positionDirection.status!=='risk_control'&&userDecision.stopLoss.status==='none')errors.push('风险控制判断与 userDecision 全部安全的表达冲突');
-    if(expected.hasActivePlan===false&&['aligned','conflict'].includes(planRelation.status))errors.push('没有有效计划时不能标记计划一致或冲突');
-    if(expected.hasActivePlan===true&&planRelation.status==='no_matching_plan')errors.push('存在有效计划时不能标记为没有对应计划');
-    if(expected.technicalDataStatus&&expected.technicalDataStatus!=='fresh'&&confidence==='high')errors.push('技术资料未标记为较新时 confidence 不能为 high');
-    const prose=allNaturalText(source),internalTokens=['actionAssessment','attentionLevel','trendAssessment','structureAssessment','validityStatus','planReview','sourceDiscussionVersion','superseded','needs_review','risk_control','reduce_review','hold_watch','wait_confirmation','add_review','entry_review','no_action','uptrend','downtrend','sideways','recovery','rebound','unclear'];
-    if(holdingKnown&&!held&&/继续持有|建议减仓|保护已有利润|持仓继续观察/.test(prose))errors.push('零持仓结论不得假设已有持仓');
-    if(holdingKnown&&held&&/(?:当前|目前|现在)(?:并)?(?:没有持仓|无持仓|未持仓|空仓)|保持空仓|等待首次建仓/.test(prose))errors.push('已有持仓结论不得假设当前没有持仓');
-    if(internalTokens.some(token=>new RegExp(`(^|[^A-Za-z_])${token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^A-Za-z_]|$)`,'i').test(prose)))errors.push('中文正文字段包含内部英文枚举或字段名');
-    if(/(?:立即|今天必须|必须).{0,12}(?:买入|卖出|加仓|减仓)|买入\s*\d+\s*股|减仓至\s*\d+(?:\.\d+)?%/.test(prose))errors.push('结论包含确定性交易命令或新仓位数值');
-    if(!expected.programProvesFullPlanConditions&&hasAffirmativeFullConditionClaim(prose))errors.push('价格触发不能被表述为完整计划条件已满足');
     return {ok:errors.length===0,errors,judgment:{symbol,sourceDiscussionVersion,...(userDecision?{userDecision}:{}),actionAssessment,attentionLevel,trendAssessment,structureAssessment,stage,focusPoints,summary,keyChanges,risks,watchPoints,planRelation,confidence}};
   }
   function assessTechnicalAnchorReadiness(prepared){
@@ -144,7 +116,7 @@ function process(raw,options={}){
   if(!validation.ok)return invalid('validation_error',StrictAiJson.contractMessage(validation.errors.join('；')),parsed.input);
   const anchorReadiness=options.prepared?assessTechnicalAnchorReadiness(options.prepared):null;
   if(anchorReadiness&&!anchorReadiness.ready)return {ok:true,previewReady:false,writes:0,code:anchorReadiness.code,reason:anchorReadiness.reason,message:anchorReadiness.message,input:parsed.input,currentState:validation.judgment};
-  return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论已通过严格校验，尚未写入。',input:parsed.input,currentState:validation.judgment};
+  return {ok:true,previewReady:true,writes:0,code:'valid',message:'结论结构可导入，尚未写入。保存后显示核对提示。',input:parsed.input,currentState:validation.judgment};
 }
   function findStock(state,symbol){const target=Workbench.canonical(symbol),stocks=array(state&&state.stocks),index=stocks.findIndex(stock=>Workbench.canonical(stock)===target);return {stocks,index,stock:index>=0?stocks[index]:null}}
   function previewBinding(prepared){return Workbench.stable({sourceDiscussionVersion:prepared.sourceDiscussionVersion,protectedHash:prepared.protectedHash,evidenceHash:prepared.evidenceHash,technicalSnapshot:prepared.technicalSnapshot,references:prepared.references})}
@@ -175,7 +147,7 @@ function process(raw,options={}){
     if(Workbench.stable(oldRefs)!==Workbench.stable(newRefs))return blocked(changes);
     const title=statusChanged?'持仓状态在本次讨论期间发生变化':'持仓信息已变化';
     const transition=statusChanged?`当前已由“${oldShares>0?'有持仓':'零持仓'}”变为“${newShares>0?'有持仓':'零持仓'}”。`:'';
-    return {status:'warning_reconcilable',changes,oldShares,newShares,statusChanged,title,message:`讨论开始：${oldShares.toLocaleString('zh-CN')} 股；当前记录：${newShares.toLocaleString('zh-CN')} 股。${transition}程序将按当前持仓事实重新校验结论，请确认 AI 已知晓最新仓位。`,acknowledgment:Workbench.stable({original:previewBinding(prepared),current:previewBinding(current)})};
+    return {status:'warning_reconcilable',changes,oldShares,newShares,statusChanged,title,message:`讨论开始：${oldShares.toLocaleString('zh-CN')} 股；当前记录：${newShares.toLocaleString('zh-CN')} 股。${transition}保存将绑定当前持仓快照；AI 原判断保持不变，差异将在保存后提示。`,acknowledgment:Workbench.stable({original:previewBinding(prepared),current:previewBinding(current)})};
   }
   function processImport(raw,prepared,current,options={}){
     const parsed=parse(raw);if(!parsed.ok)return invalid('parse_error',parsed.error);
@@ -233,6 +205,29 @@ function process(raw,options={}){
       return {status:'completed',writes:1,state:next,currentState:built.currentState};
     }catch(error){if(typeof deps.rollback==='function')deps.rollback(state);return {status:'failed',writes:1,error}}
   }
+  // Program-derived diagnostics, based only on the immutable import-time snapshot.
+  // Never call this from import validation; unknown natural language is left alone.
+  function postImportDiagnostics(saved){
+    const shares=saved?.references?.holding?.shares;
+    if(!Number.isFinite(shares)||shares<0)return [];
+    const prose=allNaturalText(saved),clauses=prose.split(/[\n。！？；;]/).map(text),diagnostics=[];
+    const currentClaims=clauses.flatMap(clause=>{
+      // Anchored current-fact declarations only: proposals, quotes, history and conditions do not qualify.
+      const m=clause.match(/^(?:当前|目前|现在)\s*(?:实际)?(?:持有|持仓(?:数量)?(?:为|是)?|持股(?:数量)?(?:为|是)?)\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*股(?:[，,：:、\s]|$)/);
+      return m?[Number(m[1].replace(/,/g,''))]:[];
+    });
+    if(currentClaims.some(value=>value!==shares))diagnostics.push({code:'holding_fact_mismatch',severity:'warning',title:'持仓核对',message:'AI 判断中的持仓数量与导入时程序记录不一致，请核对。投资事实仍以程序记录为准，程序持仓事实未被修改。'});
+    const d=saved.userDecision,positionText=clauses.some(clause=>/^(?:(?:当前|目前|现在)\s*)?(?:建议)?(?:继续持有|减仓|保护已有利润|持仓止盈|持仓继续观察)/.test(clause));
+    const zeroText=clauses.some(clause=>/^(?:当前|目前|现在)\s*(?:并)?(?:没有持仓|无持仓|未持仓|空仓)/.test(clause));
+    const heldStatus=d&&(['safe','caution','reduce_review','risk_control'].includes(d.holding?.status)||['hold','hold_no_add','reduce_review','risk_control'].includes(d.positionDirection?.status)||['watch','review'].includes(d.takeProfit?.status)||['watch','risk_control'].includes(d.stopLoss?.status));
+    if(shares===0&&(positionText||heldStatus||['hold_watch','reduce_review','add_review','risk_control'].includes(saved.actionAssessment?.category)))diagnostics.push({code:'position_semantic_mismatch',severity:'warning',title:'仓位语义核对',message:'导入时程序记录为零持仓，但 AI 判断使用了持仓语义，请核对该判断。'});
+    else if(shares>0&&(zeroText||d?.holding?.status==='not_applicable'||saved.actionAssessment?.category==='entry_review'))diagnostics.push({code:'position_semantic_mismatch',severity:'warning',title:'仓位语义核对',message:'导入时程序记录为有持仓，但 AI 判断使用了零持仓语义，请核对该判断。'});
+    return diagnostics;
+  }
+  function renderDiagnostics(saved){
+    const rows=postImportDiagnostics(saved);
+    return rows.length?`<section class="discussion-post-import-diagnostics" aria-label="核对提示" style="margin:12px 0;padding:12px;border-left:3px solid #b88728;background:rgba(184,135,40,.08);overflow-wrap:anywhere"><b>核对提示</b>${rows.map(row=>`<div data-diagnostic="${escapeHtml(row.code)}"><strong>${escapeHtml(row.title)}</strong><p>${escapeHtml(row.message)}</p></div>`).join('')}</section>`:'';
+  }
   function renderPreview(result,program={}){
     if(!result||!result.ok)return `<div class="discussion-import-error">${escapeHtml(result&&result.message||'预览不可用')}</div>`;
     const item=result.currentState,decision=item.userDecision,technicalAsOf=text(program.technicalAsOf)||'待程序确认',confirmedDate=text(program.confirmedDate)||'保存时由程序生成',actionLabels={risk_control:'风险控制',reduce_review:'减仓复核',hold_watch:'持有观察',wait_confirmation:'等待确认',add_review:'加仓复核',entry_review:'建仓复核',no_action:'暂不操作'},priorityLabels={high:'高优先级',medium:'中优先级',low:'低优先级'},attentionLabels={normal:'普通观察',focused:'重点观察',window:'临近窗口'},trendLabels={uptrend:'上升',downtrend:'下降',sideways:'震荡',recovery:'修复',rebound:'反弹',unclear:'不明确'},typeLabels={top:'顶部结构',bottom:'底部结构',breakout:'突破结构',pullback:'回踩结构',recovery:'修复结构',consolidation:'整理结构',none:'暂无明确结构',unclear:'结构不明确'},statusLabels={forming:'形成中',confirmed:'已确认',valid:'仍有效',broken:'已破坏',unclear:'不明确'};
@@ -243,5 +238,5 @@ function process(raw,options={}){
   function list(items){return items.length?`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'无'}
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 
-  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,assessTechnicalAnchorReadiness:assessTechnicalAnchorReadiness,process,reconcileContext,processImport,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
+  return Object.freeze({RESULT_FIELDS,parse,validateJudgment,postImportDiagnostics,renderDiagnostics,assessTechnicalAnchorReadiness:assessTechnicalAnchorReadiness,process,reconcileContext,processImport,findStock,buildCandidate,commit,renderPreview,escapeHtml,clone});
 });

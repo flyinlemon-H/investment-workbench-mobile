@@ -61,12 +61,12 @@ test('Runtime revision keeps its exact protected binding',async()=>{
   const rebuilt=Workbench.buildContext(stock,{...options,state});
   assert.notEqual(prepared.protectedHash,rebuilt.protectedHash);assert.equal(Readiness.sessionChanged(prepared,rebuilt),true);
 });
-test('high confidence cannot bypass inconsistent technical readiness',()=>{
+test('confidence is AI judgment while technical readiness stays program-owned',()=>{
   const stock=research();stock.technicalData.latestCompleteBar='2026-09-03';
   const prepared=Workbench.buildContext(stock,options),parsed=result(prepared);
   assert.equal(prepared.context.dataReadiness.technical.ready,false);
   assert.equal(parsed.ok,true,parsed.message);const value={currentState:{...parsed.currentState,confidence:'high'}};
-  assert.equal(Contract.process(JSON.stringify(value),{prepared,expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:100,technicalDataStatus:'fresh'}).ok,false);
+  assert.equal(Contract.process(JSON.stringify(value),{prepared,expectedSymbol:prepared.context.symbol,sourceDiscussionVersion:prepared.sourceDiscussionVersion,holdingShares:100,technicalDataStatus:'fresh'}).ok,true);
 });
 test('soft age and availability alone never change homepage alert count',()=>{
   const state=F.state(),before=Homepage.build(state,{now:F.NOW});

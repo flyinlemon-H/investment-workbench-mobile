@@ -37,26 +37,13 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/discussio
       await page.evaluate(()=>{globalThis.hotfixBefore=JSON.stringify(state)});
       for(const [kind,wording] of Object.entries(F.cases)){
         const raw=JSON.stringify(F.output(prepared,wording));await textarea.fill(raw);await page.locator('#discussionImportPreviewBtn').click();
-        const message=await page.locator('#discussionImportMessage').innerText();assert.match(message,/userDecision 不得包含/);assert.match(message,/返回讨论.*只保留定性判断.*重新输出完整严格 JSON/);
-        assert.equal(await confirm.isDisabled(),true);assert.equal(await page.locator('#discussionImportPreview').innerHTML(),'');assert.equal(await textarea.inputValue(),raw);
-        assert.equal(await page.evaluate(raw=>DiscussionStateContract.parse(raw).ok,raw),true);
-        await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);assert.equal(await page.evaluate(()=>JSON.stringify(state)===hotfixBefore),true);
-        if(kind==='price'){await page.locator('#discussionImportPreviewBtn').click();const box=await page.locator('#discussionImportMessage').boundingBox();assert.ok(box.y>=0&&box.y+box.height<=viewport.height);await page.screenshot({path:path.join(output,`protected-${shares}-${viewport.width}.png`),fullPage:true})}
+        assert.equal(await confirm.isEnabled(),true);assert.equal(await textarea.inputValue(),raw);assert.equal(await page.locator('#discussionImportPreview .discussion-post-import-diagnostics').count(),0);assert.equal(await page.evaluate(()=>hotfixWrites),0);
       }
-      const protectedRaw=await textarea.inputValue();await page.locator('#discussionImportReturnBtn').click();await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await textarea.inputValue(),protectedRaw);
+      // Structural failure still preserves raw input and disables Confirm even after DOM tampering.
+      await textarea.fill('{');await page.locator('#discussionImportPreviewBtn').click();assert.equal(await confirm.isDisabled(),true);
+      await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
+      await page.locator('#discussionImportReturnBtn').click();await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await textarea.inputValue(),'{');
       valid.currentState.userDecision.warning.summary=F.qualitative;
-      if(shares===0){for(const headline of ['继续持有，关注止盈','建议减仓','关注止盈']){
-        const invalid=structuredClone(valid);invalid.currentState.userDecision.headline=headline;const raw=JSON.stringify(invalid);
-        await textarea.fill(raw);await page.locator('#discussionImportPreviewBtn').click();
-        assert.match(await page.locator('#discussionImportMessage').innerText(),/AI结论与当前零持仓事实冲突/);assert.equal(await confirm.isDisabled(),true);assert.equal(await page.locator('#discussionImportPreview').innerHTML(),'');assert.equal(await textarea.inputValue(),raw);
-        const messageBox=await page.locator('#discussionImportMessage').boundingBox();assert.ok(messageBox.y>=0&&messageBox.y<viewport.height);
-        assert.ok(Number(await confirm.evaluate(n=>getComputedStyle(n).opacity))<.6);
-        assert.equal(await page.evaluate(raw=>DiscussionStateContract.parse(raw).ok,raw),true);
-        await page.screenshot({path:path.join(output,`invalid-${viewport.width}.png`),fullPage:true});
-        await page.evaluate(async()=>{document.getElementById('discussionImportConfirmBtn').disabled=false;await confirmDiscussionImport()});assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
-      }
-      const retained=await textarea.inputValue();await page.locator('#discussionImportReturnBtn').click();assert.equal(await page.locator('#discussionImportDialog').evaluate(n=>n.classList.contains('show')),false);await page.locator('[data-detail-action="import-discussion-state"]').click();assert.equal(await textarea.inputValue(),retained);
-      }
       await textarea.fill(JSON.stringify(valid));assert.equal(await confirm.isDisabled(),true);await page.locator('#discussionImportPreviewBtn').click();assert.equal(await confirm.isEnabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
       // Direct DOM value changes cannot adopt an old valid preview.
       await page.evaluate(()=>{document.getElementById('discussionImportText').value='{}'});await confirm.click();assert.equal(await confirm.isDisabled(),true);assert.equal(await page.evaluate(()=>hotfixWrites),0);
@@ -71,7 +58,7 @@ const output=path.resolve(process.env.ACCEPTANCE_OUTPUT||'test-results/discussio
       // Restore instrumentation after reload for the next isolated fixture.
       await page.evaluate(()=>{globalThis.hotfixRealSave=saveState;saveState=async(...args)=>{hotfixWrites++;if(globalThis.hotfixSaveFail)return false;return hotfixRealSave(...args)}});
     }
-    assert.deepEqual(errors,[]);assert.deepEqual(aiRequests,[]);results.push({viewport,scenarios,protectedFactCases:Object.keys(F.cases),protectedFactZeroWrites:true,protectedFactGuidance:true,realUserDecisionsCreated:0,automaticAiRequests:aiRequests.length,uniqueCTA:true,oneActionPerTap:true,invalidImportDisabled:true,invalidZeroWrites:true,recoveryPreservesInput:true,validZeroAndHeldSave:true,storageFailureAtomic:true,doubleSavePrevented:true,noPageErrors:true});await context.close();
+    assert.deepEqual(errors,[]);assert.deepEqual(aiRequests,[]);results.push({viewport,scenarios,protectedFactCases:Object.keys(F.cases),proposalPreviewZeroWrites:true,structuralRetryPreservesInput:true,realUserDecisionsCreated:0,automaticAiRequests:aiRequests.length,uniqueCTA:true,oneActionPerTap:true,invalidImportDisabled:true,invalidZeroWrites:true,recoveryPreservesInput:true,validZeroAndHeldSave:true,storageFailureAtomic:true,doubleSavePrevented:true,noPageErrors:true});await context.close();
   }}finally{await browser.close()}
   fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
 })().catch(error=>{console.error(error);process.exitCode=1});
