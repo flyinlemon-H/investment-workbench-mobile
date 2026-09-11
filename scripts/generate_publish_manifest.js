@@ -55,7 +55,7 @@ roleByPath.set('src/plan-update-draft.js','Plan V2 confirmed browser-side draft 
 roleByPath.set('src/clipboard.js','shared verified mobile clipboard runtime with explicit manual-copy fallback');
 roleByPath.set('src/discussion-data-readiness.js','Derived Discussion evidence readiness and session fingerprint; no persistent readiness or navigation data');
 roleByPath.set('src/discussion-workbench.js','Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs');
-roleByPath.set('src/discussion-state-contract.js','Single Stock Current State V3 fail-closed User Decision archive contract with position, language, price-ownership and semantic guards');
+roleByPath.set('src/discussion-state-contract.js','Discussion structural import contract with permissive AI content and snapshot-derived post-import diagnostics');
 roleByPath.set('src/discussion-plan-workflow.js','Standalone single-target fenced JSON Plan Draft prompt, readable business labels, strict session and target binding, preview, and confirmed replacement lifecycle runtime');
 roleByPath.set('src/price-refresh.js','Plan V2 program-owned price trigger observation and candidate-save runtime');
 roleByPath.set('src/rebalance.js','Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime');
@@ -128,8 +128,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-protected-fact-output-reliability-v1-20260909',
-  dataMode:'Discussion protected-fact output guidance with explicit no-echo qualitative judgment contract and manual retry guidance; unchanged strict parser/validator and V4 judgment/user decision separation; preserved Plan Core Loop and Homepage; no automatic AI or execution',
+  assetVersion:'discussion-permissive-import-diagnostics-v1-20260912',
+  dataMode:'Discussion-only permissive judgment import with structural safety and import-time holding diagnostics; preserved raw AI content, StrictAiJson, Plan contracts and V4 judgment/user decision separation; no automatic AI or execution',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');
