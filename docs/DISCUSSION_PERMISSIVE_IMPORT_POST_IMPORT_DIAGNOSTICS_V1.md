@@ -86,4 +86,13 @@ This provides a safe foundation to enter **DB02 Rule Evaluator / Plan Runtime & 
 
 ## Release discipline
 Builds directly on `5fb1152`; V1 reliability infrastructure and this policy will be released together. Source commit → asset/version → manifest → committed artifact/hash verification → READY_FOR_PUSH. Existing local edits to `data/market_data_bridge.js` and `data/market_task_status_bridge.js` are preserved and excluded from task commits; manifest and artifact verification use committed blobs, not those unrelated working files. Existing `_site` is not overwritten.
-Release commit references and final checks are recorded below after execution.
+- Source implementation commit: `c5d14140adc45a0a376cb32601acf70346943e08`.
+- Asset/version commit and manifest sourceCommit: `2c84d7190fdd7df735a1c107ac56b6077891be2a`.
+- Asset version: `discussion-permissive-import-diagnostics-v1-20260912`.
+- Final focused suites: **536 PASS**. Versioned full JS: **1070 PASS**, 0 failed / skipped. Versioned permissive browser acceptance: all three sizes PASS again.
+- `test-results/permissive/verify-release.cjs` runs the real `artifactPlan` using committed blobs; **85 source files / 86 artifact files PASS**. Every byte count and SHA-256 is verified, including both committed market files; sourceCommit ancestry and unchanged non-Discussion runtime modules are verified. `_site` remains untouched.
+- The final preparation commit contains only this document and the generated manifest. Post-commit `--committed` verification records the final HEAD in `test-results/permissive/ready-for-push.json`. Intentional working-tree exceptions are only the two pre-existing market bridge modifications, excluded from all three task commits.
+
+Completion status: **DISCUSSION_PERMISSIVE_IMPORT_POST_IMPORT_DIAGNOSTICS_V1_COMPLETE**.
+Final stopping point: **READY_FOR_PUSH**. No push, deploy or production smoke performed.
+
