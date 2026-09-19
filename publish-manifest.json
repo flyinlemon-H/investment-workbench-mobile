@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "ed0544b5a1eb81c87f2b496d85a1bd56c1e6daea",
-  "assetVersion": "entry-decision-path-engine-v1-20260919",
+  "sourceCommit": "34b08dfcb7e94a9e76805ebdecbbaf37c2c61ac6",
+  "assetVersion": "entry-decision-path-engine-v1-fix1-20260920",
   "dataMode": "Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution",
   "files": [
     {
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 2105221,
-      "sha256": "a70eac3138c4b579f3ae35964ebc70da999376760aa3bd04ed71c736d7fb0bd9"
+      "bytes": 2150780,
+      "sha256": "f56e3137d84175fa3dbf0eed0d0dc46a5b17919377067f6aa30ee18ab0427c68"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
-      "bytes": 1365,
-      "sha256": "ece2424aace12c81cc5490fa287cef16e9798339408397ac3762e5ee5b29dc13"
+      "bytes": 1351,
+      "sha256": "2d20bfd33ba2bba186064fe76d6bc5208c932a84f2882c5de9bd5691382473df"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71222,
-      "sha256": "83322bb9dfea66a7775104c4f2bd3c7633bf5450e4e386e02472b01524f34f70"
+      "bytes": 71642,
+      "sha256": "47cf315dc838d65b7c6c4ca92890108ad03890b596a742c5d016dab03132869a"
     },
     {
       "path": "social_posts.json",
@@ -157,14 +157,14 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 56240,
-      "sha256": "cdf48df1cd1078ab5d05e0a68d2beacd4195fbc7d6bae606a66dc15a470c4cb2"
+      "bytes": 56877,
+      "sha256": "655e53d6c9e465cf43d6115ebd74bb1e90434aebbab28aff93361a0ce8dbfdcb"
     },
     {
       "path": "src/entry-decision.js",
       "role": "browser runtime dependency",
-      "bytes": 14052,
-      "sha256": "fc15a28f61cd9d11932fbf05b3c44a393ad5db7b79ba17b15d4f2c92c42fe86f"
+      "bytes": 15609,
+      "sha256": "c28a893cd25b328f1fea54c1f61df038125fba5b7c75918e2e0f256a496cfdbd"
     },
     {
       "path": "src/homepage-attention.js",
