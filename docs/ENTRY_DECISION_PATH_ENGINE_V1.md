@@ -104,3 +104,5 @@ AI 必须逐项引用上一轮条件原文并给出完成状态及依据；满�
 既有 `discussion_user_decision_browser_acceptance.cjs` 仍期待旧版五按钮入口，而当前产品已经简化为两个主按钮。此次运行在未修改的 HEAD 资源上复现同一断言失败；保留该旧测试，不为其改回产品 UI。当前 UI 使用新版 reliability、simplification 及新增 entry 浏览器套件验收。
 
 发布停点：READY_FOR_PUSH。不 push、不部署、不修改真实用户数据。原有两份行情桥接工作区修改保留且不提交。
+
+实现提交：`ed0544b5a1eb81c87f2b496d85a1bd56c1e6daea`。发布缓存版本：`entry-decision-path-engine-v1-20260919`。清单从已提交 Git blobs 生成并逐一验证：86 个源文件、87 个最终资源（含清单），SHA-256、字节数、脚本依赖及缓存版本全部通过；两份行情文件使用已提交内容，不混入原有本地修改，现有 `_site` 未改动。最终提交另外记录清单和本文档，commit hash 由任务最终回复给出。
