@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "34b08dfcb7e94a9e76805ebdecbbaf37c2c61ac6",
-  "assetVersion": "entry-decision-path-engine-v1-fix1-20260920",
+  "sourceCommit": "5104931016efd3935b96c46414a3ce0695120a49",
+  "assetVersion": "entry-decision-path-engine-v1-fix2-20260920",
   "dataMode": "Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution",
   "files": [
     {
@@ -56,7 +56,7 @@
       "path": "index.html",
       "role": "entrypoint",
       "bytes": 71642,
-      "sha256": "47cf315dc838d65b7c6c4ca92890108ad03890b596a742c5d016dab03132869a"
+      "sha256": "4ebc8423b71afb2ab64696c5f45cc9aa75059c50d5a64aca0fe8a3d565968f25"
     },
     {
       "path": "social_posts.json",
@@ -163,8 +163,8 @@
     {
       "path": "src/entry-decision.js",
       "role": "browser runtime dependency",
-      "bytes": 15609,
-      "sha256": "c28a893cd25b328f1fea54c1f61df038125fba5b7c75918e2e0f256a496cfdbd"
+      "bytes": 15756,
+      "sha256": "7a4568a3674d76c163685a6d21e4faeb4ccc671e945fc74ecc5578b5217999ce"
     },
     {
       "path": "src/homepage-attention.js",
