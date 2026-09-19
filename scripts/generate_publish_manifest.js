@@ -129,7 +129,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'entry-decision-path-engine-v1-fix1-20260920',
+  assetVersion:'entry-decision-path-engine-v1-fix2-20260920',
   dataMode:'Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution',
   files
 };

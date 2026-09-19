@@ -44,7 +44,8 @@
     if(confirmed&&!negative)expectedState=entry.position==='acceptable'?'entry_ready':entry.position==='extended'?'entry_extended':null;
     if(expectedState&&entry.state!==expectedState)warn('entry_upgrade_not_acknowledged',`所列路径条件已满足，应复核为「${STATES[expectedState]}」，不可任意追加等待条件。`);
     if(satisfied&&!newNegative&&['wait_setup','setup_forming'].includes(entry.state)&&entry.position==='acceptable')warn('entry_goalpost_moved','原升级条件已满足；应先承认条件成立，不能无新增负面证据继续提高门槛。');
-    if(satisfied&&!newNegative&&entry.pendingConditions.length)warn('entry_new_requirement','原升级条件已满足，但仍列出待确认条件；新增要求必须说明新增负面证据或结构变化。');
+    const explainedExtension=expectedState==='entry_extended'&&entry.state==='entry_extended'&&entry.transitionReason.trim();
+    if(satisfied&&!newNegative&&entry.pendingConditions.length&&!explainedExtension)warn('entry_new_requirement','原升级条件已满足，但仍列出待确认条件；新增要求必须说明新增负面证据或结构变化。');
     if(entry.state==='entry_ready'&&(!confirmed||negative||entry.position!=='acceptable'||entry.pendingConditions.length))warn('entry_ready_conflict','建仓条件已满足与所列方向、确认事件、位置或风险证据不一致。');
     if(entry.state==='entry_ready'&&[current.userDecision?.headline,current.userDecision?.addAssessment?.summary,current.actionAssessment.headline].some(s=>/^(?:当前|仍需|还需)?(?:继续等待|等待进一步确认|再等一次回踩)/.test(s||'')))warn('entry_ready_wording_conflict','状态为建仓条件已满足，但结论仍要求等待确认，请核对原判断。');
     if(entry.state==='setup_failed'&&!negative)warn('entry_failure_unsupported','结构失败缺少明确负面证据；涨幅大或位置延伸不能单独否决建仓。');
