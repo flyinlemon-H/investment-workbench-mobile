@@ -1,12 +1,13 @@
 (function(root,factory){
   const api=factory(
+    typeof module==='object'&&module.exports?require('./entry-decision.js'):root&&root.EntryDecision,
     typeof module==='object'&&module.exports?require('./symbol-identity.js'):root&&root.SymbolIdentity,
     typeof module==='object'&&module.exports?require('./plan-v2.js'):root&&root.PlanV2,
     ()=>typeof module==='object'&&module.exports?require('./discussion-data-readiness.js'):root&&root.DiscussionDataReadiness
   );
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DiscussionWorkbench=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(SymbolIdentity,PlanV2,getReadiness){
+})(typeof globalThis!=='undefined'?globalThis:this,function(EntryDecision,SymbolIdentity,PlanV2,getReadiness){
   'use strict';
 
   const STORE_SCHEMA_VERSION='stock-discussion.store.v1';
@@ -104,7 +105,7 @@
   }
   function normalizeActionAssessment(value){
     const source=object(value);
-    return {category:text(source.category),priority:text(source.priority),headline:text(source.headline),reasons:uniqueStrings(source.reasons,5),upgradeConditions:uniqueStrings(source.upgradeConditions,3),downgradeConditions:uniqueStrings(source.downgradeConditions,3)};
+    return {...(Object.prototype.hasOwnProperty.call(source,'entryDecision')?{entryDecision:clone(source.entryDecision)}:{}),category:text(source.category),priority:text(source.priority),headline:text(source.headline),reasons:uniqueStrings(source.reasons,5),upgradeConditions:uniqueStrings(source.upgradeConditions,3),downgradeConditions:uniqueStrings(source.downgradeConditions,3)};
   }
   function normalizeTrendAssessment(value){
     const source=object(value);
@@ -183,7 +184,8 @@
     if(state.stage.length>40||/[\r\n]/.test(state.stage))errors.push('stage invalid');
     if(state.summary.length>500)errors.push('summary too long');
     for(const [key,limit] of [['focusPoints',5],['keyChanges',5],['risks',5],['watchPoints',5]])validStringList(source,key,limit,240,errors);
-    exactFields(source.actionAssessment,['category','priority','headline','reasons','upgradeConditions','downgradeConditions'],'actionAssessment',errors);
+    exactFields(source.actionAssessment,['category','priority','headline','reasons','upgradeConditions','downgradeConditions',...(Object.prototype.hasOwnProperty.call(object(source.actionAssessment),'entryDecision')?['entryDecision']:[])],'actionAssessment',errors);
+    if(Object.prototype.hasOwnProperty.call(object(source.actionAssessment),'entryDecision'))errors.push(...EntryDecision.validate(source.actionAssessment.entryDecision).errors);
     if(!ACTION_CATEGORIES.includes(state.actionAssessment.category))errors.push('action category invalid');
     if(!ACTION_PRIORITIES.includes(state.actionAssessment.priority))errors.push('action priority invalid');
     if(!state.actionAssessment.headline||state.actionAssessment.headline.length>140||/[\r\n]/.test(state.actionAssessment.headline))errors.push('action headline invalid');
@@ -284,7 +286,7 @@
   }
   function compactCurrentState(current,freshness){
     if(!current)return null;
-    const base={schemaVersion:current.schemaVersion,confirmedDate:current.confirmedDate,technicalAsOf:current.technicalAsOf,stage:current.stage,summary:current.summary,keyChanges:clone(current.keyChanges),risks:clone(current.risks),watchPoints:clone(current.watchPoints),planRelation:clone(current.planRelation),confidence:current.confidence,continuity:{status:freshness.status,reason:freshness.reason}};
+    const base={holdingShares:current.references.holding.shares,schemaVersion:current.schemaVersion,confirmedDate:current.confirmedDate,technicalAsOf:current.technicalAsOf,stage:current.stage,summary:current.summary,keyChanges:clone(current.keyChanges),risks:clone(current.risks),watchPoints:clone(current.watchPoints),planRelation:clone(current.planRelation),confidence:current.confidence,continuity:{status:freshness.status,reason:freshness.reason}};
     if([V2_STATE_SCHEMA_VERSION,STATE_SCHEMA_VERSION].includes(current.schemaVersion))return {...base,...(current.schemaVersion===STATE_SCHEMA_VERSION?{userDecision:clone(current.userDecision)}:{}),actionAssessment:clone(current.actionAssessment),attentionLevel:current.attentionLevel,trendAssessment:clone(current.trendAssessment),structureAssessment:clone(current.structureAssessment),focusPoints:clone(current.focusPoints)};
     return base;
   }
@@ -349,6 +351,7 @@
       '',
       PROTECTED_FACT_JUDGMENT_RULE,
       holdingPromptRules(context),
+      EntryDecision.rules(context),
       '再说明从上次已确认结论到现在真正变化了什么，先前关注的判断条件是否已经出现，既有技术判断是仍然稳定、正在变化还是已经失效。专业技术概念只作为判断依据，不要放在第一层结论。',
       '程序提供的持仓、完整日线、技术日期、计划、运行状态和引用关系是受保护事实；不要重算或改写。不要发明新闻、财务、价格、仓位或市场背景，明确建议仅为 AI 判断，不代表已经执行。',
       `如需判断今天盘中强弱，请结合用户随后提供的分时截图；程序当前只提供截至 ${context.currentFacts.technical.technicalAsOf||'尚未确认日期'} 的完整日K事实。`,
@@ -362,9 +365,11 @@
   function buildArchiveRequest(prepared){
     if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
     const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,rawTechnicalDataStatus=text(prepared.context.currentFacts&&prepared.context.currentFacts.technical&&prepared.context.currentFacts.technical.dataStatus),technicalDataStatus=['fresh','stale','unavailable','anomaly'].includes(rawTechnicalDataStatus)?rawTechnicalDataStatus:'unavailable',confidenceRule=technicalDataStatus==='fresh'?'当前技术资料为 fresh；confidence 可根据证据使用 high、medium 或 low，但不得仅因为 fresh 自动使用 high。':`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）；confidence 不得输出 high，只能根据证据使用 medium 或 low。`,example={currentState:{symbol,sourceDiscussionVersion,userDecision:{headline:held?'可以继续持有，暂时没有明显减仓风险。':'当前位置不适合建仓，继续等待。',holding:{status:held?'safe':'not_applicable',summary:held?'持有判断仍然稳定。':'当前无持仓。'},positionDirection:{status:held?'hold_no_add':'not_applicable',summary:held?'持有为主，暂不增加仓位。':'保持空仓观察。'},addAssessment:{status:'wait',summary:held?'等待更合适的机会，不追当前位置。':'等待更合适的建仓机会。'},warning:{summary:'若关键风险明显增强，需要重新复核当前判断。',items:[]},takeProfit:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止盈压力。':'当前无持仓，不适用。'},stopLoss:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止损风险。':'尚未持有，无需处理。'},riskSource:'none'},actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策条件，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前仍在观察区间，关键条件还未确立。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
+    if(prepared.context.currentFacts.holding.shares===0)example.currentState.actionAssessment.entryDecision=EntryDecision.example();
     const request=[
       '根据本轮讨论形成一个可持续更新的当前状态。先按当前受保护持仓事实回答用户决定，再保留技术判断作为依据。',
       holdingPromptRules(prepared.context),
+      EntryDecision.rules(prepared.context),
       '只输出唯一一个完整的 ```json 代码块；代码块外不得有任何文字。',
       '代码块内必须是一个完整严格 JSON 对象，顶层只能有 currentState。',
       'JSON 结构键和值必须使用英文半角双引号 "。',
@@ -405,5 +410,5 @@
     return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};
   }
 
-  return Object.freeze({STORE_SCHEMA_VERSION,LEGACY_STATE_SCHEMA_VERSION,V2_STATE_SCHEMA_VERSION,STATE_SCHEMA_VERSION,CONTEXT_SCHEMA_VERSION,HISTORY_LIMIT,INCREMENTAL_LIMIT,BOOTSTRAP_FRESH_LIMIT,BOOTSTRAP_STALE_LIMIT,CONFIDENCE_LEVELS,ACTION_CATEGORIES,ACTION_PRIORITIES,ATTENTION_LEVELS,TREND_STATUSES,STRUCTURE_TYPES,STRUCTURE_STATUSES,STRUCTURE_SOURCES,PLAN_RELATION_STATUSES,HOLDING_STATUSES,POSITION_DIRECTION_STATUSES,ADD_ASSESSMENT_STATUSES,TAKE_PROFIT_STATUSES,STOP_LOSS_STATUSES,RISK_SOURCES,canonical,validDate,localCalendarDate,requestMetrics,defaultStore,normalizeAnchor,normalizeTechnicalSnapshot,normalizeReferences,normalizeActionAssessment,normalizeTrendAssessment,normalizeStructureAssessment,normalizePlanRelation,normalizeUserDecision,normalizeState,validateState,normalizeStore,validateStore,normalizedBars,barsAfter,technicalSnapshot,references,stateFreshness,buildContext,buildDiscussionRequest,buildArchiveRequest,clone,hash,stable});
+  return Object.freeze({EntryDecision,STORE_SCHEMA_VERSION,LEGACY_STATE_SCHEMA_VERSION,V2_STATE_SCHEMA_VERSION,STATE_SCHEMA_VERSION,CONTEXT_SCHEMA_VERSION,HISTORY_LIMIT,INCREMENTAL_LIMIT,BOOTSTRAP_FRESH_LIMIT,BOOTSTRAP_STALE_LIMIT,CONFIDENCE_LEVELS,ACTION_CATEGORIES,ACTION_PRIORITIES,ATTENTION_LEVELS,TREND_STATUSES,STRUCTURE_TYPES,STRUCTURE_STATUSES,STRUCTURE_SOURCES,PLAN_RELATION_STATUSES,HOLDING_STATUSES,POSITION_DIRECTION_STATUSES,ADD_ASSESSMENT_STATUSES,TAKE_PROFIT_STATUSES,STOP_LOSS_STATUSES,RISK_SOURCES,canonical,validDate,localCalendarDate,requestMetrics,defaultStore,normalizeAnchor,normalizeTechnicalSnapshot,normalizeReferences,normalizeActionAssessment,normalizeTrendAssessment,normalizeStructureAssessment,normalizePlanRelation,normalizeUserDecision,normalizeState,validateState,normalizeStore,validateStore,normalizedBars,barsAfter,technicalSnapshot,references,stateFreshness,buildContext,buildDiscussionRequest,buildArchiveRequest,clone,hash,stable});
 });
