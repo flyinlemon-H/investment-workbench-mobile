@@ -365,7 +365,11 @@
   function buildArchiveRequest(prepared){
     if(!prepared||!prepared.context||!prepared.sourceDiscussionVersion)throw new Error('请先准备本次结论的存档上下文。');
     const symbol=prepared.context.symbol,sourceDiscussionVersion=prepared.sourceDiscussionVersion,held=Number(prepared.context.currentFacts&&prepared.context.currentFacts.holding&&prepared.context.currentFacts.holding.shares)>0,rawTechnicalDataStatus=text(prepared.context.currentFacts&&prepared.context.currentFacts.technical&&prepared.context.currentFacts.technical.dataStatus),technicalDataStatus=['fresh','stale','unavailable','anomaly'].includes(rawTechnicalDataStatus)?rawTechnicalDataStatus:'unavailable',confidenceRule=technicalDataStatus==='fresh'?'当前技术资料为 fresh；confidence 可根据证据使用 high、medium 或 low，但不得仅因为 fresh 自动使用 high。':`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）；confidence 不得输出 high，只能根据证据使用 medium 或 low。`,example={currentState:{symbol,sourceDiscussionVersion,userDecision:{headline:held?'可以继续持有，暂时没有明显减仓风险。':'当前位置不适合建仓，继续等待。',holding:{status:held?'safe':'not_applicable',summary:held?'持有判断仍然稳定。':'当前无持仓。'},positionDirection:{status:held?'hold_no_add':'not_applicable',summary:held?'持有为主，暂不增加仓位。':'保持空仓观察。'},addAssessment:{status:'wait',summary:held?'等待更合适的机会，不追当前位置。':'等待更合适的建仓机会。'},warning:{summary:'若关键风险明显增强，需要重新复核当前判断。',items:[]},takeProfit:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止盈压力。':'当前无持仓，不适用。'},stopLoss:{status:held?'none':'not_applicable',summary:held?'暂时没有明显止损风险。':'尚未持有，无需处理。'},riskSource:'none'},actionAssessment:{category:held?'hold_watch':'no_action',priority:'low',headline:'当前没有临近的仓位决策条件，维持常规观察。',reasons:['趋势和关键结构尚未出现需要提高操作复核级别的变化。'],upgradeConditions:['关键结构确认后提高复核优先级。'],downgradeConditions:['当前结构判断被后续走势破坏。']},attentionLevel:'normal',trendAssessment:{overall:'sideways',timeframes:[{timeframe:'日线',status:'sideways',explanation:'方向尚未形成明确突破。'}]},structureAssessment:[],stage:'常规观察',focusPoints:['观察关键结构是否确认。'],summary:'整体状态暂未发生决定性变化。关键结构仍待确认。',keyChanges:[],risks:[],watchPoints:[],planRelation:{status:'neutral',summary:'当前仍在观察区间，关键条件还未确立。'},confidence:'medium'}},structureItemExample={timeframe:'60分钟',type:'top',status:'forming',source:'ai_chart_judgment',sourceAsOf:'',shortReason:'高位回落后短周期弱势增强，但尚未形成正式外部软件确认信号。'};
-    if(prepared.context.currentFacts.holding.shares===0)example.currentState.actionAssessment.entryDecision=EntryDecision.example();
+    if(prepared.context.currentFacts.holding.shares===0){
+      const entry=EntryDecision.example(),previous=prepared.context.currentState;
+      if(previous?.holdingShares===0)entry.previousConditions=array(previous.actionAssessment?.upgradeConditions).map(condition=>({condition,status:'unknown',evidence:'请根据本轮新增事实核对整条条件；各部分进度写在此处。'}));
+      example.currentState.actionAssessment.entryDecision=entry;
+    }
     const request=[
       '根据本轮讨论形成一个可持续更新的当前状态。先按当前受保护持仓事实回答用户决定，再保留技术判断作为依据。',
       holdingPromptRules(prepared.context),
@@ -405,6 +409,7 @@
       '以下 JSON contract 的 judgment strings 可以保存 AI 原始判断、精确事实描述及策略参数；程序事实的 authority 始终以程序记录为准。',
       '允许示例：“跌破 50 元止损”“建议减仓 20%”“当前持有 100 股”“9 月 9 日结构恶化”“在 50 元建仓”。请明确事实、建议与条件。',
       '自检 JSON 结构。保护字段仍由程序补齐，不要求 AI 输出。symbol/sourceDiscussionVersion 原样返回；timeframe/source/sourceAsOf 按既有 schema 和证据填写。',
+      '输出前检查对象层级与括号配对：entryDecision 在 actionAssessment 内；attentionLevel、trendAssessment 及其后各字段与 actionAssessment 同级，必须先闭合 actionAssessment。不得把这些字段放进 actionAssessment。所有 JSON 对象和数组必须完整闭合。',
       JSON.stringify(example)
     ].join('\n');
     return {request,metrics:requestMetrics(request),symbol,sourceDiscussionVersion,technicalDataStatus};

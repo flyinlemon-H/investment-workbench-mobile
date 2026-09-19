@@ -35,7 +35,10 @@
     const newNegative=entry.negativeEvidence.some(e=>e.isNew),negative=entry.negativeEvidence.length>0;
     for(const condition of conditions)if(!entry.previousConditions.some(c=>c.condition===condition))warn('entry_commitment_missing',`上一轮条件尚未逐项核对：${condition}`);
     const satisfied=entry.previousConditions.some(c=>conditions.includes(c.condition)&&c.status==='satisfied');
-    if(entry.previousConditions.some(c=>conditions.includes(c.condition)&&c.status==='invalidated')&&!newNegative)warn('entry_invalidation_unexplained','旧条件被否定，但未说明新增负面证据或结构变化。');
+    // A completed parallel path may supersede an untriggered old path without negative evidence.
+    // Keep this narrow: it cannot excuse an unconfirmed path, new waiting requirements or a downgrade.
+    const completedMigration=priorEntry&&priorEntry.path!==entry.path&&entry.path!=='none'&&entry.transitionReason.trim()&&entry.state==='entry_ready'&&entry.directionConfirmed&&entry.confirmationSatisfied&&entry.position==='acceptable'&&!negative&&!entry.pendingConditions.length&&satisfied;
+    if(entry.previousConditions.some(c=>conditions.includes(c.condition)&&c.status==='invalidated')&&!newNegative&&!completedMigration)warn('entry_invalidation_unexplained','旧条件被否定，但未说明新增负面证据或结构变化。');
     const confirmed=entry.directionConfirmed&&entry.confirmationSatisfied&&entry.path!=='none';
     let expectedState=null;
     if(confirmed&&!negative)expectedState=entry.position==='acceptable'?'entry_ready':entry.position==='extended'?'entry_extended':null;
@@ -68,8 +71,10 @@
       'position 为 acceptable/extended/unclear。position_extended 不等于 structure_weakening、breakout_failure、momentum_exhaustion。仅涨幅大不能自动 setup_failed 或 avoid。entry_ready 降为 setup_forming 必须新增负面证据；结构明确破坏才用 setup_failed。',
       'Previous upgrade conditions are commitments for evaluation. If an explicitly stated upgrade condition becomes satisfied, the next discussion must acknowledge that satisfaction before adding any new requirement. New requirements may only be introduced when supported by new negative evidence or a clearly changed market structure.',
       'previousConditions 按上一轮 upgradeConditions 原文逐项填写 condition、status（satisfied/pending/invalidated/unknown）、evidence（具体新增证据或证据不足说明）。满足任意一条完整合法路径即可，不能把平行路径当作必须全部满足。旧数据无 entryDecision 也必须核对旧 upgradeConditions。先承认满足，再解释变化；不得任意再等一天、再等回踩、再等更高价或第二次确认。',
+      'condition 必须逐字复制上一轮 upgradeConditions 的完整数组项，包括标点、价格及复合条件；不得缩写、改写、拆分或合并。上一轮有 N 条，就按原顺序核对 N 条。复合条件的各部分进度写在 evidence 中；条件含位置要求而当前位置已延伸时，应承认突破部分已满足并说明位置变化，不改写旧条件。只是改走其他已确认路径、原路径尚未触发时用 pending 并解释路径替代，不把未发生当成结构失败。',
       'negativeEvidence 最多5项，每项 type 为 structure_weakening/breakout_failure/support_failure/short_term_weakening/momentum_exhaustion/structure_invalidated/other，detail 说明证据，isNew 布尔表示相对上一轮是否新增。结构变更必须说明原条件为何不再适用。completedConditions/pendingConditions 最多5条；previousConditions 最多3项；各正文最多200字，transitionReason 可为空，其余正文非空。证据未知不能编造成已满足。',
-      '零持仓固定输出：holding={status:"not_applicable",summary:"当前无持仓。"}；takeProfit={status:"not_applicable",summary:"当前无持仓，不适用。"}；stopLoss={status:"not_applicable",summary:"尚未持有，无需处理。"}。',
+      'negativeEvidence 只记录已经发生、实质否定建仓条件的证据；单纯涨幅较大、位置偏高及“如果以后跌破”的假设风险放在 userDecision.warning / risks，不得放进 negativeEvidence.other。没有实际否决证据时 negativeEvidence=[]。方向、核心事件和位置满足时，不因一般风险提示否定 entry_ready。',
+      '零持仓以下三个区块必须原样复制，summary 不得追加说明或改写；未来建仓后的条件性风险写在 warning 或 risks。固定输出：holding={status:"not_applicable",summary:"当前无持仓。"}；takeProfit={status:"not_applicable",summary:"当前无持仓，不适用。"}；stopLoss={status:"not_applicable",summary:"尚未持有，无需处理。"}。',
       '映射：wait_setup → positionDirection not_applicable/add_watch，category no_action/wait_confirmation；setup_forming → add_review，wait_confirmation；entry_ready → add_review，entry_review，addAssessment.status=add_review，headline/summary 明确“建仓条件已经满足”，pendingConditions 应为空；entry_extended → add_watch/add_review，wait_confirmation/entry_review（仍有有效窗口才用 entry_review）；setup_failed → not_applicable/add_watch，no_action。addAssessment 保持已有 wait/watch/add_review/avoid/not_applicable 枚举。',
       '既有 Plan、Plan validity、Runtime 是程序事实；当前路径及判断价位是 AI JUDGMENT，不得写回 Plan，也不把旧 Plan 当成唯一合法建仓条件。',
       `上一轮判断（只作承诺核对；以当前 canonical 持仓为准）：${JSON.stringify(previous?{entryDecision:previous.actionAssessment?.entryDecision||null,upgradeConditions:previous.actionAssessment?.upgradeConditions||[]}:null)}`
