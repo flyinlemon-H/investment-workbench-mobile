@@ -57,6 +57,8 @@
     if(!value||typeof value!=='object')return;
     for(const [key,item] of Object.entries(value)){
       const at=path+'.'+key;
+      // The optional typed entry contract validates its booleans and nested records itself.
+      if(path==='currentState.actionAssessment'&&key==='entryDecision')continue;
       if(STRING_FIELDS.has(key)&&typeof item!=='string'){errors.push(at+' 必须是字符串');continue}
       if(item&&typeof item==='object'){
         if(Array.isArray(item))item.forEach((row,i)=>{if(row&&typeof row==='object'&&!Array.isArray(row))validateStringTypes(row,errors,at+'['+i+']');else if(typeof row!=='string')errors.push(at+' 必须包含字符串或指定对象')});
@@ -74,8 +76,9 @@
     if(!sourceDiscussionVersion||sourceDiscussionVersion!==text(expected.sourceDiscussionVersion))errors.push('结论来源版本已过期或不一致');
     if(!stage||stage.length>40||/[\r\n]/.test(stage))errors.push('stage 必须是不超过40字的单行文字');
     if(!summary||summary.length>500)errors.push('summary 必须为1至500字');
-    exactFields(source.actionAssessment,['category','priority','headline','reasons','upgradeConditions','downgradeConditions'],'actionAssessment',errors);
-    const actionAssessment={category:text(actionSource.category),priority:text(actionSource.priority),headline:text(actionSource.headline),reasons:stringList(actionSource,'reasons',5,200,errors),upgradeConditions:stringList(actionSource,'upgradeConditions',3,200,errors),downgradeConditions:stringList(actionSource,'downgradeConditions',3,200,errors)};
+    exactFields(source.actionAssessment,['category','priority','headline','reasons','upgradeConditions','downgradeConditions',...(Object.prototype.hasOwnProperty.call(actionSource,'entryDecision')?['entryDecision']:[])],'actionAssessment',errors);
+    if(Object.prototype.hasOwnProperty.call(actionSource,'entryDecision'))errors.push(...Workbench.EntryDecision.validate(actionSource.entryDecision).errors);
+    const actionAssessment={...(Object.prototype.hasOwnProperty.call(actionSource,'entryDecision')?{entryDecision:clone(actionSource.entryDecision)}:{}),category:text(actionSource.category),priority:text(actionSource.priority),headline:text(actionSource.headline),reasons:stringList(actionSource,'reasons',5,200,errors),upgradeConditions:stringList(actionSource,'upgradeConditions',3,200,errors),downgradeConditions:stringList(actionSource,'downgradeConditions',3,200,errors)};
     if(!Workbench.ACTION_CATEGORIES.includes(actionAssessment.category))errors.push('category 为未知固定值');
     if(!Workbench.ACTION_PRIORITIES.includes(actionAssessment.priority))errors.push('priority 为未知固定值');
     if(!actionAssessment.headline||actionAssessment.headline.length>140||/[\r\n]/.test(actionAssessment.headline))errors.push('headline 必须为1至140字的单行文字');
@@ -207,7 +210,7 @@ function process(raw,options={}){
   }
   // Program-derived diagnostics, based only on the immutable import-time snapshot.
   // Never call this from import validation; unknown natural language is left alone.
-  function postImportDiagnostics(saved){
+  function postImportDiagnostics(saved,previous=null){
     const shares=saved?.references?.holding?.shares;
     if(!Number.isFinite(shares)||shares<0)return [];
     const prose=allNaturalText(saved),clauses=prose.split(/[\n。！？；;]/).map(text),diagnostics=[];
@@ -222,10 +225,10 @@ function process(raw,options={}){
     const heldStatus=d&&(['safe','caution','reduce_review','risk_control'].includes(d.holding?.status)||['hold','hold_no_add','reduce_review','risk_control'].includes(d.positionDirection?.status)||['watch','review'].includes(d.takeProfit?.status)||['watch','risk_control'].includes(d.stopLoss?.status));
     if(shares===0&&(positionText||heldStatus||['hold_watch','reduce_review','add_review','risk_control'].includes(saved.actionAssessment?.category)))diagnostics.push({code:'position_semantic_mismatch',severity:'warning',title:'仓位语义核对',message:'导入时程序记录为零持仓，但 AI 判断使用了持仓语义，请核对该判断。'});
     else if(shares>0&&(zeroText||d?.holding?.status==='not_applicable'||saved.actionAssessment?.category==='entry_review'))diagnostics.push({code:'position_semantic_mismatch',severity:'warning',title:'仓位语义核对',message:'导入时程序记录为有持仓，但 AI 判断使用了零持仓语义，请核对该判断。'});
-    return diagnostics;
+    return diagnostics.concat(Workbench.EntryDecision.evaluate(saved,previous,shares).diagnostics);
   }
-  function renderDiagnostics(saved){
-    const rows=postImportDiagnostics(saved);
+  function renderDiagnostics(saved,previous=null){
+    const rows=postImportDiagnostics(saved,previous);
     return rows.length?`<section class="discussion-post-import-diagnostics" aria-label="核对提示" style="margin:12px 0;padding:12px;border-left:3px solid #b88728;background:rgba(184,135,40,.08);overflow-wrap:anywhere"><b>核对提示</b>${rows.map(row=>`<div data-diagnostic="${escapeHtml(row.code)}"><strong>${escapeHtml(row.title)}</strong><p>${escapeHtml(row.message)}</p></div>`).join('')}</section>`:'';
   }
   function renderPreview(result,program={}){
@@ -233,7 +236,7 @@ function process(raw,options={}){
     const item=result.currentState,decision=item.userDecision,technicalAsOf=text(program.technicalAsOf)||'待程序确认',confirmedDate=text(program.confirmedDate)||'保存时由程序生成',actionLabels={risk_control:'风险控制',reduce_review:'减仓复核',hold_watch:'持有观察',wait_confirmation:'等待确认',add_review:'加仓复核',entry_review:'建仓复核',no_action:'暂不操作'},priorityLabels={high:'高优先级',medium:'中优先级',low:'低优先级'},attentionLabels={normal:'普通观察',focused:'重点观察',window:'临近窗口'},trendLabels={uptrend:'上升',downtrend:'下降',sideways:'震荡',recovery:'修复',rebound:'反弹',unclear:'不明确'},typeLabels={top:'顶部结构',bottom:'底部结构',breakout:'突破结构',pullback:'回踩结构',recovery:'修复结构',consolidation:'整理结构',none:'暂无明确结构',unclear:'结构不明确'},statusLabels={forming:'形成中',confirmed:'已确认',valid:'仍有效',broken:'已破坏',unclear:'不明确'};
     const trends=[`整体：${trendLabels[item.trendAssessment.overall]}`,...item.trendAssessment.timeframes.map(row=>`${row.timeframe}：${trendLabels[row.status]}｜${row.explanation}`)],structures=item.structureAssessment.map(row=>`${row.timeframe}：${typeLabels[row.type]}${statusLabels[row.status]}｜${row.shortReason}`);
     if(!decision)return `<div class="discussion-import-preview"><div class="discussion-preview-anchor"><b>程序锚点</b><span>技术日 ${escapeHtml(technicalAsOf)}</span><span>确认日 ${escapeHtml(confirmedDate)}</span></div><div class="discussion-preview-decision"><b>历史格式结论</b><strong>操作倾向：${escapeHtml(actionLabels[item.actionAssessment.category])}</strong><p>${escapeHtml(item.actionAssessment.headline)}</p></div><dl><dt>趋势</dt><dd>${list(trends)}</dd><dt>结构</dt><dd>${list(structures)}</dd><dt>核心结论</dt><dd>${escapeHtml(item.summary)}</dd></dl></div>`;
-    return `<div class="discussion-import-preview"><div class="discussion-preview-anchor"><b>程序锚点</b><span>技术日 ${escapeHtml(technicalAsOf)}</span><span>确认日 ${escapeHtml(confirmedDate)}</span></div><div class="discussion-preview-decision"><b>当前结论</b><strong>${escapeHtml(decision.headline)}</strong><p><b>仓位方向：</b>${escapeHtml(decision.positionDirection.summary)}</p><p><b>${decision.holding.status==='not_applicable'?'如果想建仓':'如果想加仓'}：</b>${escapeHtml(decision.addAssessment.summary)}</p><p><b>需要警惕：</b>${escapeHtml(decision.warning.summary)}</p></div><details><summary>判断依据</summary><dl><dt>操作复核</dt><dd>${escapeHtml(actionLabels[item.actionAssessment.category])} · ${escapeHtml(attentionLabels[item.attentionLevel])} · ${escapeHtml(priorityLabels[item.actionAssessment.priority])}</dd><dt>趋势</dt><dd>${list(trends)}</dd><dt>结构</dt><dd>${list(structures)}</dd><dt>当前重点</dt><dd>${list(item.focusPoints)}</dd><dt>与计划关系</dt><dd>${escapeHtml(item.planRelation.summary)}</dd><dt>核心结论</dt><dd>${escapeHtml(item.summary)}</dd><dt>置信度</dt><dd>${escapeHtml(item.confidence)}</dd></dl></details></div>`;
+    return `<div class="discussion-import-preview"><div class="discussion-preview-anchor"><b>程序锚点</b><span>技术日 ${escapeHtml(technicalAsOf)}</span><span>确认日 ${escapeHtml(confirmedDate)}</span></div>${Workbench.EntryDecision.render(item,program.holdingShares,escapeHtml)}<div class="discussion-preview-decision"><b>当前结论</b><strong>${escapeHtml(decision.headline)}</strong><p><b>仓位方向：</b>${escapeHtml(decision.positionDirection.summary)}</p><p><b>${decision.holding.status==='not_applicable'?'如果想建仓':'如果想加仓'}：</b>${escapeHtml(decision.addAssessment.summary)}</p><p><b>需要警惕：</b>${escapeHtml(decision.warning.summary)}</p></div><details><summary>判断依据</summary><dl><dt>操作复核</dt><dd>${escapeHtml(actionLabels[item.actionAssessment.category])} · ${escapeHtml(attentionLabels[item.attentionLevel])} · ${escapeHtml(priorityLabels[item.actionAssessment.priority])}</dd><dt>趋势</dt><dd>${list(trends)}</dd><dt>结构</dt><dd>${list(structures)}</dd><dt>当前重点</dt><dd>${list(item.focusPoints)}</dd><dt>与计划关系</dt><dd>${escapeHtml(item.planRelation.summary)}</dd><dt>核心结论</dt><dd>${escapeHtml(item.summary)}</dd><dt>置信度</dt><dd>${escapeHtml(item.confidence)}</dd></dl></details></div>`;
   }
   function list(items){return items.length?`<ul>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:'无'}
   function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}

@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "2c84d7190fdd7df735a1c107ac56b6077891be2a",
-  "assetVersion": "discussion-permissive-import-diagnostics-v1-20260912",
-  "dataMode": "Discussion-only permissive judgment import with structural safety and import-time holding diagnostics; preserved raw AI content, StrictAiJson, Plan contracts and V4 judgment/user decision separation; no automatic AI or execution",
+  "sourceCommit": "ed0544b5a1eb81c87f2b496d85a1bd56c1e6daea",
+  "assetVersion": "entry-decision-path-engine-v1-20260919",
+  "dataMode": "Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 72297,
-      "sha256": "bc5dd989fec8256db4aaa54e36ea078cabe3fcbacc07048e6d72fc08f6fa390d"
+      "bytes": 71222,
+      "sha256": "83322bb9dfea66a7775104c4f2bd3c7633bf5450e4e386e02472b01524f34f70"
     },
     {
       "path": "social_posts.json",
@@ -145,8 +145,8 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Discussion structural import contract with permissive AI content and snapshot-derived post-import diagnostics",
-      "bytes": 33302,
-      "sha256": "2035f2b6a6c9db73af4ad01affa584561af872b9b1f7bf65d482e2e205bb2e13"
+      "bytes": 34038,
+      "sha256": "998b9aa0e9a6fac6bc0eeed04a02a8f4367378bdb82ff67c6b006d3f0f665179"
     },
     {
       "path": "src/discussion-v4.js",
@@ -157,8 +157,14 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 55444,
-      "sha256": "557fae4c66f71097ba39a602199c69a3f067e3283ba718c043235c9c896f65e7"
+      "bytes": 56240,
+      "sha256": "cdf48df1cd1078ab5d05e0a68d2beacd4195fbc7d6bae606a66dc15a470c4cb2"
+    },
+    {
+      "path": "src/entry-decision.js",
+      "role": "browser runtime dependency",
+      "bytes": 14052,
+      "sha256": "fc15a28f61cd9d11932fbf05b3c44a393ad5db7b79ba17b15d4f2c92c42fe86f"
     },
     {
       "path": "src/homepage-attention.js",
@@ -451,8 +457,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 635851,
-      "sha256": "bcf0b1b177841ffbb40af56b487a114e7c80331237628c6e5b4567ea8d75f2e2"
+      "bytes": 636509,
+      "sha256": "b948fe79aa39056ac026652ac19aefe7d83c1d4a00a3ced36e3bc286de200dac"
     },
     {
       "path": "src/universe-auto-add.js",

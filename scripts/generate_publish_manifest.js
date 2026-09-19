@@ -65,6 +65,7 @@ roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestrat
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
 
 const paths=[...new Set([
+  'src/entry-decision.js',
   'src/plan-context-contract.js',
   'src/discussion-v4.js',
   'src/plan-v4.js',
@@ -128,8 +129,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'discussion-permissive-import-diagnostics-v1-20260912',
-  dataMode:'Discussion-only permissive judgment import with structural safety and import-time holding diagnostics; preserved raw AI content, StrictAiJson, Plan contracts and V4 judgment/user decision separation; no automatic AI or execution',
+  assetVersion:'entry-decision-path-engine-v1-20260919',
+  dataMode:'Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

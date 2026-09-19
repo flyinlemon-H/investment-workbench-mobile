@@ -103,9 +103,10 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
 
 test('Plan Discussion V4 release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='discussion-permissive-import-diagnostics-v1-20260912';
+  const version='entry-decision-path-engine-v1-20260919';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'src/entry-decision.js',
     'src/plan-context-contract.js',
     'src/discussion-v4.js',
     'src/plan-v4.js',
