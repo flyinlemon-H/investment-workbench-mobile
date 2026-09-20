@@ -4,8 +4,8 @@
   else root.EntryDecision=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
   'use strict';
-  const STATES=Object.freeze({wait_setup:'尚未形成建仓结构',setup_forming:'建仓条件正在形成',entry_ready:'建仓条件已满足',entry_extended:'已明显延伸，建仓位置优势下降',setup_failed:'本轮建仓结构已失败'});
-  const PATHS=Object.freeze({pullback_confirmation:'回踩确认',breakout_confirmation:'突破确认',platform_breakout:'平台整理后二次突破',none:'暂无明确路径'});
+  const STATES=Object.freeze({wait_setup:'尚未形成建仓条件',setup_forming:'建仓条件正在形成',entry_ready:'建仓条件已成立',entry_extended:'建仓逻辑仍成立，但当前位置已明显延伸',setup_failed:'本轮建仓结构已失效'});
+  const PATHS=Object.freeze({pullback_confirmation:'回踩确认',breakout_confirmation:'突破确认',platform_breakout:'平台后二次突破',none:'暂无明确建仓路径'});
   const NEGATIVES=['structure_weakening','breakout_failure','support_failure','short_term_weakening','momentum_exhaustion','structure_invalidated','other'];
   const own=(v,k)=>Object.prototype.hasOwnProperty.call(v||{},k);
   function validate(value){
@@ -47,7 +47,7 @@
     const explainedExtension=expectedState==='entry_extended'&&entry.state==='entry_extended'&&entry.transitionReason.trim();
     if(satisfied&&!newNegative&&entry.pendingConditions.length&&!explainedExtension)warn('entry_new_requirement','原升级条件已满足，但仍列出待确认条件；新增要求必须说明新增负面证据或结构变化。');
     if(entry.state==='entry_ready'&&(!confirmed||negative||entry.position!=='acceptable'||entry.pendingConditions.length))warn('entry_ready_conflict','建仓条件已满足与所列方向、确认事件、位置或风险证据不一致。');
-    if(entry.state==='entry_ready'&&[current.userDecision?.headline,current.userDecision?.addAssessment?.summary,current.actionAssessment.headline].some(s=>/^(?:当前|仍需|还需)?(?:继续等待|等待进一步确认|再等一次回踩)/.test(s||'')))warn('entry_ready_wording_conflict','状态为建仓条件已满足，但结论仍要求等待确认，请核对原判断。');
+    if(entry.state==='entry_ready'&&[current.userDecision?.headline,current.userDecision?.positionDirection?.summary,current.userDecision?.addAssessment?.summary,current.actionAssessment.headline].some(s=>/^(?:当前|仍需|还需)?(?:暂不建仓|继续(?:空仓)?观察|继续等待|等待(?:进一步)?确认|再评估建仓|再等一次回踩)/.test(s||'')))warn('entry_ready_wording_conflict','状态为建仓条件已满足，但结论仍要求等待确认，请核对原判断。');
     if(entry.state==='setup_failed'&&!negative)warn('entry_failure_unsupported','结构失败缺少明确负面证据；涨幅大或位置延伸不能单独否决建仓。');
     if(entry.state==='entry_extended'&&entry.position!=='extended')warn('entry_extension_unsupported','位置延伸状态需要说明当前位置已明显偏离合理结构。');
     if(priorEntry?.state==='entry_ready'&&['wait_setup','setup_forming','setup_failed'].includes(entry.state)&&!newNegative)warn('entry_downgrade_unexplained','从建仓条件已满足降级，需要说明新增的实质负面证据。');
@@ -84,8 +84,14 @@
   function render(current,shares,escape){
     const entry=current?.actionAssessment?.entryDecision;
     if(shares!==0||!entry||!validate(entry).ok)return '';
-    const rows=(label,items)=>items.length?`<div><b>${label}：</b><ul>${items.map(s=>`<li>${escape(s)}</li>`).join('')}</ul></div>`:'';
-    return `<section class="discussion-entry-decision" style="padding:12px;border:1px solid var(--teal,#1f5c5b);border-radius:8px;overflow-wrap:anywhere" aria-label="当前建仓判断"><b>当前建仓状态：${escape(STATES[entry.state])}</b><div>当前路径：${escape(PATHS[entry.path])} · AI 判断</div>${entry.state==='entry_ready'?'<p>当前已经满足首次建仓复核条件。</p>':''}${rows('已完成',entry.completedConditions)}${rows('尚待确认',entry.pendingConditions)}${entry.transitionReason?`<div>路径变化：${escape(entry.transitionReason)}</div>`:''}</section>`;
+    const upgrades=current.actionAssessment.upgradeConditions||[];
+    // Presentation of the AI's declared upgrade commitments, not a technical evaluation.
+    // Explicit intermediate conditions must never acquire a final-outcome promise in the UI.
+    const intermediate=[entry.transitionReason,...entry.pendingConditions,...upgrades].some(s=>/(?:中间|阶段性)(?:观察|确认|升级)?(?:条件|信号)|(?:不是|并非|尚非|不构成).{0,8}(?:(?:最终|完整)(?:升级)?条件|建仓条件)|(?:仅|只)(?:是|属|为|用于).{0,8}(?:观察|中间|部分)(?:条件|信号|步骤)/.test(s));
+    const finalUpgrade=entry.state==='setup_forming'&&upgrades.length>0&&!intermediate;
+    const rows=(label,items,kind='')=>`<div class="discussion-entry-conditions ${kind}"><b>${label}：</b>${items.length?`<ul>${items.map(s=>`<li>${kind==='is-complete'?'<span aria-hidden="true">✓</span>':kind==='is-pending'?'<span aria-hidden="true">○</span>':''}<span>${escape(s)}</span></li>`).join('')}</ul>`:`<p class="card-note">${entry.state==='entry_ready'&&kind==='is-pending'?'无待满足条件':'AI 未列出'+label+'条件'}</p>`}</div>`;
+    const failure=entry.state==='setup_failed'?(entry.negativeEvidence.length?entry.negativeEvidence.map(e=>e.detail):current.actionAssessment.reasons||[]):[];
+    return `<section class="discussion-entry-decision" data-entry-state="${entry.state}" aria-label="建仓决策"><div class="discussion-entry-title">建仓决策 <span>AI 判断</span></div><div class="discussion-entry-status"><span>当前状态：</span><h3>${escape(STATES[entry.state])}</h3></div><div class="discussion-entry-path"><b>当前路径：</b>${escape(PATHS[entry.path])}</div>${rows('已完成',entry.completedConditions,'is-complete')}${rows('待满足',entry.pendingConditions,'is-pending')}${finalUpgrade?'<div class="discussion-entry-outcome"><b>满足后：</b><strong>→ 建仓条件成立</strong><span>对应 AI 已定义的完整升级条件</span></div>':''}${failure.length?rows('失效依据',failure):''}${upgrades.length&&entry.state==='setup_forming'?`<details class="discussion-entry-upgrades"><summary>查看 AI 升级条件原文${intermediate?'（含中间条件）':''}</summary>${rows('升级条件',upgrades)}</details>`:''}${entry.transitionReason?`<details class="discussion-entry-transition"><summary>路径说明 · AI 原文</summary><p>${escape(entry.transitionReason)}</p></details>`:''}</section>`;
   }
   return Object.freeze({STATES,PATHS,validate,example,evaluate,rules,render});
 });
