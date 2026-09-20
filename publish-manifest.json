@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "5104931016efd3935b96c46414a3ce0695120a49",
-  "assetVersion": "entry-decision-path-engine-v1-fix2-20260920",
+  "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
+  "assetVersion": "entry-decision-clarity-v1-20260920",
   "dataMode": "Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 71642,
-      "sha256": "4ebc8423b71afb2ab64696c5f45cc9aa75059c50d5a64aca0fe8a3d565968f25"
+      "bytes": 73274,
+      "sha256": "8f7138a64c9cffaeb7edf1a7ce6c6df5259d15755bba9c8c59f318b9673b0820"
     },
     {
       "path": "social_posts.json",
@@ -145,8 +145,8 @@
     {
       "path": "src/discussion-state-contract.js",
       "role": "Discussion structural import contract with permissive AI content and snapshot-derived post-import diagnostics",
-      "bytes": 34038,
-      "sha256": "998b9aa0e9a6fac6bc0eeed04a02a8f4367378bdb82ff67c6b006d3f0f665179"
+      "bytes": 34314,
+      "sha256": "082e2aa44d45c53b541cb47c357b7601a20cd799792c3eb226b441fc3d26e1bd"
     },
     {
       "path": "src/discussion-v4.js",
@@ -163,8 +163,8 @@
     {
       "path": "src/entry-decision.js",
       "role": "browser runtime dependency",
-      "bytes": 15756,
-      "sha256": "7a4568a3674d76c163685a6d21e4faeb4ccc671e945fc74ecc5578b5217999ce"
+      "bytes": 17595,
+      "sha256": "771fb490ec9c1a07e4ad29b2a8d40898bc360ac9204086a2abec7dbad2683e4e"
     },
     {
       "path": "src/homepage-attention.js",
@@ -457,8 +457,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 636509,
-      "sha256": "b948fe79aa39056ac026652ac19aefe7d83c1d4a00a3ced36e3bc286de200dac"
+      "bytes": 636998,
+      "sha256": "6ce54bc0b03cafc78ed03e09caf5f776140693c9eef67075e5c429b66abc4ee6"
     },
     {
       "path": "src/universe-auto-add.js",
