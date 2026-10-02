@@ -123,13 +123,13 @@ test('critical or stale-tab save failure preserves the previous Runtime atomical
 });
 
 test('raw import rejects malformed Runtime before normalization can drop or repair it',()=>{
-  const context={console,PlanContextContract:require('../src/plan-context-contract'),PlanV2:Plan,PlanRuntime:Runtime,normalize:value=>value,structuredClone:clone};context.globalThis=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(root,'src/import-export.js'),'utf8'),context);
+  const context={console,PlanContextContract:require('../src/plan-context-contract'),PlanV2:Plan,PlanRuntime:Runtime,normalize:value=>value,structuredClone:clone};context.globalThis=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));vm.runInContext(fs.readFileSync(path.join(root,'src/import-export.js'),'utf8'),context);
   context.payload={stocks:[],planRuntimeStates:{schemaVersion:Runtime.STORE_SCHEMA_VERSION,byPlanId:{bad:{schemaVersion:Runtime.SCHEMA_VERSION,planId:'bad'}}}};
   assert.throws(()=>vm.runInContext('createValidatedCandidateSnapshot(payload)',context),/Runtime|字段|history/);
 });
 
 test('canonical storage validation accepts valid or orphan Runtime and rejects malformed records',async()=>{
-  const plan=Plan.createWatchPlan(definition(),{now:'2026-09-04T00:00:00.000Z'}),first=await apply(state([plan]),plan.id,judgment()),context={console,PlanContextContract:require('../src/plan-context-contract'),PlanV2:Plan,PlanRuntime:Runtime,SymbolIdentity:require('../src/symbol-identity.js')};context.globalThis=context;vm.createContext(context);for(const file of ['src/storage/storage-errors.js','src/storage/storage-validation.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
+  const plan=Plan.createWatchPlan(definition(),{now:'2026-09-04T00:00:00.000Z'}),first=await apply(state([plan]),plan.id,judgment()),context={console,PlanContextContract:require('../src/plan-context-contract'),PlanV2:Plan,PlanRuntime:Runtime,SymbolIdentity:require('../src/symbol-identity.js')};context.globalThis=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));for(const file of ['src/storage/storage-errors.js','src/storage/storage-validation.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context);
   context.payload=JSON.stringify(first.state);assert.doesNotThrow(()=>vm.runInContext('InvestmentStorage.validation.validateState(JSON.parse(payload))',context));const orphan=clone(first.state);orphan.stocks[0].plans=[];context.payload=JSON.stringify(orphan);assert.doesNotThrow(()=>vm.runInContext('InvestmentStorage.validation.validateState(JSON.parse(payload))',context));orphan.planRuntimeStates.byPlanId[plan.id].runtimeRevision=0;context.payload=JSON.stringify(orphan);assert.throws(()=>vm.runInContext('InvestmentStorage.validation.validateState(JSON.parse(payload))',context));
 });
 
@@ -139,6 +139,6 @@ test('Runtime-only canonical commits produce an empty Stock Universe diff',async
 });
 
 test('pre-Phase2 normalizer preserves the unknown top-level Runtime branch on routine save',()=>{
-  const context={console};context.globalThis=context;context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(root,'src/state.js'),'utf8'),context);
+  const context={console};context.globalThis=context;context.window=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));vm.runInContext(fs.readFileSync(path.join(root,'src/state.js'),'utf8'),context);
   const sentinel={schemaVersion:'plan-runtime.store.v1',byPlanId:{keep:{sentinel:true}}};context.payload=JSON.stringify({stocks:[],updatedAt:1,planRuntimeStates:sentinel});const result=JSON.parse(vm.runInContext('JSON.stringify(normalize(JSON.parse(payload)))',context));assert.deepEqual(result.planRuntimeStates,sentinel);
 });

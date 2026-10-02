@@ -12,7 +12,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 function loadRuntime(){
   const context={console,window:{},globalThis:null};
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext('this.volumeRuntime={volumeScaleForProvider,normalizeVolumeComparison,updateTechnicalDataFromPriceHistory};',context);
   return context.volumeRuntime;
@@ -61,7 +61,7 @@ test('P4 marks an unproven provider scale unavailable instead of comparing raw v
 
 test('P4 published bridge no longer emits the known fake minus-95-percent scale signal',()=>{
   const context={window:{}};
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('data/market_data_bridge.js'),context);
   const incoming=context.window.MARKET_DATA_BRIDGE.stocks.find(stock=>String(stock.symbol).toUpperCase()==='601869.SS');
   assert(incoming);

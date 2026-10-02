@@ -13,7 +13,10 @@ const protectedFacts=()=>state.stocks.map(s=>({id:s.id,shares:s.shares,avgCost:s
 const planState=()=>JSON.stringify({plans:state.stocks.map(s=>s.plans),v4:state.planDefinitionsV4});
 async function run(browser,viewport,timing){
  const name=viewport.width+'-'+timing,dir=path.join(output,name);fs.mkdirSync(dir,{recursive:true});
- const context=await browser.newContext({viewport}),page=await context.newPage(),network=[],errors=[];let release;
+ const context=await browser.newContext({viewport});
+ // Exercise this historical current-data fixture at its own date, including reloads.
+ await context.addInitScript(()=>{const RealDate=Date,offset=new RealDate('2026-09-09T08:00:00Z').getTime()-RealDate.now();globalThis.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[RealDate.now()+offset]))}static now(){return RealDate.now()+offset}}});
+ const page=await context.newPage(),network=[],errors=[];let release;
  const gate=new Promise(r=>release=r);page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.dismiss());
  await context.addInitScript(()=>{globalThis.rawTestRenders=[];const original=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');Object.defineProperty(Element.prototype,'innerHTML',{...original,set(v){const stack=new Error().stack;original.set.call(this,v);if(this.id==='main')rawTestRenders.push({stack,value:document.getElementById('v4PlanInput')?.value??null})}})});
  await context.route('**/*',async route=>{const req=route.request(),url=new URL(req.url()),allowed=url.origin===new URL(base).origin&&['GET','HEAD'].includes(req.method());network.push({url:url.origin+url.pathname,method:req.method(),allowed,ai:/deepseek|openai\.com|anthropic|chat\/completions|\/api\/ai(?:\/|$)/i.test(url.href)});if(!allowed)return route.abort();if(/\/social_(posts|summary)\.json$/.test(url.pathname)){const response=await route.fetch();await gate;return route.fulfill({response}).catch(()=>{})}return route.continue()});

@@ -7,6 +7,8 @@ async function applyMarketDataBridge(options={}){
     if(!symbol)return;
     const stock=state.stocks.find(item=>window.SymbolIdentity.canonicalMarketSymbol(item.code||item.symbol)===symbol);
     if(!stock)return;
+    // A later failed/static delivery cannot replace an acknowledged valid result.
+    if(stock.marketDataFreshness?.resultVersion&&(incoming.marketDataFreshness?.kline_status==='failed'||String(incoming.marketDataFreshness?.last_trade_date||'')<String(stock.marketDataFreshness.last_trade_date||'')))return;
     const currentFetched=String(stock.marketDataFreshness&&stock.marketDataFreshness.fetched_at||'');
     const nextFetched=String(incoming.marketDataFreshness&&incoming.marketDataFreshness.fetched_at||'');
     if(currentFetched&&nextFetched&&currentFetched>=nextFetched)return;

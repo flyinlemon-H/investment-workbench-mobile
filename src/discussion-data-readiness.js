@@ -1,8 +1,8 @@
 (function(root,factory){
   const node=typeof module==='object'&&module.exports;
-  const api=factory(()=>node?require('./portfolio-review-context.js'):root.PortfolioReviewContext,()=>node?require('./universe-handoff.js'):root.UniverseHandoff,()=>node?require('./plan-v2.js'):root.PlanV2);
+  const api=factory(()=>node?require('./portfolio-review-context.js'):root.PortfolioReviewContext,()=>node?require('./universe-handoff.js'):root.UniverseHandoff,()=>node?require('./plan-v2.js'):root.PlanV2,()=>node?require('./technical-freshness.js'):root.TechnicalFreshness);
   if(node)module.exports=api;else root.DiscussionDataReadiness=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(getPortfolio,getUniverse,getPlan){
+})(typeof globalThis!=='undefined'?globalThis:this,function(getPortfolio,getUniverse,getPlan,getFreshness){
   'use strict';
   const text=value=>String(value??'').trim();
   const obj=value=>value&&typeof value==='object'?value:{};
@@ -19,12 +19,7 @@
   ].join('\n');
   function technical(stock,options={}){
     const portfolio=getPortfolio(),universe=getUniverse(),facts=portfolio.compactTechnical(stock),check=portfolio.technicalConsistency(stock),raw=obj(stock.technicalData),bridge=obj(stock.marketDataFreshness);
-    let status=({current:'current',outdated:'stale',inconsistent:'anomaly',unavailable:'unavailable'})[facts.todayRelevance]||'unknown';
-    if(!check.historyDate||!check.invariantComplete)status='unavailable';
-    if(!check.consistent||raw.technicalDataStatus==='anomaly')status='anomaly';
-    if(check.historyDate&&bridge.last_trade_date&&!universe.validBridgeFacts({symbol:stock.code||stock.symbol,priceHistory:stock.priceHistory,marketDataFreshness:bridge,technicalIndicators:stock.technicalIndicators}))status='anomaly';
-    if(status==='current'&&bridge.kline_status==='stale')status='stale';
-    if(status==='current'&&bridge.kline_status==='failed')status='unknown';
+    let status=getFreshness().evaluateTechnicalFreshness(stock,{...options,consistent:check.consistent}).status;
     if(status==='unavailable'&&universe.isPending(options.state||{},stock.code||stock.symbol))status='pending';
     const labels={current:`行情数据正常 · 日K截至 ${check.technicalAsOf.slice(5)}`,stale:'行情数据待更新 · 当前技术判断不能作为最新依据',unavailable:check.historyDate?'技术快照不完整 · 当前技术判断受限':'缺少完整日K · 请先补齐行情数据',anomaly:'行情数据异常 · 当前技术判断受限',pending:'等待行情覆盖 · 当前技术判断受限',unknown:'行情状态待确认 · 当前技术判断受限'};
     return {status,ready:status==='current',asOf:check.technicalAsOf||null,latestCompleteBar:check.historyDate||null,indicatorAsOf:text(stock.technicalIndicators&&stock.technicalIndicators.last_trade_date)||null,programStatus:text(raw.technicalDataStatus)||'unavailable',marketStatus:text(bridge.kline_status)||'unknown',dataQuality:facts.dataQuality,label:labels[status],workspace:'technical',actionLabel:'查看行情 / 检查同步状态',actionNote:'完整日K由电脑端行情流程生成；此处查看行情及同步状态，手机浏览器不会直接生成日K。'};

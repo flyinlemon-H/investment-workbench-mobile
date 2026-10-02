@@ -23,6 +23,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
+      - name: Install pinned regression dependencies
+        run: npm ci
+      - name: Preserve production baseline and validate Orchestrator
+        run: npm run test:production-baseline
       - name: Validate and stage only browser assets
         run: node scripts/prepare_pages_artifact.js
       - uses: actions/upload-pages-artifact@v4

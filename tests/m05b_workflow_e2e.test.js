@@ -14,7 +14,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 function loadRuntime(){
   const context={console,window:{},globalThis:null,setTimeout:()=>0,clearTimeout:()=>{}};
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext(read('src/ui-render.js'),context,{filename:'ui-render.js'});
   vm.runInContext('this.runtime={validator:validateSingleStockTechnicalReview,apply:applyTechnicalReviewToStock,updateFacts:updateTechnicalDataFromPriceHistory,normalizeVolume:normalizeVolumeComparison};',context);

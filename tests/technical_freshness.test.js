@@ -13,7 +13,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 function loadRuntime(){
   const context={console,window:{},globalThis:null};
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext('this.freshnessRuntime={normalizePriceHistory,updateTechnicalDataFromPriceHistory,technicalFreshnessStatus,latestCompletePriceBar};',context);
   return context.freshnessRuntime;

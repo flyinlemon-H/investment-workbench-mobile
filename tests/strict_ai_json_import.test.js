@@ -190,7 +190,7 @@ test('Discussion Archive parser and contract failures are distinct and always pr
 function legacyImportRuntime(){
   const context={console,window:null,globalThis:null,setTimeout:()=>0,clearTimeout:()=>{},structuredClone,alert:()=>{}};
   context.globalThis=context;context.window=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/symbol-identity.js'),context,{filename:'symbol-identity.js'});
   vm.runInContext(read('src/strict-ai-json.js'),context,{filename:'strict-ai-json.js'});
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});

@@ -45,7 +45,7 @@ function renderStatus(state,{userAgent='fixture'}={}){
     clearTimeout:()=>{}
   };
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext(read('src/ui-render.js'),context,{filename:'ui-render.js'});
   vm.runInContext("state=fixture;currentTab='tools';detailStockId=null;renderPcSyncStatus();",context);

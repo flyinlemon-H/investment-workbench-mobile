@@ -1,0 +1,383 @@
+{
+  "review": "resumed-read-only",
+  "project": {
+    "id": "fntslvdxnupmdljnadec",
+    "ref": "fntslvdxnupmdljnadec",
+    "organization_id": "pkmkmqhkbgwnsvvopkgx",
+    "organization_slug": "pkmkmqhkbgwnsvvopkgx",
+    "name": "investment-workbench",
+    "region": "ap-southeast-1",
+    "status": "ACTIVE_HEALTHY",
+    "database": {
+      "host": "db.fntslvdxnupmdljnadec.supabase.co",
+      "version": "17.6.1.141",
+      "postgres_engine": "17",
+      "release_channel": "ga"
+    },
+    "created_at": "2026-07-10T07:31:45.622333Z"
+  },
+  "migrations": {
+    "migrations": [
+      {
+        "version": "20260903132654",
+        "name": "stock_universe_auto_add_v1a"
+      },
+      {
+        "version": "20260903132704",
+        "name": "stock_universe_private_rpc_boundary"
+      }
+    ]
+  },
+  "capturedAt": "2026-10-02T09:02:09.39983+00:00",
+  "advisors": {
+    "lints": [
+      {
+        "name": "anon_security_definer_function_executable",
+        "title": "Public Can Execute SECURITY DEFINER Function",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects `SECURITY DEFINER` functions that are callable without signing in. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if it is not meant to be public.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Function `public.rls_auto_enable()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/rls_auto_enable`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "rls_auto_enable",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-02T09:02:13.186Z"
+          }
+        ]
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "title": "Signed-In Users Can Execute SECURITY DEFINER Function",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects `SECURITY DEFINER` functions that are callable by signed-in users. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if signed-in users should not call it.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Function `public.rls_auto_enable()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/rls_auto_enable`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "rls_auto_enable",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-02T09:02:13.186Z"
+          }
+        ]
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "title": "Leaked Password Protection Disabled",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Leaked password protection is currently disabled.",
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+            "metadata": {
+              "type": "auth",
+              "entity": "Auth"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "organization": {
+    "id": "pkmkmqhkbgwnsvvopkgx",
+    "name": "flyinlemon-H's Org",
+    "plan": "free",
+    "tier": "tier_free",
+    "opt_in_tags": [],
+    "allowed_release_channels": [
+      "ga",
+      "preview"
+    ]
+  },
+  "deploymentMetadata": {
+    "ledger": [
+      {
+        "name": "stock_universe_auto_add_v1a",
+        "version": "20260903132654",
+        "statementsMd5": "ea140f2862d4aa615e3429defb5a19be",
+        "statementCount": 1
+      },
+      {
+        "name": "stock_universe_private_rpc_boundary",
+        "version": "20260903132704",
+        "statementsMd5": "387b5e4eed8246aa197cdeefba5caded",
+        "statementCount": 1
+      }
+    ],
+    "schemaCreate": [
+      {
+        "role": "authenticated",
+        "schema": "extensions",
+        "canCreate": false
+      },
+      {
+        "role": "anon",
+        "schema": "extensions",
+        "canCreate": false
+      },
+      {
+        "role": "authenticated",
+        "schema": "universe_private",
+        "canCreate": false
+      },
+      {
+        "role": "anon",
+        "schema": "universe_private",
+        "canCreate": false
+      },
+      {
+        "role": "authenticated",
+        "schema": "analysis_private",
+        "canCreate": false
+      },
+      {
+        "role": "anon",
+        "schema": "analysis_private",
+        "canCreate": false
+      },
+      {
+        "role": "authenticated",
+        "schema": "public",
+        "canCreate": false
+      },
+      {
+        "role": "anon",
+        "schema": "public",
+        "canCreate": false
+      }
+    ],
+    "ledgerColumns": [
+      {
+        "data_type": "text",
+        "column_name": "version",
+        "is_nullable": "NO",
+        "column_default": null
+      },
+      {
+        "data_type": "ARRAY",
+        "column_name": "statements",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "data_type": "text",
+        "column_name": "name",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "data_type": "text",
+        "column_name": "created_by",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "data_type": "text",
+        "column_name": "idempotency_key",
+        "is_nullable": "YES",
+        "column_default": null
+      },
+      {
+        "data_type": "ARRAY",
+        "column_name": "rollback",
+        "is_nullable": "YES",
+        "column_default": null
+      }
+    ],
+    "ledgerConstraints": [
+      "UNIQUE (idempotency_key)",
+      "PRIMARY KEY (version)"
+    ]
+  },
+  "productionWrites": [],
+  "authChanges": [],
+  "productionCredentialsCreated": 0,
+  "productionTasksCreated": 0,
+  "auth": {
+    "capturedAt": "2026-10-02T09:03:20.631Z",
+    "projectRef": "fntslvdxnupmdljnadec",
+    "authStatus": 200,
+    "authSettings": {
+      "external": {
+        "anonymous_users": false,
+        "apple": false,
+        "azure": false,
+        "bitbucket": false,
+        "discord": false,
+        "facebook": false,
+        "snapchat": false,
+        "figma": false,
+        "fly": false,
+        "github": false,
+        "gitlab": false,
+        "google": false,
+        "keycloak": false,
+        "kakao": false,
+        "linkedin": false,
+        "linkedin_oidc": false,
+        "notion": false,
+        "spotify": false,
+        "slack": false,
+        "slack_oidc": false,
+        "workos": false,
+        "twitch": false,
+        "twitter": false,
+        "email": true,
+        "phone": false,
+        "zoom": false
+      },
+      "disable_signup": false,
+      "mailer_autoconfirm": false,
+      "phone_autoconfirm": false,
+      "sms_provider": "twilio",
+      "saml_enabled": false,
+      "saml_private_key_next_configured": true,
+      "passkeys_enabled": false
+    },
+    "profileProbeStatus": 401,
+    "profileProbe": {
+      "message": "Secret API key required",
+      "hint": "Only secret API keys can be used for this endpoint."
+    }
+  },
+  "apiProfile": [
+    {
+      "label": "schema_exposure",
+      "status": 406,
+      "body": {
+        "code": "PGRST106",
+        "details": null,
+        "hint": "Only the following schemas are exposed: public, graphql_public",
+        "message": "Invalid schema: market_private"
+      }
+    },
+    {
+      "label": "legacy_queue_anon_metadata_only",
+      "status": 200,
+      "body": []
+    }
+  ],
+  "frontend": {
+    "capturedAt": "2026-10-02T09:13:14.607Z",
+    "production": {
+      "assetVersion": "entry-decision-clarity-v1-20260920",
+      "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
+      "hasOrchestrator": false,
+      "sharedFreshnessStatus": 404
+    },
+    "reviewed": {
+      "assetVersion": "market-data-orchestrator-v1-20261002",
+      "sourceCommit": "4818a0fce774010504074709a664352057d23055",
+      "assets": 89,
+      "manifestSha256": "77d6a812512626b4470afb4f766563629ec81b5a26c7d83c51d9e69817c6cd53"
+    }
+  },
+  "localDryDiff": {
+    "kind": "local catalog reconstruction; no production data",
+    "delta": {
+      "tables": 3,
+      "indexes": 8,
+      "functions": 5,
+      "policies": 3
+    },
+    "existingDefinitionsPoliciesGrantsPreserved": true,
+    "existingLedgerRowsPreserved": true,
+    "newLedgerVersions": [
+      "20261002020030",
+      "20261002021340"
+    ],
+    "eventTriggerOrdinaryCallRejected": true
+  },
+  "finalReadOnly": [
+    {
+      "checked_at": "2026-10-02 09:19:04.812247+00",
+      "ledger": [
+        {
+          "name": "stock_universe_auto_add_v1a",
+          "version": "20260903132654"
+        },
+        {
+          "name": "stock_universe_private_rpc_boundary",
+          "version": "20260903132704"
+        }
+      ],
+      "market_schema_absent": true,
+      "market_rpcs_absent": true
+    }
+  ],
+  "verification": {
+    "jsSqlBaseline": 1106,
+    "reviewTests": 7,
+    "uniqueJsSqlTotal": 1113,
+    "python": 27,
+    "viewports": [
+      "1280x900",
+      "390x844",
+      "360x800"
+    ],
+    "targetedTestsIncludingOverlap": 19,
+    "previousTestProjectRemoteChecks": 55,
+    "productionAcceptanceExecuted": false
+  },
+  "limitations": [
+    "Local catalog reconstruction is not a production database clone; Auth/digest are scaffolded, non-relevant hosted event triggers are not reproduced.",
+    "Public effective Auth settings and advisor were read; complete private SMTP/password administration settings were not fetched.",
+    "Deployment SQL is generated only, never executed remotely.",
+    "Future deployment requires new explicit authorization, verified target connection, fresh baseline, recoverable backup, complete frontend release and isolated acceptance."
+  ],
+  "legacyRisks": [
+    {
+      "object": "public.input_queue",
+      "finding": "Pre-existing anonymous SELECT/INSERT/UPDATE grants and permissive policies; outside feature call path; unchanged."
+    },
+    {
+      "object": "public.rls_auto_enable()",
+      "finding": "Advisor warns about ordinary EXECUTE; function returns event_trigger, ordinary invocation rejected in local replay; unchanged."
+    },
+    {
+      "object": "Auth",
+      "finding": "Leaked password protection disabled; current organization Free; NON_BLOCKING_SECURITY_IMPROVEMENT."
+    },
+    {
+      "object": "migration ledger",
+      "finding": "analysis_private objects exist without corresponding ledger migration; do not run full repository db push."
+    }
+  ],
+  "release": {
+    "file": "supabase/review/market_data_orchestrator_production.sql",
+    "sha256": "a2bf856a1074df9282ce4b646b3b1b842244174aac729e5a08f9045037460387",
+    "transaction": "M1 -> M2 -> postchecks -> exactly two ledger entries -> COMMIT",
+    "newLedgerVersions": [
+      "20261002020030",
+      "20261002021340"
+    ],
+    "executed": false
+  },
+  "finalRecommendation": "READY_FOR_PRODUCTION_DEPLOY"
+}

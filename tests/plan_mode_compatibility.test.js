@@ -9,7 +9,7 @@ const stock=plans=>({id:'fixture',code:'600000.SS',name:'兼容性测试',type:'
 async function runtime(plans=[]){
   const fields=new Map(),alerts=[],saved=[];let fail=false;
   const context={console,TextEncoder,Uint8Array,ArrayBuffer,AbortController,crypto:require('node:crypto').webcrypto,setTimeout:()=>0,clearTimeout(){},alert:msg=>alerts.push(msg),confirm:()=>{throw Error('unexpected confirmation')},navigator:{},document:{getElementById(id){if(!fields.has(id))fields.set(id,{value:'',innerHTML:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},focus(){},setAttribute(){},addEventListener(){}});return fields.get(id)},querySelectorAll:selector=>selector==='#modal input,#modal select,#modal textarea'?[...fields].filter(([id])=>/^f[A-Z]/.test(id)).map(([id,node])=>({...node,id})):[]}};
-  context.window=context;context.globalThis=context;vm.createContext(context);
+  context.window=context;context.globalThis=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext('globalThis.structuredClone=value=>JSON.parse(JSON.stringify(value))',context);
   for(const file of ['src/symbol-identity.js','src/management-category.js','src/management-category-ui.js','src/strict-ai-json.js','src/plan-v2.js','src/plan-review.js','src/batch-technical-review.js','src/state.js','src/import-export.js','src/position.js','src/rebalance.js','src/v13-plan-engine.js','src/v13-recommendation-engine.js','src/ui-render.js','src/operation-entry.js','src/plan-update-draft.js','src/plan-review-ui.js','src/storage/storage-errors.js','src/storage/storage-validation.js','src/storage/draft-adapter.js','src/storage/storage-manager.js'])vm.runInContext(read(file),context,{filename:file});
   let persisted=null;

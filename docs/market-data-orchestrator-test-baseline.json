@@ -1,0 +1,2012 @@
+{
+  "project": {
+    "id": "lblyapnsngqnjimgskkp",
+    "ref": "lblyapnsngqnjimgskkp",
+    "organization_id": "pkmkmqhkbgwnsvvopkgx",
+    "organization_slug": "pkmkmqhkbgwnsvvopkgx",
+    "name": "investment-analysis-test-s01",
+    "region": "ap-southeast-1",
+    "status": "ACTIVE_HEALTHY",
+    "database": {
+      "host": "db.lblyapnsngqnjimgskkp.supabase.co",
+      "version": "17.6.1.155",
+      "postgres_engine": "17",
+      "release_channel": "ga"
+    },
+    "created_at": "2026-08-01T01:12:54.148645Z"
+  },
+  "migrations": {
+    "migrations": [
+      {
+        "version": "20260801054602",
+        "name": "initial_schema"
+      },
+      {
+        "version": "20260801054642",
+        "name": "multi_tenant_identity_v2"
+      },
+      {
+        "version": "20260903123919",
+        "name": "stock_universe_auto_add_v1a"
+      },
+      {
+        "version": "20260903125657",
+        "name": "stock_universe_private_rpc_boundary"
+      }
+    ]
+  },
+  "schema": {
+    "columns": [
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "module_type",
+        "type": "text",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "entity_key",
+        "type": "text",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "module_schema_version",
+        "type": "text",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "payload_hash",
+        "type": "text",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "payload",
+        "type": "jsonb",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "published_at",
+        "type": "timestamp with time zone",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "events",
+        "schema": "public",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "stock_id",
+        "type": "uuid",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "event_type",
+        "type": "text",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "priority",
+        "type": "text",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "allow_review_only",
+        "type": "boolean",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "events",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "table": "events",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "portfolio_id",
+        "type": "uuid",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "sync_run_id",
+        "type": "uuid",
+        "table": "events",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "plans",
+        "schema": "public",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "stock_id",
+        "type": "uuid",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "plan_type",
+        "type": "text",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "trigger_price",
+        "type": "numeric",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "quantity",
+        "type": "numeric",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "plans",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "table": "plans",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "portfolio_id",
+        "type": "uuid",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "sync_run_id",
+        "type": "uuid",
+        "table": "plans",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "portfolios",
+        "schema": "public",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "currency",
+        "type": "text",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "version",
+        "type": "integer",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "portfolios",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "table": "portfolios",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "portfolio_key",
+        "type": "text",
+        "table": "portfolios",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "positions",
+        "schema": "public",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "portfolio_id",
+        "type": "uuid",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "stock_id",
+        "type": "uuid",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "shares",
+        "type": "numeric",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "avg_cost",
+        "type": "numeric",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "market_value",
+        "type": "numeric",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "role",
+        "type": "text",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "target_weight",
+        "type": "numeric",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "max_weight",
+        "type": "numeric",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "snapshot_time",
+        "type": "timestamp with time zone",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "version",
+        "type": "integer",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "positions",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "table": "positions",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "sync_run_id",
+        "type": "uuid",
+        "table": "positions",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "symbol",
+        "type": "text",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "display_name",
+        "type": "text",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "default": "''::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "stocks",
+        "schema": "public",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "symbol",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "market",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "industry",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "theme",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "stocks",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "stocks",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "table": "stocks",
+        "schema": "public",
+        "default": "now()",
+        "nullable": "YES"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "portfolio_id",
+        "type": "uuid",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "source_version",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "payload_hash",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "expected_stocks",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "expected_portfolios",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "expected_positions",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "expected_plans",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "expected_events",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "actual_stocks",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "actual_portfolios",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "actual_positions",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "actual_plans",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "actual_events",
+        "type": "integer",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "started_at",
+        "type": "timestamp with time zone",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "completed_at",
+        "type": "timestamp with time zone",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "error_category",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "error_summary",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "environment",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "project_ref",
+        "type": "text",
+        "table": "sync_runs",
+        "schema": "public",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "id",
+        "type": "uuid",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "token_hash",
+        "type": "bytea",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "label",
+        "type": "text",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "expires_at",
+        "type": "timestamp with time zone",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "default": "(now() + '180 days'::interval)",
+        "nullable": "NO"
+      }
+    ],
+    "indexes": [
+      {
+        "indexdef": "CREATE INDEX analysis_sync_modules_owner_published_idx ON analysis_private.analysis_sync_modules USING btree (user_id, published_at DESC)",
+        "indexname": "analysis_sync_modules_owner_published_idx",
+        "tablename": "analysis_sync_modules",
+        "schemaname": "analysis_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX analysis_sync_modules_pkey ON analysis_private.analysis_sync_modules USING btree (user_id, module_type, entity_key)",
+        "indexname": "analysis_sync_modules_pkey",
+        "tablename": "analysis_sync_modules",
+        "schemaname": "analysis_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX events_pkey ON public.events USING btree (id)",
+        "indexname": "events_pkey",
+        "tablename": "events",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX events_portfolio_id_idx ON public.events USING btree (portfolio_id)",
+        "indexname": "events_portfolio_id_idx",
+        "tablename": "events",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX events_stock_id_idx ON public.events USING btree (stock_id)",
+        "indexname": "events_stock_id_idx",
+        "tablename": "events",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX events_sync_run_id_idx ON public.events USING btree (sync_run_id)",
+        "indexname": "events_sync_run_id_idx",
+        "tablename": "events",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX plans_pkey ON public.plans USING btree (id)",
+        "indexname": "plans_pkey",
+        "tablename": "plans",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX plans_portfolio_id_idx ON public.plans USING btree (portfolio_id)",
+        "indexname": "plans_portfolio_id_idx",
+        "tablename": "plans",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX plans_stock_id_idx ON public.plans USING btree (stock_id)",
+        "indexname": "plans_stock_id_idx",
+        "tablename": "plans",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX plans_sync_run_id_idx ON public.plans USING btree (sync_run_id)",
+        "indexname": "plans_sync_run_id_idx",
+        "tablename": "plans",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX portfolios_id_user_unique ON public.portfolios USING btree (id, user_id)",
+        "indexname": "portfolios_id_user_unique",
+        "tablename": "portfolios",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX portfolios_pkey ON public.portfolios USING btree (id)",
+        "indexname": "portfolios_pkey",
+        "tablename": "portfolios",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX portfolios_user_id_idx ON public.portfolios USING btree (user_id)",
+        "indexname": "portfolios_user_id_idx",
+        "tablename": "portfolios",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX portfolios_user_key_unique ON public.portfolios USING btree (user_id, portfolio_key)",
+        "indexname": "portfolios_user_key_unique",
+        "tablename": "portfolios",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX positions_pkey ON public.positions USING btree (id)",
+        "indexname": "positions_pkey",
+        "tablename": "positions",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX positions_portfolio_id_idx ON public.positions USING btree (portfolio_id)",
+        "indexname": "positions_portfolio_id_idx",
+        "tablename": "positions",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX positions_portfolio_stock_unique ON public.positions USING btree (portfolio_id, stock_id)",
+        "indexname": "positions_portfolio_stock_unique",
+        "tablename": "positions",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX positions_stock_id_idx ON public.positions USING btree (stock_id)",
+        "indexname": "positions_stock_id_idx",
+        "tablename": "positions",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX positions_sync_run_id_idx ON public.positions USING btree (sync_run_id)",
+        "indexname": "positions_sync_run_id_idx",
+        "tablename": "positions",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX stock_universe_entries_pkey ON public.stock_universe_entries USING btree (user_id, symbol)",
+        "indexname": "stock_universe_entries_pkey",
+        "tablename": "stock_universe_entries",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX stocks_pkey ON public.stocks USING btree (id)",
+        "indexname": "stocks_pkey",
+        "tablename": "stocks",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX stocks_symbol_key ON public.stocks USING btree (symbol)",
+        "indexname": "stocks_symbol_key",
+        "tablename": "stocks",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX sync_runs_id_portfolio_unique ON public.sync_runs USING btree (id, portfolio_id)",
+        "indexname": "sync_runs_id_portfolio_unique",
+        "tablename": "sync_runs",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX sync_runs_identity_unique ON public.sync_runs USING btree (user_id, portfolio_id, source_version, payload_hash)",
+        "indexname": "sync_runs_identity_unique",
+        "tablename": "sync_runs",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX sync_runs_pkey ON public.sync_runs USING btree (id)",
+        "indexname": "sync_runs_pkey",
+        "tablename": "sync_runs",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX sync_runs_portfolio_started_idx ON public.sync_runs USING btree (portfolio_id, started_at DESC)",
+        "indexname": "sync_runs_portfolio_started_idx",
+        "tablename": "sync_runs",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX sync_runs_user_started_idx ON public.sync_runs USING btree (user_id, started_at DESC)",
+        "indexname": "sync_runs_user_started_idx",
+        "tablename": "sync_runs",
+        "schemaname": "public",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX reader_credentials_owner_idx ON universe_private.reader_credentials USING btree (user_id)",
+        "indexname": "reader_credentials_owner_idx",
+        "tablename": "reader_credentials",
+        "schemaname": "universe_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX reader_credentials_pkey ON universe_private.reader_credentials USING btree (id)",
+        "indexname": "reader_credentials_pkey",
+        "tablename": "reader_credentials",
+        "schemaname": "universe_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX reader_credentials_token_hash_key ON universe_private.reader_credentials USING btree (token_hash)",
+        "indexname": "reader_credentials_token_hash_key",
+        "tablename": "reader_credentials",
+        "schemaname": "universe_private",
+        "tablespace": null
+      }
+    ],
+    "schemas": [
+      {
+        "acl": "{postgres=UC/postgres,authenticated=U/postgres}",
+        "name": "analysis_private"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,anon=U/supabase_admin,authenticated=U/supabase_admin,service_role=U/supabase_admin,supabase_auth_admin=UC/supabase_admin,dashboard_user=UC/supabase_admin,postgres=U/supabase_admin}",
+        "name": "auth"
+      },
+      {
+        "acl": "{postgres=UC/postgres,anon=U/postgres,authenticated=U/postgres,service_role=U/postgres,dashboard_user=UC/postgres}",
+        "name": "extensions"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,postgres=U*/supabase_admin,anon=U/supabase_admin,authenticated=U/supabase_admin,service_role=U/supabase_admin}",
+        "name": "graphql"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,postgres=U*/supabase_admin,anon=U/supabase_admin,authenticated=U/supabase_admin,service_role=U/supabase_admin}",
+        "name": "graphql_public"
+      },
+      {
+        "acl": null,
+        "name": "pgbouncer"
+      },
+      {
+        "acl": "{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner,postgres=U/pg_database_owner,anon=U/pg_database_owner,authenticated=U/pg_database_owner,service_role=U/pg_database_owner}",
+        "name": "public"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,postgres=U/supabase_admin}",
+        "name": "realtime"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,postgres=U*/supabase_admin,anon=U/supabase_admin,authenticated=U/supabase_admin,service_role=U/supabase_admin,supabase_storage_admin=U*C*/supabase_admin,dashboard_user=UC/supabase_admin}",
+        "name": "storage"
+      },
+      {
+        "acl": null,
+        "name": "supabase_migrations"
+      },
+      {
+        "acl": "{postgres=UC/postgres,anon=U/postgres,authenticated=U/postgres}",
+        "name": "universe_private"
+      },
+      {
+        "acl": "{supabase_admin=UC/supabase_admin,postgres=U*/supabase_admin,service_role=U/supabase_admin}",
+        "name": "vault"
+      }
+    ],
+    "version": "PostgreSQL 17.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "database": "postgres",
+    "policies": [
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "analysis_sync_modules",
+        "permissive": "PERMISSIVE",
+        "policyname": "analysis_sync_owner_insert",
+        "schemaname": "analysis_private",
+        "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "analysis_sync_modules",
+        "permissive": "PERMISSIVE",
+        "policyname": "analysis_sync_owner_select",
+        "schemaname": "analysis_private",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "analysis_sync_modules",
+        "permissive": "PERMISSIVE",
+        "policyname": "analysis_sync_owner_update",
+        "schemaname": "analysis_private",
+        "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM portfolios p\n  WHERE ((p.id = events.portfolio_id) AND (p.user_id = ( SELECT auth.uid() AS uid)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "events",
+        "permissive": "PERMISSIVE",
+        "policyname": "events_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM portfolios p\n  WHERE ((p.id = plans.portfolio_id) AND (p.user_id = ( SELECT auth.uid() AS uid)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "plans",
+        "permissive": "PERMISSIVE",
+        "policyname": "plans_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "portfolios",
+        "permissive": "PERMISSIVE",
+        "policyname": "portfolios_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(EXISTS ( SELECT 1\n   FROM portfolios p\n  WHERE ((p.id = positions.portfolio_id) AND (p.user_id = ( SELECT auth.uid() AS uid)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "positions",
+        "permissive": "PERMISSIVE",
+        "policyname": "positions_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "INSERT",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "stock_universe_entries",
+        "permissive": "PERMISSIVE",
+        "policyname": "stock_universe_owner_insert",
+        "schemaname": "public",
+        "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "stock_universe_entries",
+        "permissive": "PERMISSIVE",
+        "policyname": "stock_universe_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "true",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "stocks",
+        "permissive": "PERMISSIVE",
+        "policyname": "stocks_authenticated_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "qual": "((user_id = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1\n   FROM portfolios p\n  WHERE ((p.id = sync_runs.portfolio_id) AND (p.user_id = sync_runs.user_id) AND (p.user_id = ( SELECT auth.uid() AS uid))))))",
+        "roles": [
+          "authenticated"
+        ],
+        "tablename": "sync_runs",
+        "permissive": "PERMISSIVE",
+        "policyname": "sync_runs_owner_select",
+        "schemaname": "public",
+        "with_check": null
+      },
+      {
+        "cmd": "ALL",
+        "qual": "false",
+        "roles": [
+          "public"
+        ],
+        "tablename": "reader_credentials",
+        "permissive": "PERMISSIVE",
+        "policyname": "reader_credentials_deny_direct_access",
+        "schemaname": "universe_private",
+        "with_check": "false"
+      }
+    ],
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "get_analysis_module",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "analysis_private",
+        "definer": true,
+        "arguments": "p_module_type text, p_entity_key text",
+        "definition_md5": "c252a3d2b8aac395ce24084cbb3b6e51"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "list_analysis_modules",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "analysis_private",
+        "definer": true,
+        "arguments": "",
+        "definition_md5": "021a92b37ac9455e133f41b1985af59d"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "module_json",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "analysis_private",
+        "definer": false,
+        "arguments": "p_row analysis_private.analysis_sync_modules",
+        "definition_md5": "eca2a4332cd8454ae8b5f0d519ef81ec"
+      },
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "publish_analysis_module",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "analysis_private",
+        "definer": true,
+        "arguments": "p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text",
+        "definition_md5": "4402c9a2316799981bdc54ad0dc88ce6"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "validate_module_payload",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "analysis_private",
+        "definer": false,
+        "arguments": "p_module_type text, p_module_schema_version text, p_payload jsonb",
+        "definition_md5": "a715ef2fd1c990c0030b1b3416d2808b"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "get_analysis_module",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_module_type text, p_entity_key text",
+        "definition_md5": "3c8a48c12be321bf89aee9f25b81822a"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "identity_v2_encode",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_value text",
+        "definition_md5": "159f4177999605341433725d0e89683d"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "list_analysis_modules",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "",
+        "definition_md5": "b5c796b9c4be0ff8b3773751ae9083c5"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "list_stock_universe_readers",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "",
+        "definition_md5": "52a4d12bcaa8416a626b8ae9cbcffcb7"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "publish_analysis_module",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text",
+        "definition_md5": "0a256cb99177735afdcf8631e5920932"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,anon=X/postgres}",
+        "name": "read_stock_universe",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_token text",
+        "definition_md5": "c1b1cbaccc1290cab55469c5f71d180a"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "name": "record_sync_failure_v2",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": true,
+        "arguments": "p_failure jsonb",
+        "definition_md5": "963b1ac88ed99f049a54ff1cf7785276"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "register_stock_universe_reader",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_token text, p_label text",
+        "definition_md5": "e111a36004c5112accb45199c8743fb9"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "revoke_stock_universe_reader",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_id uuid",
+        "definition_md5": "e330e25ed3b3785384438bd3cc014bc9"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres}",
+        "name": "sync_portfolio_batch_v2",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": true,
+        "arguments": "p_payload jsonb",
+        "definition_md5": "1fb9cfb5431fd09a784d0aae352b5131"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "sync_run_identity_v2",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "arguments": "p_user_id uuid, p_portfolio_id uuid, p_source_version text, p_payload_hash text",
+        "definition_md5": "3ba22dce31edaa71402669560272e97e"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "list_stock_universe_readers",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "universe_private",
+        "definer": true,
+        "arguments": "",
+        "definition_md5": "a32a7285ca082ff1699c7924279036ed"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,anon=X/postgres}",
+        "name": "read_stock_universe",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "universe_private",
+        "definer": true,
+        "arguments": "p_token text",
+        "definition_md5": "54938dc6ee85155a4868c41090bce7a7"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "register_stock_universe_reader",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "universe_private",
+        "definer": true,
+        "arguments": "p_token text, p_label text",
+        "definition_md5": "6819d9d42d68a9bba975beaf94f6bc8f"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "revoke_stock_universe_reader",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "universe_private",
+        "definer": true,
+        "arguments": "p_id uuid",
+        "definition_md5": "b69bf19b5f3d0b3daa8af53524f20170"
+      }
+    ],
+    "relations": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "analysis_sync_modules_owner_published_idx",
+        "schema": "analysis_private",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "analysis_sync_modules_pkey",
+        "schema": "analysis_private",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "events",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "events_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "events_portfolio_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "events_stock_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "events_sync_run_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "plans",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "plans_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "plans_portfolio_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "plans_stock_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "plans_sync_run_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "portfolios",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "portfolios_id_user_unique",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "portfolios_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "portfolios_user_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "portfolios_user_key_unique",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "positions",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "positions_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "positions_portfolio_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "positions_portfolio_stock_unique",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "positions_stock_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "positions_sync_run_id_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=ar/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "stock_universe_entries",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "stock_universe_entries_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "stocks",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "stocks_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "stocks_symbol_key",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=r/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "sync_runs",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "sync_runs_id_portfolio_unique",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "sync_runs_identity_unique",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "sync_runs_pkey",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "sync_runs_portfolio_started_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "sync_runs_user_started_idx",
+        "schema": "public",
+        "force_rls": false
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "kind": "r",
+        "name": "reader_credentials",
+        "schema": "universe_private",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "reader_credentials_owner_idx",
+        "schema": "universe_private",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "reader_credentials_pkey",
+        "schema": "universe_private",
+        "force_rls": false
+      },
+      {
+        "acl": null,
+        "rls": false,
+        "kind": "i",
+        "name": "reader_credentials_token_hash_key",
+        "schema": "universe_private",
+        "force_rls": false
+      }
+    ],
+    "captured_at": "2026-10-02T01:59:18.835444+00:00",
+    "constraints": [
+      {
+        "name": "analysis_sync_modules_entity_key_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((entity_key ~ '^[A-Z0-9][A-Z0-9._-]{0,63}$'::text))"
+      },
+      {
+        "name": "analysis_sync_modules_module_schema_version_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((module_schema_version ~ '^[a-z][a-z0-9-]*\\.v[1-9][0-9]*$'::text))"
+      },
+      {
+        "name": "analysis_sync_modules_module_type_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((module_type ~ '^[a-z][a-z0-9_]{0,63}$'::text))"
+      },
+      {
+        "name": "analysis_sync_modules_payload_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((jsonb_typeof(payload) = 'object'::text))"
+      },
+      {
+        "name": "analysis_sync_modules_payload_hash_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((payload_hash ~ '^sha256:[0-9a-f]{64}$'::text))"
+      },
+      {
+        "name": "analysis_sync_modules_pkey",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "PRIMARY KEY (user_id, module_type, entity_key)"
+      },
+      {
+        "name": "analysis_sync_modules_revision_check",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "CHECK ((revision > 0))"
+      },
+      {
+        "name": "analysis_sync_modules_user_id_fkey",
+        "table": "analysis_sync_modules",
+        "schema": "analysis_private",
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "events_pkey",
+        "table": "events",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "events_portfolio_id_fkey",
+        "table": "events",
+        "schema": "public",
+        "definition": "FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "events_stock_id_fkey",
+        "table": "events",
+        "schema": "public",
+        "definition": "FOREIGN KEY (stock_id) REFERENCES stocks(id)"
+      },
+      {
+        "name": "events_sync_run_portfolio_fkey",
+        "table": "events",
+        "schema": "public",
+        "definition": "FOREIGN KEY (sync_run_id, portfolio_id) REFERENCES sync_runs(id, portfolio_id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "plans_pkey",
+        "table": "plans",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "plans_portfolio_id_fkey",
+        "table": "plans",
+        "schema": "public",
+        "definition": "FOREIGN KEY (portfolio_id) REFERENCES portfolios(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "plans_stock_id_fkey",
+        "table": "plans",
+        "schema": "public",
+        "definition": "FOREIGN KEY (stock_id) REFERENCES stocks(id)"
+      },
+      {
+        "name": "plans_sync_run_portfolio_fkey",
+        "table": "plans",
+        "schema": "public",
+        "definition": "FOREIGN KEY (sync_run_id, portfolio_id) REFERENCES sync_runs(id, portfolio_id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "portfolios_id_user_unique",
+        "table": "portfolios",
+        "schema": "public",
+        "definition": "UNIQUE (id, user_id)"
+      },
+      {
+        "name": "portfolios_pkey",
+        "table": "portfolios",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "portfolios_portfolio_key_not_blank",
+        "table": "portfolios",
+        "schema": "public",
+        "definition": "CHECK ((length(btrim(portfolio_key)) > 0))"
+      },
+      {
+        "name": "portfolios_user_id_fkey",
+        "table": "portfolios",
+        "schema": "public",
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "portfolios_user_key_unique",
+        "table": "portfolios",
+        "schema": "public",
+        "definition": "UNIQUE (user_id, portfolio_key)"
+      },
+      {
+        "name": "positions_pkey",
+        "table": "positions",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "positions_portfolio_id_fkey",
+        "table": "positions",
+        "schema": "public",
+        "definition": "FOREIGN KEY (portfolio_id) REFERENCES portfolios(id)"
+      },
+      {
+        "name": "positions_portfolio_stock_unique",
+        "table": "positions",
+        "schema": "public",
+        "definition": "UNIQUE (portfolio_id, stock_id)"
+      },
+      {
+        "name": "positions_stock_id_fkey",
+        "table": "positions",
+        "schema": "public",
+        "definition": "FOREIGN KEY (stock_id) REFERENCES stocks(id)"
+      },
+      {
+        "name": "positions_sync_run_portfolio_fkey",
+        "table": "positions",
+        "schema": "public",
+        "definition": "FOREIGN KEY (sync_run_id, portfolio_id) REFERENCES sync_runs(id, portfolio_id) ON DELETE RESTRICT"
+      },
+      {
+        "name": "stock_universe_entries_display_name_check",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "definition": "CHECK ((char_length(display_name) <= 120))"
+      },
+      {
+        "name": "stock_universe_entries_pkey",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "definition": "PRIMARY KEY (user_id, symbol)"
+      },
+      {
+        "name": "stock_universe_entries_symbol_check",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "definition": "CHECK ((symbol ~ '^(?:[0-9]{6}\\.(?:SS|SZ)|[0-9]{4,5}\\.HK)$'::text))"
+      },
+      {
+        "name": "stock_universe_entries_user_id_fkey",
+        "table": "stock_universe_entries",
+        "schema": "public",
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+      },
+      {
+        "name": "stocks_pkey",
+        "table": "stocks",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "stocks_symbol_key",
+        "table": "stocks",
+        "schema": "public",
+        "definition": "UNIQUE (symbol)"
+      },
+      {
+        "name": "sync_runs_expected_counts_nonnegative",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "CHECK (((expected_stocks >= 0) AND (expected_portfolios >= 0) AND (expected_positions >= 0) AND (expected_plans >= 0) AND (expected_events >= 0)))"
+      },
+      {
+        "name": "sync_runs_id_portfolio_unique",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "UNIQUE (id, portfolio_id)"
+      },
+      {
+        "name": "sync_runs_identity_unique",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "UNIQUE (user_id, portfolio_id, source_version, payload_hash)"
+      },
+      {
+        "name": "sync_runs_payload_hash_format",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "CHECK ((payload_hash ~ '^[0-9a-f]{64}$'::text))"
+      },
+      {
+        "name": "sync_runs_pkey",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "sync_runs_portfolio_owner_fkey",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "FOREIGN KEY (portfolio_id, user_id) REFERENCES portfolios(id, user_id) ON DELETE CASCADE"
+      },
+      {
+        "name": "sync_runs_status_check",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "CHECK ((status = ANY (ARRAY['running'::text, 'committed'::text, 'failed'::text])))"
+      },
+      {
+        "name": "sync_runs_user_id_fkey",
+        "table": "sync_runs",
+        "schema": "public",
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+      },
+      {
+        "name": "reader_credentials_label_check",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "definition": "CHECK (((char_length(label) >= 1) AND (char_length(label) <= 40)))"
+      },
+      {
+        "name": "reader_credentials_pkey",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "reader_credentials_token_hash_key",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "definition": "UNIQUE (token_hash)"
+      },
+      {
+        "name": "reader_credentials_user_id_fkey",
+        "table": "reader_credentials",
+        "schema": "universe_private",
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+      }
+    ]
+  },
+  "advisors": {
+    "result": {
+      "lints": []
+    }
+  }
+}

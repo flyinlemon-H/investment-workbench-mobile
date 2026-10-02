@@ -39,7 +39,7 @@ test('category alone changes no Discussion binding, holding facts, references or
   const zero={...s,shares:0,managementCategory:'core'};assert.equal(D.buildContext(zero,{state:{stocks:[zero]}}).context.currentFacts.holding.shares,0);
 });
 test('real normalization and backup compatibility preserve category with no inference',()=>{
-  const context={console,window:null,globalThis:null};context.window=context;context.globalThis=context;vm.createContext(context);
+  const context={console,window:null,globalThis:null};context.window=context;context.globalThis=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   for(const file of ['src/plan-v2.js','src/strict-ai-json.js','src/state.js','src/import-export.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
   context.fixture={stocks:fixtures(),updatedAt:1};
   const result=vm.runInContext('createValidatedCandidateSnapshot(alpha3ExportSnapshot(createValidatedCandidateSnapshot(fixture,{touchUpdatedAt:false})),{touchUpdatedAt:false})',context);

@@ -10,9 +10,9 @@ test('current K plus old News/LTL stays ready with neutral dates and no required
   for(const key of Object.keys(Readiness.MODULES)){assert.equal(model[key].required,false);assert.doesNotMatch(model[key].label,/待更新|过期|需复核/)}
   assert.equal(model.news.todayRelevance,'outdated');assert.equal(model.fundamental.label,'2026Q2');assert.equal(model.valuation.label,'未提供');
 });
-test('weekend and long holiday honor canonical freshness without a second calendar',()=>{
+test('weekend stays current but old current flags cannot bypass the shared age policy',()=>{
   const stock=F.stock({marketDataFreshness:{last_trade_date:F.DAY,is_complete_bar:true,kline_status:'current'},technicalIndicators:{last_trade_date:F.DAY}});
-  for(const now of [F.NOW,'2026-09-15T04:00:00Z'])assert.equal(Readiness.build(stock,{now}).technical.ready,true);
+  assert.equal(Readiness.build(stock,{now:F.NOW}).technical.ready,true);assert.equal(Readiness.build(stock,{now:'2026-09-15T04:00:00Z'}).technical.ready,false);
 });
 for(const [name,patch,status] of [
   ['missing K',{priceHistory:[]},'unavailable'],['incomplete K',{priceHistory:[{date:F.DAY,close:50,is_complete_bar:false}]},'unavailable'],['invalid close',{priceHistory:[{date:F.DAY,close:0,is_complete_bar:true}]},'unavailable'],

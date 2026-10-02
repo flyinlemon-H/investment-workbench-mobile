@@ -1095,15 +1095,7 @@ function calculateMacd(priceHistory){
   return {dif:Number(dif[last].toFixed(6)),dea:Number(dea[last].toFixed(6)),histogram:Number(((dif[last]-dea[last])*2).toFixed(6))};
 }
 function technicalFreshnessStatus(technicalAsOf,referenceDate=todayDate(),marketFreshness={}){
-  const asOf=normalizePriceDate(technicalAsOf),reference=normalizePriceDate(referenceDate);
-  if(!asOf)return 'unavailable';
-  if(!reference)return 'anomaly';
-  const start=Date.parse(`${asOf}T00:00:00Z`),end=Date.parse(`${reference}T00:00:00Z`);
-  if(!isFinite(start)||!isFinite(end)||start>end)return 'anomaly';
-  if(String(marketFreshness&&marketFreshness.kline_status||'').toLowerCase()==='current')return 'fresh';
-  let businessDays=0;
-  for(let cursor=start+86400000;cursor<=end;cursor+=86400000){const day=new Date(cursor).getUTCDay();if(day!==0&&day!==6)businessDays+=1}
-  return businessDays<=3?'fresh':'stale';
+  return TechnicalFreshness.ageStatus(technicalAsOf,referenceDate,marketFreshness);
 }
 function volumeScaleForProvider(provider,symbol){
   const source=String(provider||'').trim().toLowerCase();

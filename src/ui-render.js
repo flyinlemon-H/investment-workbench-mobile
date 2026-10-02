@@ -4704,9 +4704,9 @@ function workspaceSummaryCard(title,items,detailTitle,detailBody,color='var(--te
 function technicalWorkspacePanel(stock){
   const review=normalizeTechnicalReview(stock.technicalReview,stock);
   const td=normalizeTechnicalData(stock.technicalData);
-  const freshness=technicalViewUx().canonicalTechnicalDate({technicalData:td,priceHistory:normalizePriceHistory(stock)});
+  const freshness=technicalViewUx().canonicalTechnicalDate({...stock,technicalData:td,priceHistory:normalizePriceHistory(stock)});
   const risk=technicalRiskSummary(stock,review);
-  return `${technicalConclusionLayer(stock,review,td,freshness,risk)}${technicalEvidenceLayer(stock,review,td,risk)}${technicalDataStatusLayer(stock,review,td,freshness)}${technicalMaintenanceLayer()}`;
+  return `${window.MarketDataTaskUi?.panel(window.SymbolIdentity.canonicalMarketSymbol(stock.code||stock.symbol))||''}${technicalConclusionLayer(stock,review,td,freshness,risk)}${technicalEvidenceLayer(stock,review,td,risk)}${technicalDataStatusLayer(stock,review,td,freshness)}${technicalMaintenanceLayer()}`;
 }
 function newsWorkspacePanel(stock){
   const rc=normalizeRecentCatalyst(stock.recentCatalyst,stock);

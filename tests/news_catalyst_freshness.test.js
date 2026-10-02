@@ -28,7 +28,7 @@ function runtime(saveBehavior=async()=>({ok:true})){
   context.globalThis=context;
   context.fixture=oldFii();
   context.saveBehavior=saveBehavior;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/strict-ai-json.js'),context,{filename:'strict-ai-json.js'});
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext(read('src/ui-render.js'),context,{filename:'ui-render.js'});

@@ -12,8 +12,11 @@ const response=(phase,transitionAssessment,summary)=>JSON.stringify({planRuntime
   async function review(page,payload){await page.locator('#runtimeResultText').fill(payload);await page.locator('#runtimePreviewBtn').click()}
   async function closeReview(page){await page.locator('#runtimeDoneBtn').click()}
   try{
-    for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
-      const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[],dialogs=[];
+    for(const viewport of [{width:1280,height:900},{width:390,height:844},{width:360,height:800}]){
+      const context=await browser.newContext({viewport});
+      // The fixture is a current 2026-09-04 review; don't let wall-clock aging invalidate it.
+      await context.addInitScript(()=>{const RealDate=Date,offset=new RealDate('2026-09-04T08:00:00Z').getTime()-RealDate.now();globalThis.Date=class extends RealDate{constructor(...args){super(...(args.length?args:[RealDate.now()+offset]))}static now(){return RealDate.now()+offset}}});
+      const page=await context.newPage(),errors=[],dialogs=[];
       page.on('pageerror',error=>errors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.message());await dialog.dismiss()});
       await context.route('**/*',route=>new URL(route.request().url()).pathname==='/data/market_data_bridge.js'?route.fulfill({contentType:'application/javascript',body:'window.MARKET_DATA_BRIDGE = null;'}):new URL(route.request().url()).origin===new URL(url).origin?route.continue():route.abort());await page.goto(url);await ready(page);
       await page.evaluate(async()=>{

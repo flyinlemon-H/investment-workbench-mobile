@@ -1,0 +1,398 @@
+{
+  "projectId": "lblyapnsngqnjimgskkp",
+  "startedAt": "2026-10-02T02:14:57.905Z",
+  "accounts": [
+    {
+      "email": "market-orch-owner-5dcea3e7-25dd-438b-8e18-a782f8694cdf@example.invalid",
+      "label": "owner",
+      "userId": "5dcea3e7-25dd-438b-8e18-a782f8694cdf"
+    },
+    {
+      "email": "market-orch-outsider-4797acf6-2b76-4c37-b7ef-1240f4efede1@example.invalid",
+      "label": "outsider",
+      "userId": "4797acf6-2b76-4c37-b7ef-1240f4efede1"
+    }
+  ],
+  "checks": [
+    {
+      "name": "real_auth_owner",
+      "passed": true
+    },
+    {
+      "name": "real_auth_outsider",
+      "passed": true
+    },
+    {
+      "name": "unauthenticated_create_denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "unauthorized_worker_denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "concurrent_rotation_one_valid_capability",
+      "passed": true,
+      "statuses": [
+        401,
+        401,
+        401,
+        401,
+        401,
+        401,
+        401,
+        200
+      ]
+    },
+    {
+      "name": "reject_invalid_symbol",
+      "passed": true
+    },
+    {
+      "name": "reject_invalid_type",
+      "passed": true
+    },
+    {
+      "name": "reject_command",
+      "passed": true
+    },
+    {
+      "name": "reject_path",
+      "passed": true
+    },
+    {
+      "name": "reject_url",
+      "passed": true
+    },
+    {
+      "name": "reject_owner",
+      "passed": true
+    },
+    {
+      "name": "worker_reject_taskType",
+      "passed": true
+    },
+    {
+      "name": "worker_reject_symbol",
+      "passed": true
+    },
+    {
+      "name": "worker_reject_command",
+      "passed": true
+    },
+    {
+      "name": "worker_reject_path",
+      "passed": true
+    },
+    {
+      "name": "worker_reject_url",
+      "passed": true
+    },
+    {
+      "name": "worker_only_claim_finish",
+      "passed": true
+    },
+    {
+      "name": "direct_public_tasks_denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "direct_public_results_denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "direct_public_workers_denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "direct_market_private_tasks_denied",
+      "passed": true,
+      "status": 406
+    },
+    {
+      "name": "direct_market_private_results_denied",
+      "passed": true,
+      "status": 406
+    },
+    {
+      "name": "direct_market_private_workers_denied",
+      "passed": true,
+      "status": 406
+    },
+    {
+      "name": "worker_cannot_create_tasks",
+      "passed": true
+    },
+    {
+      "name": "browser_is_test_project",
+      "passed": true
+    },
+    {
+      "name": "initial_stale_agreement",
+      "passed": true
+    },
+    {
+      "name": "duplicate_active_reused",
+      "passed": true
+    },
+    {
+      "name": "worker_offline_remains_queued",
+      "passed": true
+    },
+    {
+      "name": "outsider_cannot_read_task",
+      "passed": true
+    },
+    {
+      "name": "running_visible",
+      "passed": true
+    },
+    {
+      "name": "second_claim_does_not_execute",
+      "passed": true
+    },
+    {
+      "name": "outsider_cannot_finish",
+      "passed": true
+    },
+    {
+      "name": "remote_succeeded",
+      "passed": true,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "name": "actual_incremental_bars",
+      "passed": true,
+      "before": 365,
+      "after": 368
+    },
+    {
+      "name": "version_matches_request",
+      "passed": true
+    },
+    {
+      "name": "provider_continuity",
+      "passed": true,
+      "provider": "yahoo"
+    },
+    {
+      "name": "freshness_discussion_same_version",
+      "passed": true,
+      "pageFresh": true,
+      "ready": true,
+      "dataStatus": "fresh",
+      "resultVersion": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "latestCompleteBar": "2026-09-30",
+      "technicalAsOf": "2026-09-30"
+    },
+    {
+      "name": "outsider_cannot_read_result",
+      "passed": true
+    },
+    {
+      "name": "provider_failure_is_failed",
+      "passed": true
+    },
+    {
+      "name": "previous_remote_result_unchanged",
+      "passed": true
+    },
+    {
+      "name": "previous_browser_result_preserved",
+      "passed": true
+    },
+    {
+      "name": "retry_has_new_task",
+      "passed": true
+    },
+    {
+      "name": "no_change_succeeds",
+      "passed": true,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "name": "finish_idempotent",
+      "passed": true
+    },
+    {
+      "name": "no_business_field_mutation",
+      "passed": true
+    },
+    {
+      "name": "no_browser_errors_or_overflow",
+      "passed": true
+    },
+    {
+      "name": "revoked_worker_owner_denied",
+      "passed": true
+    },
+    {
+      "name": "revoked_worker_outsider_denied",
+      "passed": true
+    }
+  ],
+  "loops": [
+    {
+      "taskId": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "resultVersion": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "requestedAt": "2026-10-02T02:15:14.670523+00:00",
+      "startedAt": "2026-10-02T02:15:24.853392+00:00",
+      "completedAt": "2026-10-02T02:15:32.567117+00:00",
+      "provider": "yahoo",
+      "seedBars": 365,
+      "resultBars": 368,
+      "dataUpdated": true,
+      "fingerprint": "786d8f0d59ef9626b9ce23c45d4dad1959d7748b070c92e9be53fa6f9c5af2ce",
+      "pageFresh": true,
+      "ready": true,
+      "dataStatus": "fresh",
+      "latestCompleteBar": "2026-09-30",
+      "technicalAsOf": "2026-09-30"
+    }
+  ],
+  "externalRequests": [
+    {
+      "origin": "https://lblyapnsngqnjimgskkp.supabase.co",
+      "path": "/rest/v1/stock_universe_entries",
+      "blocked": true
+    },
+    {
+      "origin": "https://lblyapnsngqnjimgskkp.supabase.co",
+      "path": "/rest/v1/stock_universe_entries",
+      "blocked": true
+    },
+    {
+      "origin": "https://lblyapnsngqnjimgskkp.supabase.co",
+      "path": "/rest/v1/stock_universe_entries",
+      "blocked": true
+    }
+  ],
+  "completedAt": "2026-10-02T02:16:02.340Z",
+  "status": "passed",
+  "supplementalSecurity": {
+    "projectId": "lblyapnsngqnjimgskkp",
+    "status": "passed",
+    "checks": [
+      {
+        "name": "incomplete_result_rejected",
+        "passed": true
+      },
+      {
+        "name": "rejected_finish_remains_running",
+        "passed": true
+      },
+      {
+        "name": "rejected_finish_preserves_previous",
+        "passed": true
+      },
+      {
+        "name": "rotation_while_running_denied",
+        "passed": true
+      },
+      {
+        "name": "revoke_running_marks_failed",
+        "passed": true
+      },
+      {
+        "name": "revoked_capability_cannot_finish",
+        "passed": true
+      },
+      {
+        "name": "revocation_preserves_valid_result",
+        "passed": true
+      }
+    ],
+    "completedAt": "2026-10-02T02:18:23.761Z"
+  },
+  "workerEvents": [
+    {
+      "observed": "remote_claim",
+      "taskId": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "status": "running"
+    },
+    {
+      "taskId": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "symbol": "601869.SS",
+      "status": "running",
+      "worker": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "startedAt": "2026-10-02T02:15:24.853392+00:00",
+      "latestCompleteBarBefore": "2026-09-24"
+    },
+    {
+      "taskId": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "symbol": "601869.SS",
+      "status": "succeeded",
+      "startedAt": "2026-10-02T02:15:24.853392+00:00",
+      "completedAt": "2026-10-02T02:15:32.567117+00:00",
+      "workerId": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "resultVersion": "128adedf-d7f0-44a4-93d1-cca6a28e0f11",
+      "error": null,
+      "provider": "yahoo",
+      "latestCompleteBarAfter": "2026-09-30",
+      "warnings": [
+        "provider_fallback"
+      ]
+    },
+    {
+      "observed": "remote_claim",
+      "taskId": "48d33631-8fde-4a53-a20d-db9de2eb6827",
+      "status": "running"
+    },
+    {
+      "taskId": "48d33631-8fde-4a53-a20d-db9de2eb6827",
+      "symbol": "601869.SS",
+      "status": "running",
+      "worker": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "startedAt": "2026-10-02T02:15:37.012984+00:00",
+      "latestCompleteBarBefore": "2026-09-30"
+    },
+    {
+      "taskId": "48d33631-8fde-4a53-a20d-db9de2eb6827",
+      "symbol": "601869.SS",
+      "status": "failed",
+      "startedAt": "2026-10-02T02:15:37.012984+00:00",
+      "completedAt": "2026-10-02T02:15:41.720963+00:00",
+      "workerId": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "resultVersion": null,
+      "error": "provider_or_pipeline_failure",
+      "provider": null,
+      "latestCompleteBarAfter": null,
+      "warnings": []
+    },
+    {
+      "observed": "remote_claim",
+      "taskId": "c6fda1ea-b2ae-4ae6-9bf5-a832ac272cd7",
+      "status": "running"
+    },
+    {
+      "taskId": "c6fda1ea-b2ae-4ae6-9bf5-a832ac272cd7",
+      "symbol": "601869.SS",
+      "status": "running",
+      "worker": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "startedAt": "2026-10-02T02:15:44.920763+00:00",
+      "latestCompleteBarBefore": "2026-09-30"
+    },
+    {
+      "taskId": "c6fda1ea-b2ae-4ae6-9bf5-a832ac272cd7",
+      "symbol": "601869.SS",
+      "status": "succeeded",
+      "startedAt": "2026-10-02T02:15:44.920763+00:00",
+      "completedAt": "2026-10-02T02:15:52.743239+00:00",
+      "workerId": "b89d86fa-1874-40ab-b423-8c085834be34",
+      "resultVersion": "c6fda1ea-b2ae-4ae6-9bf5-a832ac272cd7",
+      "error": null,
+      "provider": "yahoo",
+      "latestCompleteBarAfter": "2026-09-30",
+      "warnings": [
+        "provider_fallback"
+      ]
+    }
+  ]
+}

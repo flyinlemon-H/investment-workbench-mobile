@@ -26,7 +26,7 @@ function sharedStore(){
 async function tab(shared=sharedStore()){
   const context={console,TextEncoder,Uint8Array,ArrayBuffer,Date,AbortController,setTimeout,clearTimeout};
   context.window=context;context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext('globalThis.structuredClone=value=>JSON.parse(JSON.stringify(value));',context);
   context.localStorage={
     getItem:key=>shared.raw.has(key)?shared.raw.get(key):null,

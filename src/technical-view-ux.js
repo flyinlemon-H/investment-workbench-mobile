@@ -1,8 +1,8 @@
 (function(root,factory){
-  const api=factory();
+  const api=factory(typeof module==='object'&&module.exports?require('./technical-freshness.js'):root.TechnicalFreshness);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.TechnicalViewUx=api;
-})(typeof globalThis!=='undefined'?globalThis:this,function(){
+})(typeof globalThis!=='undefined'?globalThis:this,function(Freshness){
   'use strict';
 
   const TREND_LABELS=Object.freeze({
@@ -128,26 +128,11 @@
       .replace(/\bma(5|10|20|60|120)\b/gi,(_,period)=>`MA${period}`);
   }
   function canonicalTechnicalDate({technicalData={},priceHistory=[],referenceDate=new Date()}={}){
-    const technicalAsOf=dateOnly(technicalData.technicalAsOf);
-    const latestCompleteBar=dateOnly(technicalData.latestCompleteBar);
-    const historyLastDate=lastCompleteBarDate(priceHistory);
-    const comparisons=[latestCompleteBar,historyLastDate].filter(Boolean);
-    const conflict=Boolean(technicalAsOf&&comparisons.some(value=>value!==technicalAsOf));
-    const incomplete=!technicalAsOf||!latestCompleteBar||!historyLastDate;
-    const rawStatus=text(technicalData.technicalDataStatus)||'unavailable';
-    const reference=localDate(referenceDate);
-    const ageInBusinessDays=technicalAsOf&&reference?businessDaysSince(technicalAsOf,reference):NaN;
-    const futureDate=Boolean(technicalAsOf&&reference&&technicalAsOf>reference);
-    const staleByAge=Number.isFinite(ageInBusinessDays)&&ageInBusinessDays>3;
-    const stale=rawStatus==='stale'||staleByAge;
-    const anomaly=rawStatus==='anomaly'||futureDate||conflict||incomplete;
-    const fresh=rawStatus==='fresh'&&!anomaly&&!staleByAge;
-    let label='技术数据日期待确认',date='',warning='缺少完整的技术数据日期，请先更新日K与技术数据';
-    if(conflict||futureDate){warning='技术数据日期不一致，请先更新技术数据';}
-    else if(!incomplete&&stale){label='技术数据截至';date=technicalAsOf;warning='技术数据可能已过期';}
-    else if(!incomplete&&fresh){label='技术数据最新至';date=technicalAsOf;warning='';}
-    else if(!incomplete){label='技术数据截至';date=technicalAsOf;warning=text(technicalData.technicalWarning)||'技术数据状态异常，请谨慎使用';}
-    return {date,label,warning,status:fresh?'fresh':(stale&&!anomaly?'stale':'anomaly'),fresh,stale:stale&&!anomaly,conflict,incomplete,technicalAsOf,latestCompleteBar,historyLastDate,ageInBusinessDays};
+    const check=Freshness.evaluateTechnicalFreshness(arguments[0]||{},{referenceDate});
+    const {technicalAsOf,latestCompleteBar,historyLastDate,conflict,incomplete}=check;
+    const fresh=check.ready,stale=check.status==='stale';
+    const date=!conflict&&!incomplete&&check.ageStatus!=='anomaly'?technicalAsOf:'';
+    return {...check,date,label:fresh?'技术数据最新至':date?'技术数据截至':'技术数据日期待确认',warning:fresh?'':stale?'技术数据可能已过期':(conflict||check.ageStatus==='anomaly')?'技术数据日期不一致，请先更新技术数据':'缺少有效完整日K或技术快照，请先更新行情',status:fresh?'fresh':stale?'stale':'anomaly',fresh,stale};
   }
 
   return Object.freeze({

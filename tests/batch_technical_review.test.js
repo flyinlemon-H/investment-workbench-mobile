@@ -17,7 +17,7 @@ const stocks=Array.from({length:10},(_,index)=>({
 function loadSingleStockRuntime(){
   const context={console,window:{},globalThis:null,setTimeout:()=>0,clearTimeout:()=>{}};
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   const root=path.resolve(__dirname,'..');
   vm.runInContext(fs.readFileSync(path.join(root,'src/state.js'),'utf8'),context,{filename:'state.js'});
   vm.runInContext(fs.readFileSync(path.join(root,'src/ui-render.js'),'utf8'),context,{filename:'ui-render.js'});

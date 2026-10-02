@@ -63,7 +63,7 @@ test('exact pending set, enum and compatibility guard preserve atomicity',()=>{
   assert.equal(JSON.stringify(state),before);
 });
 test('old backup with cash loads without a synthesized category and roundtrips classification',()=>{
-  const context={console};context.window=context;context.globalThis=context;vm.createContext(context);
+  const context={console};context.window=context;context.globalThis=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   for(const file of ['src/plan-v2.js','src/strict-ai-json.js','src/state.js','src/import-export.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
   context.fixture=F.mixed(4);
   const legacy=JSON.parse(JSON.stringify(vm.runInContext('createValidatedCandidateSnapshot(fixture,{touchUpdatedAt:false})',context)));

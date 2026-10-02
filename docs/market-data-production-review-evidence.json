@@ -1,0 +1,443 @@
+{
+  "capturedAt": "2026-10-02T03:28:00Z",
+  "scope": "READ_ONLY_PRODUCTION_REVIEW",
+  "production": {
+    "id": "fntslvdxnupmdljnadec",
+    "ref": "fntslvdxnupmdljnadec",
+    "organization_id": "pkmkmqhkbgwnsvvopkgx",
+    "organization_slug": "pkmkmqhkbgwnsvvopkgx",
+    "name": "investment-workbench",
+    "region": "ap-southeast-1",
+    "status": "INACTIVE",
+    "database": {
+      "host": "db.fntslvdxnupmdljnadec.supabase.co",
+      "version": "17.6.1.141",
+      "postgres_engine": "17",
+      "release_channel": "ga"
+    },
+    "created_at": "2026-07-10T07:31:45.622333Z"
+  },
+  "test": {
+    "id": "lblyapnsngqnjimgskkp",
+    "ref": "lblyapnsngqnjimgskkp",
+    "organization_id": "pkmkmqhkbgwnsvvopkgx",
+    "organization_slug": "pkmkmqhkbgwnsvvopkgx",
+    "name": "investment-analysis-test-s01",
+    "region": "ap-southeast-1",
+    "status": "ACTIVE_HEALTHY",
+    "database": {
+      "host": "db.lblyapnsngqnjimgskkp.supabase.co",
+      "version": "17.6.1.155",
+      "postgres_engine": "17",
+      "release_channel": "ga"
+    },
+    "created_at": "2026-08-01T01:12:54.148645Z"
+  },
+  "productionMigrations": {
+    "error": {
+      "name": "HttpException",
+      "message": "Failed to list database migrations: Connection terminated due to connection timeout"
+    }
+  },
+  "productionSqlProbe": {
+    "error": {
+      "name": "HttpException",
+      "message": "Failed to run sql query: Connection terminated due to connection timeout"
+    }
+  },
+  "productionAdvisors": {
+    "lints": []
+  },
+  "testAdvisors": {
+    "lints": [
+      {
+        "name": "auth_leaked_password_protection",
+        "title": "Leaked Password Protection Disabled",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Leaked password protection is currently disabled.",
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+            "metadata": {
+              "type": "auth",
+              "entity": "Auth"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "organizationPlan": {
+    "id": "pkmkmqhkbgwnsvvopkgx",
+    "plan": "free",
+    "tier": "tier_free",
+    "source": "supabase_get_organization"
+  },
+  "productionAuthSetting": "UNVERIFIED: INACTIVE project; dashboard settings did not load",
+  "testCatalog": {
+    "tables": [
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "workers",
+        "owner": "postgres"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "tasks",
+        "owner": "postgres"
+      },
+      {
+        "acl": "{postgres=arwdDxtm/postgres}",
+        "rls": true,
+        "name": "results",
+        "owner": "postgres"
+      }
+    ],
+    "indexes": [
+      {
+        "indexdef": "CREATE UNIQUE INDEX workers_pkey ON market_private.workers USING btree (id)",
+        "indexname": "workers_pkey",
+        "tablename": "workers",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX workers_token_hash_key ON market_private.workers USING btree (token_hash)",
+        "indexname": "workers_token_hash_key",
+        "tablename": "workers",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX market_worker_owner ON market_private.workers USING btree (owner)",
+        "indexname": "market_worker_owner",
+        "tablename": "workers",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX tasks_pkey ON market_private.tasks USING btree (id)",
+        "indexname": "tasks_pkey",
+        "tablename": "tasks",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX market_one_active ON market_private.tasks USING btree (owner, symbol) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))",
+        "indexname": "market_one_active",
+        "tablename": "tasks",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX market_task_owner_time ON market_private.tasks USING btree (owner, requested_at DESC)",
+        "indexname": "market_task_owner_time",
+        "tablename": "tasks",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX results_pkey ON market_private.results USING btree (version)",
+        "indexname": "results_pkey",
+        "tablename": "results",
+        "schemaname": "market_private",
+        "tablespace": null
+      },
+      {
+        "indexdef": "CREATE INDEX market_result_owner_symbol ON market_private.results USING btree (owner, symbol, completed_at DESC)",
+        "indexname": "market_result_owner_symbol",
+        "tablename": "results",
+        "schemaname": "market_private",
+        "tablespace": null
+      }
+    ],
+    "policies": [
+      {
+        "cmd": "ALL",
+        "qual": "false",
+        "roles": [
+          "public"
+        ],
+        "tablename": "workers",
+        "permissive": "PERMISSIVE",
+        "policyname": "no_direct_workers",
+        "schemaname": "market_private",
+        "with_check": "false"
+      },
+      {
+        "cmd": "ALL",
+        "qual": "false",
+        "roles": [
+          "public"
+        ],
+        "tablename": "tasks",
+        "permissive": "PERMISSIVE",
+        "policyname": "no_direct_tasks",
+        "schemaname": "market_private",
+        "with_check": "false"
+      },
+      {
+        "cmd": "ALL",
+        "qual": "false",
+        "roles": [
+          "public"
+        ],
+        "tablename": "results",
+        "permissive": "PERMISSIVE",
+        "policyname": "no_direct_results",
+        "schemaname": "market_private",
+        "with_check": "false"
+      }
+    ],
+    "triggers": [
+      {
+        "name": "RI_ConstraintTrigger_c_33681",
+        "table": "workers",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33681\" AFTER INSERT ON market_private.workers FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33682",
+        "table": "workers",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33682\" AFTER UPDATE ON market_private.workers FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33699",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33699\" AFTER INSERT ON market_private.tasks FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33700",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33700\" AFTER UPDATE ON market_private.tasks FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_a_33702",
+        "table": "workers",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_a_33702\" AFTER DELETE ON market_private.workers FROM market_private.tasks NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_noaction_del\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_a_33703",
+        "table": "workers",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_a_33703\" AFTER UPDATE ON market_private.workers FROM market_private.tasks NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_noaction_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33704",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33704\" AFTER INSERT ON market_private.tasks FROM market_private.workers NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33705",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33705\" AFTER UPDATE ON market_private.tasks FROM market_private.workers NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_a_33717",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_a_33717\" AFTER DELETE ON market_private.tasks FROM market_private.results NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_noaction_del\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_a_33718",
+        "table": "tasks",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_a_33718\" AFTER UPDATE ON market_private.tasks FROM market_private.results NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_noaction_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33719",
+        "table": "results",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33719\" AFTER INSERT ON market_private.results FROM market_private.tasks NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33720",
+        "table": "results",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33720\" AFTER UPDATE ON market_private.results FROM market_private.tasks NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33724",
+        "table": "results",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33724\" AFTER INSERT ON market_private.results FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+      },
+      {
+        "name": "RI_ConstraintTrigger_c_33725",
+        "table": "results",
+        "internal": true,
+        "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_33725\" AFTER UPDATE ON market_private.results FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+      }
+    ],
+    "functions": [
+      {
+        "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+        "name": "account",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "market_private",
+        "definer": true,
+        "returns": "jsonb",
+        "arguments": "p_action text, p_input jsonb",
+        "definition_md5": "9dbae2ab6ff29b27db967b8634d916ae"
+      },
+      {
+        "acl": "{postgres=X/postgres}",
+        "name": "task_json",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "market_private",
+        "definer": false,
+        "returns": "jsonb",
+        "arguments": "t market_private.tasks",
+        "definition_md5": "ded7e79108cf62f82702f924a7caeadf"
+      },
+      {
+        "acl": "{postgres=X/postgres,anon=X/postgres}",
+        "name": "worker",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "market_private",
+        "definer": true,
+        "returns": "jsonb",
+        "arguments": "p_token text, p_action text, p_input jsonb",
+        "definition_md5": "784a757cfdef6fc66418184e8deba8a9"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,authenticated=X/postgres}",
+        "name": "market_data_account",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "returns": "jsonb",
+        "arguments": "p_action text, p_input jsonb",
+        "definition_md5": "ca18ddc49c4ad957e61a60216824f92b"
+      },
+      {
+        "acl": "{postgres=X/postgres,service_role=X/postgres,anon=X/postgres}",
+        "name": "market_data_worker",
+        "owner": "postgres",
+        "config": [
+          "search_path=\"\""
+        ],
+        "schema": "public",
+        "definer": false,
+        "returns": "jsonb",
+        "arguments": "p_token text, p_action text, p_input jsonb",
+        "definition_md5": "2ba90d6933804749b8f7e31ed83e3ad4"
+      }
+    ],
+    "extensions": [
+      {
+        "name": "plpgsql",
+        "schema": "pg_catalog",
+        "version": "1.0"
+      },
+      {
+        "name": "pg_stat_statements",
+        "schema": "extensions",
+        "version": "1.11"
+      },
+      {
+        "name": "uuid-ossp",
+        "schema": "extensions",
+        "version": "1.1"
+      },
+      {
+        "name": "pgcrypto",
+        "schema": "extensions",
+        "version": "1.3"
+      },
+      {
+        "name": "supabase_vault",
+        "schema": "vault",
+        "version": "0.3.1"
+      }
+    ],
+    "captured_at": "2026-10-02T03:26:46.842147+00:00"
+  },
+  "productionMutations": [],
+  "testMutations": [],
+  "finalRecommendation": "PRODUCTION_REVIEW_NEEDS_FIX",
+  "publishedAssets": [
+    {
+      "path": "publish-manifest.json",
+      "status": 200,
+      "sharedFreshness": false,
+      "orchestrator": false,
+      "assetVersion": "entry-decision-clarity-v1-20260920",
+      "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170"
+    },
+    {
+      "path": "index.html",
+      "status": 200,
+      "sharedFreshness": false,
+      "orchestrator": false
+    },
+    {
+      "path": "src/technical-view-ux.js",
+      "status": 200,
+      "sharedFreshness": false,
+      "orchestrator": false
+    },
+    {
+      "path": "src/discussion-data-readiness.js",
+      "status": 200,
+      "sharedFreshness": false,
+      "orchestrator": false
+    },
+    {
+      "path": "src/technical-freshness.js",
+      "error": "Response status code does not indicate success: 404 (Not Found).",
+      "status": "unavailable"
+    }
+  ],
+  "migrationSha256Lf": {
+    "20261001155527_market_data_orchestrator_v1.sql": "626f36d353c5490e5cdf68b747bbaf26584d68739d239510cedc4643570e2098",
+    "20261002021235_market_data_worker_capability_lock.sql": "ba6e5d809f052fffd6f5bfaf3af76cf104e87559eba6bfcdde773bc71eb3f30a"
+  },
+  "tests": {
+    "baselineJsSql": 1106,
+    "additionalReviewTests": 5,
+    "python": 27,
+    "viewports": [
+      [
+        1280,
+        900
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        360,
+        800
+      ]
+    ],
+    "allPassed": true,
+    "remoteProductionTestsExecuted": false
+  }
+}

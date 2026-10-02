@@ -11,7 +11,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 function runtime(mode='valid'){
   const context={console,window:null,globalThis:null,setTimeout:()=>0,clearTimeout:()=>{},structuredClone,alert:()=>{},document:{getElementById:()=>null}};
   context.window=context;context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   for(const file of ['src/symbol-identity.js','src/strict-ai-json.js','src/state.js','src/long-term-logic-contract.js','src/long-term-logic-workflow.js','src/ui-render.js'])vm.runInContext(read(file),context,{filename:file});
   vm.runInContext(`
     state={stocks:[{id:'fixture',code:'601138.SS',symbol:'601138.SS',name:'工业富联',type:'holding',role:'成长仓',theme:'AI算力',shares:100,avgCost:40,plans:[],longTermLogic:{updatedAt:'2026-06-01',validUntil:'2026-12-01',investmentThesis:'原有行业与公司逻辑支持组合中的成长角色。',coreDrivers:['原驱动'],industryDrivers:['原行业驱动'],companyDrivers:['原公司驱动'],portfolioDrivers:['原组合驱动'],fundamentalSupport:'原基本面资料提供辅助验证。',longTermRisks:['原长期风险'],logicStatus:'valid',confidence:'medium',nextReviewDate:'2026-09-01',sourceSummary:'原资料摘要。'},dataFreshness:{personalViewUpdatedAt:'2026-06-01'}}]};

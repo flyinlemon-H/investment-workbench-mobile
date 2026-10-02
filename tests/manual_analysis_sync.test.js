@@ -92,7 +92,7 @@ test('mandatory backup-to-PC acceptance stays local-first until explicit Sync Pr
 });
 
 test('legacy and Slim backups load together without silently consolidating legacy driver sections',()=>{
-  const context={console};context.globalThis=context;context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','state.js'),'utf8'),context);
+  const context={console};context.globalThis=context;context.window=context;(context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','state.js'),'utf8'),context);
   context.legacy=legacyStock();context.slim=slimStock();
   const values=JSON.parse(vm.runInContext('JSON.stringify([normalizeLongTermLogic(legacy.longTermLogic,legacy),normalizeLongTermLogic(slim.longTermLogic,slim)])',context));
   assert.deepEqual(values[0].coreDrivers,['旧驱动']);assert.deepEqual(values[0].industryDrivers,['旧行业驱动']);assert.deepEqual(values[0].companyDrivers,['旧公司驱动']);assert.deepEqual(values[0].portfolioDrivers,['旧组合驱动']);assert.equal(values[0].fundamentalSupport,'旧基本面说明。');assert.equal(values[0].schemaVersion,undefined);

@@ -1,0 +1,120 @@
+{
+  "task": "MARKET_DATA_ORCHESTRATOR_V1_PRODUCTION_DEPLOY_AND_ACCEPTANCE",
+  "recordedAt": "2026-10-02T10:57:52.302Z",
+  "status": "PRODUCTION_REVIEW_NEEDS_FIX",
+  "stoppedAt": "pre-deployment compatibility gate",
+  "project": {
+    "id": "fntslvdxnupmdljnadec",
+    "name": "investment-workbench",
+    "region": "ap-southeast-1",
+    "status": "ACTIVE_HEALTHY"
+  },
+  "candidateCommit": "d9766de3f599a62e2b12d158003949ae4a1d2706",
+  "branch": "codex/market-data-orchestrator-v1",
+  "productionCommit": "27731979dc4b63b57d7a6ed262478261140484a4",
+  "mergeBase": "8e529b727b9492a7a0195ef2dc446558423e1eb6",
+  "divergence": "22\t8",
+  "baseline": {
+    "capturedAt": "2026-10-02T10:48:06.460884+00:00",
+    "reference": "docs/market-data-production-live-baseline.json",
+    "changedFields": [],
+    "businessSummaries": [
+      {
+        "object": "analysis_private.analysis_sync_modules",
+        "row_count": 0,
+        "content_hash": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "object": "public.input_queue",
+        "row_count": 2,
+        "content_hash": "6509d234a14f2a73dbbb1936bac7d277"
+      },
+      {
+        "object": "public.stock_universe_entries",
+        "row_count": 23,
+        "content_hash": "c4156cc16fbf818859ed245c642de8fb"
+      },
+      {
+        "object": "universe_private.reader_credentials",
+        "row_count": 2,
+        "content_hash": "539a458be6589e8d2f28f14e40fa2520"
+      }
+    ]
+  },
+  "web": {
+    "capturedAt": "2026-10-02T10:50:20.788Z",
+    "authUnchanged": true,
+    "assetVersion": "entry-decision-clarity-v1-20260920",
+    "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
+    "deploymentCommit": "27731979dc4b63b57d7a6ed262478261140484a4"
+  },
+  "tests": {
+    "orchestratorRelated": {
+      "passed": 19,
+      "failed": 0
+    },
+    "existingProductionClarityOnMain": {
+      "tests": 31,
+      "passed": 31,
+      "failed": 0
+    },
+    "existingProductionClarityOnCandidate": {
+      "tests": 31,
+      "passed": 14,
+      "failed": 17
+    },
+    "failedTests": [
+      "clarity state label: wait_setup",
+      "clarity state label: entry_ready",
+      "clarity state label: entry_extended",
+      "clarity state label: setup_failed",
+      "clarity path label: platform_breakout",
+      "clarity path label: none",
+      "completed and pending conditions remain separate verbatim lists",
+      "final upgrade result is explicit for pullback_confirmation",
+      "final upgrade result is explicit for breakout_confirmation",
+      "empty condition arrays stay empty and do not borrow lower Plan prices",
+      "failed state exposes only supplied failure evidence",
+      "ready wins display priority while contradictory originals and diagnostics survive",
+      "preview uses same priority, keeps risks visible and stays diagnostic-free",
+      "Plan references stay distinct with understandable needs_review guidance",
+      "ready conflict wording in headline stays diagnostic only",
+      "ready conflict wording in positionDirection stays diagnostic only",
+      "ready conflict wording in addAssessment stays diagnostic only"
+    ],
+    "controlLogSha256": "3b0008da48f2b9a2e884567f0028819f0fbac0a5dcdd7fa94d0fb5f1d8d6d51c",
+    "candidateLogSha256": "8e5c49a0a1785e173f7030cdc64d56d7d36a2b86725f895c161ba386f8fe9a19"
+  },
+  "finalReadOnly": {
+    "ledger": [
+      {
+        "name": "stock_universe_auto_add_v1a",
+        "version": "20260903132654",
+        "statementsMd5": "ea140f2862d4aa615e3429defb5a19be"
+      },
+      {
+        "name": "stock_universe_private_rpc_boundary",
+        "version": "20260903132704",
+        "statementsMd5": "387b5e4eed8246aa197cdeefba5caded"
+      }
+    ],
+    "checkedAt": "2026-10-02T10:54:41.808315+00:00",
+    "marketRpcCount": 0,
+    "marketSchemaAbsent": true
+  },
+  "cli": {
+    "authenticated": false,
+    "readOnlyBackupList": "Access token not provided",
+    "backupAvailable": "unverified"
+  },
+  "productionWrites": [],
+  "migrationsApplied": [],
+  "productionAccountsCreated": 0,
+  "productionCredentialsCreated": 0,
+  "productionTasksCreated": 0,
+  "pushed": false,
+  "frontendDeployed": false,
+  "rollbackRequired": false,
+  "productCodeChanged": false,
+  "previousReadyConclusionWithdrawn": true
+}

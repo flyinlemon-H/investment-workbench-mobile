@@ -11,7 +11,7 @@ const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 
 function loadPublishedBridge(){
   const context={window:{}};
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('data/market_data_bridge.js'),context);
   return context.window.MARKET_DATA_BRIDGE;
 }
@@ -19,7 +19,7 @@ function loadPublishedBridge(){
 function loadTechnicalRuntime(){
   const context={console,window:{},globalThis:null};
   context.globalThis=context;
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(read('src/state.js'),context,{filename:'state.js'});
   vm.runInContext('this.runtime={updateTechnicalDataFromPriceHistory};',context);
   return context.runtime;
@@ -61,7 +61,7 @@ test('Workbench consumes bridge data through one critical save',async()=>{
     updateTechnicalDataFromPriceHistory:target=>{technicalRefreshes+=1;target.technicalData={technicalAsOf:target.priceHistory.at(-1).date,technicalDataStatus:'fresh'}},
     saveState:async(value,options)=>saves.push({value,options})
   };
-  vm.createContext(context);
+  (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(`${read('src/market-data-bridge.js')}\nthis.applyMarketDataBridge=applyMarketDataBridge;`,context);
   const changed=await context.applyMarketDataBridge();
   assert.equal(changed,1);
@@ -101,11 +101,14 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Plan Discussion V4 release cache-busts new and preserved Workbench modules',()=>{
+test('Market Orchestrator release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='entry-decision-clarity-v1-20260920';
+  const version='market-data-orchestrator-v1-integration-20261002';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'src/technical-freshness.js',
+    'src/market-data-orchestrator.js',
+    'src/market-data-task-ui.js',
     'src/entry-decision.js',
     'src/plan-context-contract.js',
     'src/discussion-v4.js',

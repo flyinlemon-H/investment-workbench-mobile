@@ -140,7 +140,7 @@ test('Discussion Prompt is natural, continuation-focused, screenshot-aware, and 
 });
 
 test('Archive Prompt is short, strict, versioned, and does not resend history',()=>{
-  const prepared=Workbench.buildDiscussionRequest(stock()),archive=Workbench.buildArchiveRequest(prepared);
+  const prepared=Workbench.buildDiscussionRequest(stock(),{reviewDate:dateAt(29)}),archive=Workbench.buildArchiveRequest(prepared);
   assert.ok(archive.request.length<7000);assert.match(archive.request,/只输出唯一一个完整的 ```json 代码块/);assert.match(archive.request,/代码块外不得有任何文字/);assert.match(archive.request,/代码块内必须是一个完整严格 JSON 对象/);assert.doesNotMatch(archive.request,/不要 Markdown 代码围栏/);assert.match(archive.request,new RegExp(prepared.sourceDiscussionVersion));
   assert.equal(archive.technicalDataStatus,'fresh');assert.match(archive.request,/程序当前 technicalDataStatus: fresh/);assert.match(archive.request,/confidence 可根据证据使用 high、medium 或 low/);assert.match(archive.request,/不得仅因为 fresh 自动使用 high/);
   assert.match(archive.request,/PROGRAM OWNS FACTS \/ AI OWNS JUDGMENTS/);assert.match(archive.request,/程序上下文中出现的字段不代表它属于输出 schema/);assert.match(archive.request,/其余 input-only context 不得复制到 JSON/);
@@ -156,7 +156,7 @@ test('Archive Prompt is short, strict, versioned, and does not resend history',(
 
 test('Archive Prompt carries the actual four-state technical freshness fact and forbids high confidence unless fresh',()=>{
   for(const technicalDataStatus of ['stale','unavailable','anomaly']){
-    const prepared=Workbench.buildDiscussionRequest(stock({technicalData:{technicalDataStatus}})),archive=Workbench.buildArchiveRequest(prepared);
+    const prepared=Workbench.buildDiscussionRequest(stock({technicalData:{...stock().technicalData,technicalDataStatus}})),archive=Workbench.buildArchiveRequest(prepared);
     assert.equal(archive.technicalDataStatus,technicalDataStatus);assert.match(archive.request,new RegExp(`程序当前 technicalDataStatus: ${technicalDataStatus}`));assert.match(archive.request,/technicalDataStatus 是程序拥有的输入上下文，只用于判断 confidence，不得输出到 currentState JSON/);assert.match(archive.request,new RegExp(`当前技术资料不是 fresh（实际为 ${technicalDataStatus}）`));assert.match(archive.request,/confidence 不得输出 high，只能根据证据使用 medium 或 low/);assert.match(archive.request,/正确输出保留 "confidence":"medium" 且不含 technicalDataStatus/);assert.match(archive.request,/错误输出含 "technicalDataStatus":"stale","confidence":"medium"，会被 strict schema 拒绝/);assert.ok(archive.request.length<7000);
   }
   const missing=Workbench.buildArchiveRequest(Workbench.buildDiscussionRequest(stock({technicalData:{}})));assert.equal(missing.technicalDataStatus,'unavailable');assert.match(missing.request,/程序当前 technicalDataStatus: unavailable/);

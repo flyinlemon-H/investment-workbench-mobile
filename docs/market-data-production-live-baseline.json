@@ -1,0 +1,1152 @@
+{
+  "capturedAt": "2026-10-02T09:02:09.39983+00:00",
+  "projectId": "fntslvdxnupmdljnadec",
+  "database": "postgres",
+  "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+  "schemas": [
+    {
+      "acl": "{postgres=UC/postgres,authenticated=U/postgres}",
+      "name": "analysis_private",
+      "owner": "postgres"
+    },
+    {
+      "acl": "{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner,postgres=U/pg_database_owner,anon=U/pg_database_owner,authenticated=U/pg_database_owner,service_role=U/pg_database_owner}",
+      "name": "public",
+      "owner": "pg_database_owner"
+    },
+    {
+      "acl": "{postgres=UC/postgres,anon=U/postgres,authenticated=U/postgres}",
+      "name": "universe_private",
+      "owner": "postgres"
+    }
+  ],
+  "relations": [
+    {
+      "acl": "{postgres=arwdDxtm/postgres}",
+      "rls": true,
+      "kind": "r",
+      "name": "analysis_sync_modules",
+      "owner": "postgres",
+      "schema": "analysis_private",
+      "forceRls": false
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=arwDxtm/postgres,authenticated=Dxtm/postgres,service_role=Dxtm/postgres}",
+      "rls": true,
+      "kind": "r",
+      "name": "input_queue",
+      "owner": "postgres",
+      "schema": "public",
+      "forceRls": false
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,service_role=Dxtm/postgres,authenticated=ar/postgres}",
+      "rls": true,
+      "kind": "r",
+      "name": "stock_universe_entries",
+      "owner": "postgres",
+      "schema": "public",
+      "forceRls": false
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres}",
+      "rls": true,
+      "kind": "r",
+      "name": "reader_credentials",
+      "owner": "postgres",
+      "schema": "universe_private",
+      "forceRls": false
+    }
+  ],
+  "columns": [
+    {
+      "acl": null,
+      "name": "user_id",
+      "type": "uuid",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "module_type",
+      "type": "text",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "entity_key",
+      "type": "text",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "module_schema_version",
+      "type": "text",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "revision",
+      "type": "bigint",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "payload_hash",
+      "type": "text",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "payload",
+      "type": "jsonb",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "published_at",
+      "type": "timestamp with time zone",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "default": "now()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "id",
+      "type": "uuid",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "gen_random_uuid()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "now()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "source",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "input_type",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "symbol",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "payload",
+      "type": "jsonb",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "'{}'::jsonb",
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "processed_at",
+      "type": "timestamp with time zone",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "error_message",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "ingestion_status",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "'''pending'''::text",
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "processing_status",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "'''unprocessed'''::text",
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "review_status",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "'''pending_review'''::text",
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "client_request_id",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "schema_version",
+      "type": "text",
+      "table": "input_queue",
+      "schema": "public",
+      "default": "'''1.0'''::text",
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "received_at",
+      "type": "timestamp with time zone",
+      "table": "input_queue",
+      "schema": "public",
+      "default": null,
+      "notNull": false
+    },
+    {
+      "acl": null,
+      "name": "user_id",
+      "type": "uuid",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "symbol",
+      "type": "text",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "display_name",
+      "type": "text",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "default": "''::text",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "default": "now()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "id",
+      "type": "uuid",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": "gen_random_uuid()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "user_id",
+      "type": "uuid",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "token_hash",
+      "type": "bytea",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "label",
+      "type": "text",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": null,
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": "now()",
+      "notNull": true
+    },
+    {
+      "acl": null,
+      "name": "expires_at",
+      "type": "timestamp with time zone",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "default": "(now() + '180 days'::interval)",
+      "notNull": true
+    }
+  ],
+  "constraints": [
+    {
+      "name": "analysis_sync_modules_entity_key_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((entity_key ~ '^[A-Z0-9][A-Z0-9._-]{0,63}$'::text))"
+    },
+    {
+      "name": "analysis_sync_modules_module_schema_version_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((module_schema_version ~ '^[a-z][a-z0-9-]*\\.v[1-9][0-9]*$'::text))"
+    },
+    {
+      "name": "analysis_sync_modules_module_type_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((module_type ~ '^[a-z][a-z0-9_]{0,63}$'::text))"
+    },
+    {
+      "name": "analysis_sync_modules_payload_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((jsonb_typeof(payload) = 'object'::text))"
+    },
+    {
+      "name": "analysis_sync_modules_payload_hash_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((payload_hash ~ '^sha256:[0-9a-f]{64}$'::text))"
+    },
+    {
+      "name": "analysis_sync_modules_pkey",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "PRIMARY KEY (user_id, module_type, entity_key)"
+    },
+    {
+      "name": "analysis_sync_modules_revision_check",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "CHECK ((revision > 0))"
+    },
+    {
+      "name": "analysis_sync_modules_user_id_fkey",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "input_queue_pkey",
+      "table": "input_queue",
+      "schema": "public",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "stock_universe_entries_display_name_check",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "definition": "CHECK ((char_length(display_name) <= 120))"
+    },
+    {
+      "name": "stock_universe_entries_pkey",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "definition": "PRIMARY KEY (user_id, symbol)"
+    },
+    {
+      "name": "stock_universe_entries_symbol_check",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "definition": "CHECK ((symbol ~ '^(?:[0-9]{6}\\.(?:SS|SZ)|[0-9]{4,5}\\.HK)$'::text))"
+    },
+    {
+      "name": "stock_universe_entries_user_id_fkey",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    },
+    {
+      "name": "reader_credentials_label_check",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "definition": "CHECK (((char_length(label) >= 1) AND (char_length(label) <= 40)))"
+    },
+    {
+      "name": "reader_credentials_pkey",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "reader_credentials_token_hash_key",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "definition": "UNIQUE (token_hash)"
+    },
+    {
+      "name": "reader_credentials_user_id_fkey",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id)"
+    }
+  ],
+  "indexes": [
+    {
+      "indexdef": "CREATE INDEX analysis_sync_modules_owner_published_idx ON analysis_private.analysis_sync_modules USING btree (user_id, published_at DESC)",
+      "indexname": "analysis_sync_modules_owner_published_idx",
+      "tablename": "analysis_sync_modules",
+      "schemaname": "analysis_private",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX analysis_sync_modules_pkey ON analysis_private.analysis_sync_modules USING btree (user_id, module_type, entity_key)",
+      "indexname": "analysis_sync_modules_pkey",
+      "tablename": "analysis_sync_modules",
+      "schemaname": "analysis_private",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX input_queue_pkey ON public.input_queue USING btree (id)",
+      "indexname": "input_queue_pkey",
+      "tablename": "input_queue",
+      "schemaname": "public",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX stock_universe_entries_pkey ON public.stock_universe_entries USING btree (user_id, symbol)",
+      "indexname": "stock_universe_entries_pkey",
+      "tablename": "stock_universe_entries",
+      "schemaname": "public",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE INDEX reader_credentials_owner_idx ON universe_private.reader_credentials USING btree (user_id)",
+      "indexname": "reader_credentials_owner_idx",
+      "tablename": "reader_credentials",
+      "schemaname": "universe_private",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX reader_credentials_pkey ON universe_private.reader_credentials USING btree (id)",
+      "indexname": "reader_credentials_pkey",
+      "tablename": "reader_credentials",
+      "schemaname": "universe_private",
+      "tablespace": null
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX reader_credentials_token_hash_key ON universe_private.reader_credentials USING btree (token_hash)",
+      "indexname": "reader_credentials_token_hash_key",
+      "tablename": "reader_credentials",
+      "schemaname": "universe_private",
+      "tablespace": null
+    }
+  ],
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "get_analysis_module",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "analysis_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "p_module_type text, p_entity_key text",
+      "definition": "CREATE OR REPLACE FUNCTION analysis_private.get_analysis_module(p_module_type text, p_entity_key text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare v_owner uuid := auth.uid(); v_row analysis_private.analysis_sync_modules;\r\nbegin\r\n  if v_owner is null then raise exception 'ANALYSIS_AUTH_REQUIRED' using errcode='42501'; end if;\r\n  select * into v_row from analysis_private.analysis_sync_modules\r\n    where user_id=v_owner and module_type=p_module_type and entity_key=p_entity_key;\r\n  if not found then return null; end if;\r\n  return analysis_private.module_json(v_row);\r\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "list_analysis_modules",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "analysis_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION analysis_private.list_analysis_modules()\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare v_owner uuid := auth.uid(); v_rows jsonb;\r\nbegin\r\n  if v_owner is null then raise exception 'ANALYSIS_AUTH_REQUIRED' using errcode='42501'; end if;\r\n  select coalesce(jsonb_agg(analysis_private.module_json(row_value) order by row_value.published_at desc),'[]'::jsonb)\r\n    into v_rows from analysis_private.analysis_sync_modules row_value where row_value.user_id=v_owner;\r\n  return v_rows;\r\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "name": "module_json",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "analysis_private",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "p_row analysis_private.analysis_sync_modules",
+      "definition": "CREATE OR REPLACE FUNCTION analysis_private.module_json(p_row analysis_private.analysis_sync_modules)\n RETURNS jsonb\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO ''\nAS $function$\r\n  select jsonb_build_object(\r\n    'moduleType',p_row.module_type,\r\n    'entityKey',p_row.entity_key,\r\n    'moduleSchemaVersion',p_row.module_schema_version,\r\n    'revision',p_row.revision,\r\n    'payloadHash',p_row.payload_hash,\r\n    'publishedAt',p_row.published_at,\r\n    'payload',p_row.payload\r\n  );\r\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "publish_analysis_module",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "analysis_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text",
+      "definition": "CREATE OR REPLACE FUNCTION analysis_private.publish_analysis_module(p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare v_owner uuid := auth.uid(); v_row analysis_private.analysis_sync_modules; v_next bigint;\r\nbegin\r\n  if v_owner is null then raise exception 'ANALYSIS_AUTH_REQUIRED' using errcode='42501'; end if;\r\n  if p_entity_key !~ '^[A-Z0-9][A-Z0-9._-]{0,63}$' or p_payload_hash !~ '^sha256:[0-9a-f]{64}$' or p_expected_revision is null or p_expected_revision < 0 then\r\n    raise exception 'ANALYSIS_ENVELOPE_INVALID';\r\n  end if;\r\n  perform analysis_private.validate_module_payload(p_module_type,p_module_schema_version,p_payload);\r\n  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_owner::text||':'||p_module_type||':'||p_entity_key,0));\r\n  select * into v_row from analysis_private.analysis_sync_modules\r\n    where user_id=v_owner and module_type=p_module_type and entity_key=p_entity_key for update;\r\n  if found and v_row.payload_hash=p_payload_hash then\r\n    return jsonb_build_object('status','no_change','module',analysis_private.module_json(v_row));\r\n  end if;\r\n  if not found then\r\n    if p_expected_revision<>0 or p_expected_hash is not null then return jsonb_build_object('status','conflict'); end if;\r\n    insert into analysis_private.analysis_sync_modules(user_id,module_type,entity_key,module_schema_version,revision,payload_hash,payload)\r\n      values(v_owner,p_module_type,p_entity_key,p_module_schema_version,1,p_payload_hash,p_payload) returning * into v_row;\r\n  else\r\n    if v_row.revision<>p_expected_revision or v_row.payload_hash is distinct from p_expected_hash then return jsonb_build_object('status','conflict'); end if;\r\n    v_next:=v_row.revision+1;\r\n    update analysis_private.analysis_sync_modules set module_schema_version=p_module_schema_version,revision=v_next,payload_hash=p_payload_hash,payload=p_payload,published_at=now()\r\n      where user_id=v_owner and module_type=p_module_type and entity_key=p_entity_key returning * into v_row;\r\n  end if;\r\n  return jsonb_build_object('status','published','module',analysis_private.module_json(v_row));\r\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "name": "validate_module_payload",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "analysis_private",
+      "definer": false,
+      "returns": "void",
+      "arguments": "p_module_type text, p_module_schema_version text, p_payload jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION analysis_private.validate_module_payload(p_module_type text, p_module_schema_version text, p_payload jsonb)\n RETURNS void\n LANGUAGE plpgsql\n IMMUTABLE\n SET search_path TO ''\nAS $function$\r\ndeclare v_keys text[];\r\nbegin\r\n  if p_module_type !~ '^[a-z][a-z0-9_]{0,63}$' or p_module_schema_version !~ '^[a-z][a-z0-9-]*\\.v[1-9][0-9]*$' or jsonb_typeof(p_payload) <> 'object' then\r\n    raise exception 'ANALYSIS_MODULE_INVALID';\r\n  end if;\r\n  if p_module_type = 'long_term_logic' then\r\n    if p_module_schema_version <> 'long-term-logic.v2' then raise exception 'ANALYSIS_SCHEMA_UNSUPPORTED'; end if;\r\n    select array_agg(key order by key) into v_keys from jsonb_object_keys(p_payload) key;\r\n    if v_keys <> array['confidence','coreDrivers','investmentThesis','keyRisks','logicStatus','nextReviewDate','reviewTriggers'] then\r\n      raise exception 'ANALYSIS_PAYLOAD_INVALID';\r\n    end if;\r\n  else\r\n    raise exception 'ANALYSIS_MODULE_UNSUPPORTED';\r\n  end if;\r\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "get_analysis_module",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "p_module_type text, p_entity_key text",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_analysis_module(p_module_type text, p_entity_key text)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$ select analysis_private.get_analysis_module(p_module_type,p_entity_key); $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "list_analysis_modules",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.list_analysis_modules()\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$ select analysis_private.list_analysis_modules(); $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "list_stock_universe_readers",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.list_stock_universe_readers()\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  select universe_private.list_stock_universe_readers();\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "publish_analysis_module",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text",
+      "definition": "CREATE OR REPLACE FUNCTION public.publish_analysis_module(p_module_type text, p_entity_key text, p_module_schema_version text, p_payload_hash text, p_payload jsonb, p_expected_revision bigint, p_expected_hash text)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\r\n  select analysis_private.publish_analysis_module(p_module_type,p_entity_key,p_module_schema_version,p_payload_hash,p_payload,p_expected_revision,p_expected_hash);\r\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres}",
+      "name": "read_stock_universe",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "p_token text",
+      "definition": "CREATE OR REPLACE FUNCTION public.read_stock_universe(p_token text)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  select universe_private.read_stock_universe(p_token);\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "register_stock_universe_reader",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "jsonb",
+      "arguments": "p_token text, p_label text",
+      "definition": "CREATE OR REPLACE FUNCTION public.register_stock_universe_reader(p_token text, p_label text)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  select universe_private.register_stock_universe_reader(p_token,p_label);\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "revoke_stock_universe_reader",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "public",
+      "definer": false,
+      "returns": "void",
+      "arguments": "p_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.revoke_stock_universe_reader(p_id uuid)\n RETURNS void\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  select universe_private.revoke_stock_universe_reader(p_id);\n$function$\n"
+    },
+    {
+      "acl": null,
+      "name": "rls_auto_enable",
+      "owner": "postgres",
+      "config": [
+        "search_path=pg_catalog"
+      ],
+      "schema": "public",
+      "definer": true,
+      "returns": "event_trigger",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.rls_auto_enable()\n RETURNS event_trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE\n  cmd record;\nBEGIN\n  FOR cmd IN\n    SELECT *\n    FROM pg_event_trigger_ddl_commands()\n    WHERE command_tag IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')\n      AND object_type IN ('table','partitioned table')\n  LOOP\n     IF cmd.schema_name IS NOT NULL AND cmd.schema_name IN ('public') AND cmd.schema_name NOT IN ('pg_catalog','information_schema') AND cmd.schema_name NOT LIKE 'pg_toast%' AND cmd.schema_name NOT LIKE 'pg_temp%' THEN\n      BEGIN\n        EXECUTE format('alter table if exists %s enable row level security', cmd.object_identity);\n        RAISE LOG 'rls_auto_enable: enabled RLS on %', cmd.object_identity;\n      EXCEPTION\n        WHEN OTHERS THEN\n          RAISE LOG 'rls_auto_enable: failed to enable RLS on %', cmd.object_identity;\n      END;\n     ELSE\n        RAISE LOG 'rls_auto_enable: skip % (either system schema or not in enforced list: %.)', cmd.object_identity, cmd.schema_name;\n     END IF;\n  END LOOP;\nEND;\n$function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "list_stock_universe_readers",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "universe_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION universe_private.list_stock_universe_readers()\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_owner uuid := auth.uid();\nbegin\n  if v_owner is null then raise exception 'UNIVERSE_AUTH_REQUIRED' using errcode='42501'; end if;\n  return (select coalesce(jsonb_agg(jsonb_build_object('id',id,'label',label,'expiresAt',expires_at) order by created_at),'[]'::jsonb)\n    from universe_private.reader_credentials where user_id=v_owner and expires_at>now());\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres}",
+      "name": "read_stock_universe",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "universe_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "p_token text",
+      "definition": "CREATE OR REPLACE FUNCTION universe_private.read_stock_universe(p_token text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_owner uuid; v_expiry timestamptz; v_rows jsonb;\nbegin\n  if p_token is null or p_token !~ '^[0-9a-f]{64}$' then\n    raise exception 'UNIVERSE_READER_AUTH_REQUIRED' using errcode='42501';\n  end if;\n  select user_id,expires_at into v_owner,v_expiry from universe_private.reader_credentials\n    where token_hash=pg_catalog.sha256(pg_catalog.convert_to(p_token,'UTF8')) and expires_at>now();\n  if v_owner is null then raise exception 'UNIVERSE_READER_AUTH_REQUIRED' using errcode='42501'; end if;\n  select coalesce(jsonb_agg(jsonb_build_object('symbol',symbol,'displayName',display_name) order by symbol),'[]'::jsonb)\n    into v_rows from public.stock_universe_entries where user_id=v_owner;\n  return jsonb_build_object('schemaVersion',1,'userId',v_owner,'credentialExpiresAt',v_expiry,'symbols',v_rows);\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "register_stock_universe_reader",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "universe_private",
+      "definer": true,
+      "returns": "jsonb",
+      "arguments": "p_token text, p_label text",
+      "definition": "CREATE OR REPLACE FUNCTION universe_private.register_stock_universe_reader(p_token text, p_label text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare v_owner uuid := auth.uid(); v_id uuid; v_expiry timestamptz;\nbegin\n  if v_owner is null then raise exception 'UNIVERSE_AUTH_REQUIRED' using errcode='42501'; end if;\n  if p_token is null or p_token !~ '^[0-9a-f]{64}$' or p_label is null or char_length(btrim(p_label)) not between 1 and 40 then\n    raise exception 'UNIVERSE_READER_INVALID';\n  end if;\n  -- Serialize issuance to enforce the small per-owner limit, not Universe ordering.\n  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(v_owner::text,0));\n  if (select count(*) from universe_private.reader_credentials where user_id=v_owner and expires_at>now()) >= 10 then\n    raise exception 'UNIVERSE_READER_LIMIT';\n  end if;\n  insert into universe_private.reader_credentials(user_id,token_hash,label)\n    values(v_owner,pg_catalog.sha256(pg_catalog.convert_to(p_token,'UTF8')),btrim(p_label))\n    returning id,expires_at into v_id,v_expiry;\n  return jsonb_build_object('id',v_id,'userId',v_owner,'expiresAt',v_expiry);\nend $function$\n"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "name": "revoke_stock_universe_reader",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "schema": "universe_private",
+      "definer": true,
+      "returns": "void",
+      "arguments": "p_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION universe_private.revoke_stock_universe_reader(p_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if auth.uid() is null then raise exception 'UNIVERSE_AUTH_REQUIRED' using errcode='42501'; end if;\n  update universe_private.reader_credentials set expires_at=now() where id=p_id and user_id=auth.uid();\nend $function$\n"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "analysis_sync_modules",
+      "permissive": "PERMISSIVE",
+      "policyname": "analysis_sync_owner_insert",
+      "schemaname": "analysis_private",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "analysis_sync_modules",
+      "permissive": "PERMISSIVE",
+      "policyname": "analysis_sync_owner_select",
+      "schemaname": "analysis_private",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "analysis_sync_modules",
+      "permissive": "PERMISSIVE",
+      "policyname": "analysis_sync_owner_update",
+      "schemaname": "analysis_private",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "anon"
+      ],
+      "tablename": "input_queue",
+      "permissive": "PERMISSIVE",
+      "policyname": "allow_insert_input_queue_test",
+      "schemaname": "public",
+      "with_check": "true"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "anon"
+      ],
+      "tablename": "input_queue",
+      "permissive": "PERMISSIVE",
+      "policyname": "allow_read_input_queue_test",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "true",
+      "roles": [
+        "anon"
+      ],
+      "tablename": "input_queue",
+      "permissive": "PERMISSIVE",
+      "policyname": "allow_update_input_queue_test",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "stock_universe_entries",
+      "permissive": "PERMISSIVE",
+      "policyname": "stock_universe_owner_insert",
+      "schemaname": "public",
+      "with_check": "(( SELECT auth.uid() AS uid) = user_id)"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "stock_universe_entries",
+      "permissive": "PERMISSIVE",
+      "policyname": "stock_universe_owner_select",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "ALL",
+      "qual": "false",
+      "roles": [
+        "public"
+      ],
+      "tablename": "reader_credentials",
+      "permissive": "PERMISSIVE",
+      "policyname": "reader_credentials_deny_direct_access",
+      "schemaname": "universe_private",
+      "with_check": "false"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "RI_ConstraintTrigger_c_25494",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25494\" AFTER INSERT ON analysis_private.analysis_sync_modules FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+    },
+    {
+      "name": "RI_ConstraintTrigger_c_25495",
+      "table": "analysis_sync_modules",
+      "schema": "analysis_private",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25495\" AFTER UPDATE ON analysis_private.analysis_sync_modules FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+    },
+    {
+      "name": "RI_ConstraintTrigger_c_25430",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25430\" AFTER INSERT ON public.stock_universe_entries FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+    },
+    {
+      "name": "RI_ConstraintTrigger_c_25431",
+      "table": "stock_universe_entries",
+      "schema": "public",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25431\" AFTER UPDATE ON public.stock_universe_entries FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+    },
+    {
+      "name": "RI_ConstraintTrigger_c_25451",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25451\" AFTER INSERT ON universe_private.reader_credentials FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_ins\"()"
+    },
+    {
+      "name": "RI_ConstraintTrigger_c_25452",
+      "table": "reader_credentials",
+      "schema": "universe_private",
+      "enabled": "O",
+      "internal": true,
+      "definition": "CREATE CONSTRAINT TRIGGER \"RI_ConstraintTrigger_c_25452\" AFTER UPDATE ON universe_private.reader_credentials FROM auth.users NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION \"RI_FKey_check_upd\"()"
+    }
+  ],
+  "eventTriggers": [
+    {
+      "name": "issue_graphql_placeholder",
+      "tags": [
+        "DROP EXTENSION"
+      ],
+      "event": "sql_drop",
+      "enabled": "O",
+      "function": "set_graphql_placeholder()"
+    },
+    {
+      "name": "pgrst_ddl_watch",
+      "tags": null,
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "pgrst_ddl_watch()"
+    },
+    {
+      "name": "pgrst_drop_watch",
+      "tags": null,
+      "event": "sql_drop",
+      "enabled": "O",
+      "function": "pgrst_drop_watch()"
+    },
+    {
+      "name": "issue_pg_cron_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "grant_pg_cron_access()"
+    },
+    {
+      "name": "issue_pg_net_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "grant_pg_net_access()"
+    },
+    {
+      "name": "issue_pg_graphql_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "grant_pg_graphql_access()"
+    },
+    {
+      "name": "ensure_rls",
+      "tags": [
+        "CREATE TABLE",
+        "CREATE TABLE AS",
+        "SELECT INTO"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "rls_auto_enable()"
+    }
+  ],
+  "defaultPrivileges": [
+    {
+      "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+      "type": "r",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "type": "f",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+      "type": "S",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/supabase_auth_admin,dashboard_user=arwdDxtm/supabase_auth_admin}",
+      "type": "r",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": "{postgres=rwU/supabase_auth_admin,dashboard_user=rwU/supabase_auth_admin}",
+      "type": "S",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": "{postgres=X/supabase_auth_admin,dashboard_user=X/supabase_auth_admin}",
+      "type": "f",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": "{postgres=rwU/supabase_admin,dashboard_user=rwU/supabase_admin}",
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    },
+    {
+      "acl": "{postgres=X/supabase_admin,dashboard_user=X/supabase_admin}",
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    },
+    {
+      "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": "{postgres=a*r*w*d*D*x*t*m*/supabase_admin}",
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": "{postgres=X*/supabase_admin}",
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": "{postgres=r*w*U*/supabase_admin}",
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}",
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}",
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}",
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": "{postgres=arwdDxtm/postgres,anon=Dxtm/postgres,authenticated=Dxtm/postgres,service_role=Dxtm/postgres}",
+      "type": "r",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=rwU/postgres}",
+      "type": "S",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "type": "f",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": "{postgres=a*r*wdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}",
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    }
+  ],
+  "roles": [
+    {
+      "role": "authenticated",
+      "inherit": true,
+      "bypassRls": false,
+      "superuser": false
+    },
+    {
+      "role": "anon",
+      "inherit": true,
+      "bypassRls": false,
+      "superuser": false
+    },
+    {
+      "role": "service_role",
+      "inherit": true,
+      "bypassRls": true,
+      "superuser": false
+    },
+    {
+      "role": "postgres",
+      "inherit": true,
+      "bypassRls": true,
+      "superuser": false
+    }
+  ],
+  "roleMemberships": null,
+  "extensions": [
+    {
+      "name": "plpgsql",
+      "schema": "pg_catalog",
+      "version": "1.0"
+    },
+    {
+      "name": "pgcrypto",
+      "schema": "extensions",
+      "version": "1.3"
+    },
+    {
+      "name": "uuid-ossp",
+      "schema": "extensions",
+      "version": "1.1"
+    },
+    {
+      "name": "pg_stat_statements",
+      "schema": "extensions",
+      "version": "1.11"
+    },
+    {
+      "name": "supabase_vault",
+      "schema": "vault",
+      "version": "0.3.1"
+    }
+  ]
+}
