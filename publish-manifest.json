@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
-  "assetVersion": "entry-decision-clarity-v1-20260920",
-  "dataMode": "Optional zero-holding Entry Decision paths, commitment review and post-import diagnostics; compatible Discussion V3 permissive import and protected facts; no Plan mutation, automatic AI or execution",
+  "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
+  "assetVersion": "market-data-orchestrator-v1-integration-20261002",
+  "dataMode": "Production Entry Decision Clarity and preserved Discussion/Plan/Runtime plus daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -19,14 +19,14 @@
     {
       "path": "data/market_data_bridge.js",
       "role": "delivered daily market data bridge",
-      "bytes": 2150780,
-      "sha256": "f56e3137d84175fa3dbf0eed0d0dc46a5b17919377067f6aa30ee18ab0427c68"
+      "bytes": 2194603,
+      "sha256": "5ac635d1a9aad099b7738ad5555af1e3103a16aae6ffd76df869a37f192b0c76"
     },
     {
       "path": "data/market_task_status_bridge.js",
       "role": "delivered daily market task status bridge",
       "bytes": 1351,
-      "sha256": "2d20bfd33ba2bba186064fe76d6bc5208c932a84f2882c5de9bd5691382473df"
+      "sha256": "0f16130892b0aee260437552d2f230574122b1b8833a028d7f7cc4a0069b9d53"
     },
     {
       "path": "data/operation_application_status_bridge.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 73274,
-      "sha256": "8f7138a64c9cffaeb7edf1a7ce6c6df5259d15755bba9c8c59f318b9673b0820"
+      "bytes": 74761,
+      "sha256": "6cbb8b0874333560ec2620010dff1d5f132de4cff1a998b149717c2b8bbbdf6a"
     },
     {
       "path": "social_posts.json",
@@ -133,8 +133,8 @@
     {
       "path": "src/discussion-data-readiness.js",
       "role": "Derived Discussion evidence readiness and session fingerprint; no persistent readiness or navigation data",
-      "bytes": 8201,
-      "sha256": "e9036e2f7a1268c430aeadc3fac723879ef49f0c76e5edd3ae99dd2226502bb3"
+      "bytes": 7721,
+      "sha256": "47700cd56d14c38c4818be2e1e497c98a7285f1add2cae66489109388a30c498"
     },
     {
       "path": "src/discussion-plan-workflow.js",
@@ -157,8 +157,8 @@
     {
       "path": "src/discussion-workbench.js",
       "role": "Single Stock Current State v3 position-centric User Decision schema, V1/V2 compatibility, continuity context, and protected Runtime/market inputs",
-      "bytes": 56877,
-      "sha256": "655e53d6c9e465cf43d6115ebd74bb1e90434aebbab28aff93361a0ce8dbfdcb"
+      "bytes": 57174,
+      "sha256": "7ff6116f90586e0882f734b2a5c3484ead36de358db99b2748009a1c652a8350"
     },
     {
       "path": "src/entry-decision.js",
@@ -229,8 +229,20 @@
     {
       "path": "src/market-data-bridge.js",
       "role": "browser runtime dependency",
-      "bytes": 1899,
-      "sha256": "309c1643af97fdaabe2332540964c0be2ba4e32a9a6e731e4b44f3c4a2461b91"
+      "bytes": 2208,
+      "sha256": "8ea9209824466b2ef0a410f97f789d4123ef4b0767be8c81d3b4aed723163e10"
+    },
+    {
+      "path": "src/market-data-orchestrator.js",
+      "role": "browser runtime dependency",
+      "bytes": 4732,
+      "sha256": "6768636aced16ef749f9c033e515a4ce1f79f515c39d9326a2ac9bc1224254a0"
+    },
+    {
+      "path": "src/market-data-task-ui.js",
+      "role": "browser runtime dependency",
+      "bytes": 6901,
+      "sha256": "14d033b24c2b9202f680d630047b7a5d7aa4632595802bd1e5a8aca2f83d473e"
     },
     {
       "path": "src/multi-stock-analysis.js",
@@ -367,8 +379,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 122500,
-      "sha256": "5149c66164bb710b79b3e986b6810c2464bc9240effa36a675ee4847c6c56ca5"
+      "bytes": 121963,
+      "sha256": "4619aac35b85a0448b167592cb2fff6c81b8b080ae0ea11a925ac05e14464ac0"
     },
     {
       "path": "src/stock-research-ui.js",
@@ -449,16 +461,22 @@
       "sha256": "e7a02f044a0bebd4e9ac09eab642fe81891b5c8f7ac3d1e7552282e27e4541ae"
     },
     {
+      "path": "src/technical-freshness.js",
+      "role": "browser runtime dependency",
+      "bytes": 3384,
+      "sha256": "1fdde6d10fc2c714f0ddd5d35c14cbd9e6f839027aae27bb10df0e2b141510e0"
+    },
+    {
       "path": "src/technical-view-ux.js",
       "role": "REAL MOBILE TRIAL V3 technical and scheduler freshness presentation runtime",
-      "bytes": 8708,
-      "sha256": "7c5203056d5bd05b1dcd4a0c82a90f13b112011d6eed21056c56fa9df2aa3851"
+      "bytes": 7714,
+      "sha256": "e798537ba3b35e78955bd7db2345487e2eca719fd15d616d63e4947f0ddab8d6"
     },
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 636998,
-      "sha256": "6ce54bc0b03cafc78ed03e09caf5f776140693c9eef67075e5c429b66abc4ee6"
+      "bytes": 637115,
+      "sha256": "4e015846e64919b90c3f09a67d4bf2b4e45968a81e1eee0541079ce62ef5b968"
     },
     {
       "path": "src/universe-auto-add.js",

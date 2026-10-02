@@ -1,0 +1,815 @@
+{
+  "task": "MARKET_DATA_ORCHESTRATOR_V1_PRODUCTION_BASELINE_INTEGRATION",
+  "status": "READY_FOR_PRODUCTION_REVIEW",
+  "productionMain": "27731979dc4b63b57d7a6ed262478261140484a4",
+  "historicalOrchestrator": "af84cd0ec7bc27b4128b1e4662549d023a3f3650",
+  "commonAncestor": "8e529b727b9492a7a0195ef2dc446558423e1eb6",
+  "integrationBranch": "codex/market-data-orchestrator-v1-production-integration",
+  "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
+  "onlineReadOnlyVerification": {
+    "assetVersion": "entry-decision-clarity-v1-20260920",
+    "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
+    "deploymentCommit": "27731979dc4b63b57d7a6ed262478261140484a4"
+  },
+  "testSummary": {
+    "productionMain": {
+      "passed": 1144,
+      "failed": 0,
+      "skipped": 0
+    },
+    "candidateJsSql": {
+      "passed": 1159,
+      "failed": 0,
+      "skipped": 0
+    },
+    "python": {
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0
+    },
+    "productionGateSubset": {
+      "passed": 207,
+      "failed": 0,
+      "skipped": 0
+    },
+    "claritySubset": {
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "browserResults": {
+    "clarity": [
+      {
+        "viewport": 360,
+        "case": "A-forming-pullback",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "B-forming-breakout",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "C-ready-conflict",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "D-extended",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "E-failed",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "F-old-v3",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "G-intermediate",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 360,
+        "case": "H-wait",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "A-forming-pullback",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "B-forming-breakout",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "C-ready-conflict",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "D-extended",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "E-failed",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "F-old-v3",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "G-intermediate",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 390,
+        "case": "H-wait",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "A-forming-pullback",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "B-forming-breakout",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "C-ready-conflict",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "D-extended",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "E-failed",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "F-old-v3",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "G-intermediate",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      },
+      {
+        "viewport": 1280,
+        "case": "H-wait",
+        "pass": true,
+        "protectedFactsUnchanged": true,
+        "originalAiPreserved": true
+      }
+    ],
+    "entry": [
+      {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "oldV3": true,
+        "forming": true,
+        "pathMigration": true,
+        "ready": true,
+        "extended": true,
+        "platform": true,
+        "failed": true,
+        "postImportDiagnostics": true,
+        "reload": true,
+        "protectedFactsUnchanged": true,
+        "heldEntryHidden": true,
+        "noOverflow": true,
+        "pageErrors": []
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "oldV3": true,
+        "forming": true,
+        "pathMigration": true,
+        "ready": true,
+        "extended": true,
+        "platform": true,
+        "failed": true,
+        "postImportDiagnostics": true,
+        "reload": true,
+        "protectedFactsUnchanged": true,
+        "heldEntryHidden": true,
+        "noOverflow": true,
+        "pageErrors": []
+      },
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "oldV3": true,
+        "forming": true,
+        "pathMigration": true,
+        "ready": true,
+        "extended": true,
+        "platform": true,
+        "failed": true,
+        "postImportDiagnostics": true,
+        "reload": true,
+        "protectedFactsUnchanged": true,
+        "heldEntryHidden": true,
+        "noOverflow": true,
+        "pageErrors": []
+      }
+    ],
+    "orchestrator": [
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "queued": true,
+        "running": true,
+        "succeeded": true,
+        "failed": true,
+        "version": "6ec014a0-1dc9-433f-a5c6-64d486f8abc8",
+        "freshnessAgreement": true,
+        "previousPreserved": true,
+        "noProtectedChanges": true,
+        "noOverflow": true,
+        "errors": []
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "queued": true,
+        "running": true,
+        "succeeded": true,
+        "failed": true,
+        "version": "5b9715ca-2dbc-41e1-a989-a27dd9b96fab",
+        "freshnessAgreement": true,
+        "previousPreserved": true,
+        "noProtectedChanges": true,
+        "noOverflow": true,
+        "errors": []
+      },
+      {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "queued": true,
+        "running": true,
+        "succeeded": true,
+        "failed": true,
+        "version": "81799763-dfa4-4d06-afd6-2e046e4afd60",
+        "freshnessAgreement": true,
+        "previousPreserved": true,
+        "noProtectedChanges": true,
+        "noOverflow": true,
+        "errors": []
+      }
+    ],
+    "runtime": [
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "firstRevision": 1,
+        "finalRevision": 3,
+        "finalPhase": "action_review",
+        "noChange": true,
+        "staleTabRejected": true,
+        "definitionStaleRejected": true,
+        "actionReviewAcknowledged": true,
+        "universeQueueUnchanged": true,
+        "execution": 0,
+        "overflow": false,
+        "errors": [],
+        "dialogs": []
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "firstRevision": 1,
+        "finalRevision": 3,
+        "finalPhase": "action_review",
+        "noChange": true,
+        "staleTabRejected": true,
+        "definitionStaleRejected": true,
+        "actionReviewAcknowledged": true,
+        "universeQueueUnchanged": true,
+        "execution": 0,
+        "overflow": false,
+        "errors": [],
+        "dialogs": []
+      },
+      {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "firstRevision": 1,
+        "finalRevision": 3,
+        "finalPhase": "action_review",
+        "noChange": true,
+        "staleTabRejected": true,
+        "definitionStaleRejected": true,
+        "actionReviewAcknowledged": true,
+        "universeQueueUnchanged": true,
+        "execution": 0,
+        "overflow": false,
+        "errors": [],
+        "dialogs": []
+      }
+    ],
+    "homepage": [
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "threeShapes": [
+          "suppressed",
+          "注意持仓风险",
+          "可考虑减仓"
+        ],
+        "shapeCount": 2,
+        "zeroEntryAndWait": true,
+        "noTechnicalLanguage": true,
+        "quiet": true,
+        "newsRegressionCount": 0,
+        "eligibleCount": 3,
+        "riskFirst": true,
+        "firstCardFullyVisible": true,
+        "ctaRoutes": [
+          "ai",
+          "plan",
+          "technical",
+          "market-task-technical"
+        ],
+        "noAutoDiscussion": true,
+        "noOverflow": true,
+        "errors": [],
+        "externalRequestsBlocked": 0
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "threeShapes": [
+          "suppressed",
+          "注意持仓风险",
+          "可考虑减仓"
+        ],
+        "shapeCount": 2,
+        "zeroEntryAndWait": true,
+        "noTechnicalLanguage": true,
+        "quiet": true,
+        "newsRegressionCount": 0,
+        "eligibleCount": 3,
+        "riskFirst": true,
+        "firstCardFullyVisible": true,
+        "ctaRoutes": [
+          "ai",
+          "plan",
+          "technical",
+          "market-task-technical"
+        ],
+        "noAutoDiscussion": true,
+        "noOverflow": true,
+        "errors": [],
+        "externalRequestsBlocked": 0
+      },
+      {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "threeShapes": [
+          "suppressed",
+          "注意持仓风险",
+          "可考虑减仓"
+        ],
+        "shapeCount": 2,
+        "zeroEntryAndWait": true,
+        "noTechnicalLanguage": true,
+        "quiet": true,
+        "newsRegressionCount": 0,
+        "eligibleCount": 3,
+        "riskFirst": true,
+        "firstCardFullyVisible": true,
+        "ctaRoutes": [
+          "ai",
+          "plan",
+          "technical",
+          "market-task-technical"
+        ],
+        "noAutoDiscussion": true,
+        "noOverflow": true,
+        "errors": [],
+        "externalRequestsBlocked": 0
+      }
+    ],
+    "planV4": [
+      {
+        "name": "1280-before",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "timing": "before",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "1280-after",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "timing": "after",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": true,
+        "sessionIsolation": true,
+        "strictRejections": true,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "1280-during",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "timing": "during",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "1280-none",
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "timing": "none",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "390-before",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "timing": "before",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "390-after",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "timing": "after",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": true,
+        "sessionIsolation": true,
+        "strictRejections": true,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "390-during",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "timing": "during",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "390-none",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "timing": "none",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "360-before",
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "timing": "before",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "360-after",
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "timing": "after",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": true,
+        "sessionIsolation": true,
+        "strictRejections": true,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "360-during",
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "timing": "during",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      },
+      {
+        "name": "360-none",
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "timing": "none",
+        "rawPreserved": true,
+        "previewEditInvalidation": true,
+        "staleConfirmWrites": 0,
+        "confirmedEntry": true,
+        "allSixOperations": false,
+        "sessionIsolation": false,
+        "strictRejections": false,
+        "refreshPersistence": true,
+        "protectedFactsUnchanged": true,
+        "automaticAiAttempts": 0
+      }
+    ]
+  },
+  "browserScope": "Local isolated synthetic contexts; no remote task/provider execution. Plan expanded checks run in after timing; false fields in other timings mean not exercised there.",
+  "unchangedHistoricalContracts": {
+    "supabase/migrations/20261001155527_market_data_orchestrator_v1.sql": {
+      "sha256LF": "626f36d353c5490e5cdf68b747bbaf26584d68739d239510cedc4643570e2098",
+      "identical": true
+    },
+    "supabase/migrations/20261002021235_market_data_worker_capability_lock.sql": {
+      "sha256LF": "ba6e5d809f052fffd6f5bfaf3af76cf104e87559eba6bfcdde773bc71eb3f30a",
+      "identical": true
+    },
+    "scripts/market_data_worker.py": {
+      "sha256LF": "c0b90eb8f50e06ff9353842913a22e886fe64ccf7118a2d4211374435391054a",
+      "identical": true
+    },
+    "src/market-data-orchestrator.js": {
+      "sha256LF": "6768636aced16ef749f9c033e515a4ce1f79f515c39d9326a2ac9bc1224254a0",
+      "identical": true
+    },
+    "src/market-data-task-ui.js": {
+      "sha256LF": "14d033b24c2b9202f680d630047b7a5d7aa4632595802bd1e5a8aca2f83d473e",
+      "identical": true
+    },
+    "src/technical-freshness.js": {
+      "sha256LF": "1fdde6d10fc2c714f0ddd5d35c14cbd9e6f839027aae27bb10df0e2b141510e0",
+      "identical": true
+    }
+  },
+  "unchangedProductionFiles": {
+    "src/entry-decision.js": {
+      "sha256LF": "771fb490ec9c1a07e4ad29b2a8d40898bc360ac9204086a2abec7dbad2683e4e",
+      "identical": true
+    },
+    "src/discussion-state-contract.js": {
+      "sha256LF": "082e2aa44d45c53b541cb47c357b7601a20cd799792c3eb226b441fc3d26e1bd",
+      "identical": true
+    },
+    "src/plan-v2.js": {
+      "sha256LF": "92da6af69fe6c966eb50e7df8be49e218f363283c8afe6f696549f06896dd08f",
+      "identical": true
+    },
+    "src/plan-v4.js": {
+      "sha256LF": "115bbe8476522272012c63f89e8c78771b85fec61f6f368c4183646bbb3e663c",
+      "identical": true
+    },
+    "src/plan-runtime.js": {
+      "sha256LF": "f8e30e5c5dfc17f964dd36354e0f940ac0528564aca8b398b9d157f40395174f",
+      "identical": true
+    },
+    "src/plan-runtime-ui.js": {
+      "sha256LF": "9579daff244462a28b7fdae6a13d91b62aae0042fbd58ef1c091d507fa0cdeed",
+      "identical": true
+    },
+    "src/plan-discussion-v4-ui.js": {
+      "sha256LF": "37b7a8194328ef5b7dfa6a094ed89400ff81db3942e27da18b4ddb8497523e2c",
+      "identical": true
+    },
+    "data/market_data_bridge.js": {
+      "sha256LF": "5ac635d1a9aad099b7738ad5555af1e3103a16aae6ffd76df869a37f192b0c76",
+      "identical": true
+    },
+    "data/market_task_status_bridge.js": {
+      "sha256LF": "0f16130892b0aee260437552d2f230574122b1b8833a028d7f7cc4a0069b9d53",
+      "identical": true
+    },
+    "tests/entry_decision_clarity.test.js": {
+      "sha256LF": "f830348ade410370f5ba56e82e6603b7c3d84b5655ab1ea046e0ac6795b5e9a6",
+      "identical": true
+    },
+    "src/storage/cutover-v1.js": {
+      "sha256LF": "db0eebb9b8f81f2693e2d123e991b57408ce4246394ad77e2efe6fa5fe6579e1",
+      "identical": true
+    },
+    "src/storage/draft-adapter.js": {
+      "sha256LF": "c1488c93f4261c370afddf40a84e1873a35b416f8f17f2ed9d5424ad27a4cb69",
+      "identical": true
+    },
+    "src/storage/idb-adapter.js": {
+      "sha256LF": "f182b4a4d9c228f70486e39915b2fad9eea1efcba98a7577e79e8cde2cff28f3",
+      "identical": true
+    },
+    "src/storage/local-storage-adapter.js": {
+      "sha256LF": "1d764278a531523108faced3584331053abd60b05ffe90b073508fbc7d086ce8",
+      "identical": true
+    },
+    "src/storage/migration-v1.js": {
+      "sha256LF": "e9465528f23ed029c8b3f11fb12b646dbf731cfd92397fafad65dc30c18daa08",
+      "identical": true
+    },
+    "src/storage/storage-checksum.js": {
+      "sha256LF": "54e05acf59b71f8c670a590fe2ff0d6b370197065d2d57277ccb891a278a0a4c",
+      "identical": true
+    },
+    "src/storage/storage-errors.js": {
+      "sha256LF": "dc6edf8a0f934746a2aae58452a3949ff9725148f0bd13605da3fde9276570b2",
+      "identical": true
+    },
+    "src/storage/storage-manager.js": {
+      "sha256LF": "503663d016502585cb6be68218e65ec14f38f3ac15ca05c4f8069abd99b52a38",
+      "identical": true
+    },
+    "src/storage/storage-validation.js": {
+      "sha256LF": "097ab69102711a741a16ac767a413f4f0e15152e62026980132e5338af599006",
+      "identical": true
+    }
+  },
+  "originalUncommittedFilesPreserved": {
+    "data/market_data_bridge.js": "5ac635d1a9aad099b7738ad5555af1e3103a16aae6ffd76df869a37f192b0c76",
+    "data/market_task_status_bridge.js": "0f16130892b0aee260437552d2f230574122b1b8833a028d7f7cc4a0069b9d53"
+  },
+  "manifest": {
+    "path": "publish-manifest.json",
+    "assetVersion": "market-data-orchestrator-v1-integration-20261002",
+    "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
+    "sha256": "a5482224eacf4df998d451427c30d314bea60f1bb9f625332548deda4d07dc98",
+    "sourceAssets": 89,
+    "artifactFilesIncludingManifest": 90,
+    "missingProductionAssets": [],
+    "artifactPlanValidated": true,
+    "workerExcludedFromPages": true
+  },
+  "productionMutations": false,
+  "productionWorkerStarted": false,
+  "productionTasksCreated": false,
+  "pushed": false,
+  "remoteAcceptanceRerun": false,
+  "notes": [
+    "M2 inherited trailing blank line preserved for migration integrity.",
+    "Final delivery commit adds manifest/report/evidence; sourceCommit identifies tested application source.",
+    "Prior remote acceptance/review documents are historical evidence, not new remote execution."
+  ]
+}
