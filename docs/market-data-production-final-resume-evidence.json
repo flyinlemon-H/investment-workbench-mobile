@@ -1,0 +1,758 @@
+{
+  "task": "MARKET_DATA_ORCHESTRATOR_V1_PRODUCTION_DEPLOY_AND_ACCEPTANCE_FINAL",
+  "status": "PRODUCTION_ACCEPTANCE_PASSED",
+  "productionBaseline": "27731979dc4b63b57d7a6ed262478261140484a4",
+  "candidate": "9d02277fd271848116d5f3bd41c9c3303f921351",
+  "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
+  "verificationTooling": "25739ec065075b020569e779e3735ce682e7081c",
+  "assetVersion": "market-data-orchestrator-v1-integration-20261002",
+  "approvedManifestSha256": "a5482224eacf4df998d451427c30d314bea60f1bb9f625332548deda4d07dc98",
+  "project": {
+    "id": "fntslvdxnupmdljnadec",
+    "ref": "fntslvdxnupmdljnadec",
+    "organization_id": "pkmkmqhkbgwnsvvopkgx",
+    "organization_slug": "pkmkmqhkbgwnsvvopkgx",
+    "name": "investment-workbench",
+    "region": "ap-southeast-1",
+    "status": "ACTIVE_HEALTHY",
+    "database": {
+      "host": "db.fntslvdxnupmdljnadec.supabase.co",
+      "version": "17.6.1.141",
+      "postgres_engine": "17",
+      "release_channel": "ga"
+    },
+    "created_at": "2026-07-10T07:31:45.622333Z"
+  },
+  "transaction": {
+    "channel": "official Supabase CLI 2.109.1 logged-in Management API; no token read/output",
+    "result": "COMMIT",
+    "cliOutput": "[]",
+    "migrations": [
+      {
+        "version": "20261002020030",
+        "sha256": "626f36d353c5490e5cdf68b747bbaf26584d68739d239510cedc4643570e2098"
+      },
+      {
+        "version": "20261002021340",
+        "sha256": "ba6e5d809f052fffd6f5bfaf3af76cf104e87559eba6bfcdde773bc71eb3f30a"
+      }
+    ],
+    "preflightCatalogDifferences": [],
+    "postAcceptanceCatalogDifferences": [],
+    "objectsAdded": {
+      "roles": {
+        "added": 0,
+        "removed": 0
+      },
+      "columns": {
+        "added": 20,
+        "removed": 0
+      },
+      "indexes": {
+        "added": 8,
+        "removed": 0
+      },
+      "schemas": {
+        "added": 1,
+        "removed": 0
+      },
+      "policies": {
+        "added": 3,
+        "removed": 0
+      },
+      "triggers": {
+        "added": 14,
+        "removed": 0
+      },
+      "functions": {
+        "added": 5,
+        "removed": 0
+      },
+      "relations": {
+        "added": 3,
+        "removed": 0
+      },
+      "extensions": {
+        "added": 0,
+        "removed": 0
+      },
+      "constraints": {
+        "added": 11,
+        "removed": 0
+      },
+      "eventTriggers": {
+        "added": 0,
+        "removed": 0
+      },
+      "defaultPrivileges": {
+        "added": 0,
+        "removed": 0
+      }
+    },
+    "ledger": [
+      {
+        "name": "stock_universe_auto_add_v1a",
+        "version": "20260903132654",
+        "statementsMd5": "ea140f2862d4aa615e3429defb5a19be"
+      },
+      {
+        "name": "stock_universe_private_rpc_boundary",
+        "version": "20260903132704",
+        "statementsMd5": "387b5e4eed8246aa197cdeefba5caded"
+      },
+      {
+        "name": "market_data_orchestrator_v1",
+        "version": "20261002020030",
+        "statementsMd5": "114173ea93139caa1fa693050266fd6b"
+      },
+      {
+        "name": "market_data_worker_capability_lock",
+        "version": "20261002021340",
+        "statementsMd5": "906ff7ef0d60c81903cc94098c1b879c"
+      }
+    ]
+  },
+  "protectedBusinessBefore": [
+    {
+      "object": "analysis_private.analysis_sync_modules",
+      "row_count": 0,
+      "content_hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "object": "public.input_queue",
+      "row_count": 2,
+      "content_hash": "c41ff7d65ad85fdc54f1e291d910fb24"
+    },
+    {
+      "object": "public.stock_universe_entries",
+      "row_count": 23,
+      "content_hash": "f84b0bfad86b59b17093382e88a9a0a5"
+    },
+    {
+      "object": "universe_private.reader_credentials",
+      "row_count": 2,
+      "content_hash": "f617e88936d96ffc1b1f10a0cea8eacb"
+    }
+  ],
+  "protectedBusinessAfter": [
+    {
+      "object": "analysis_private.analysis_sync_modules",
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    {
+      "object": "public.input_queue",
+      "count": 2,
+      "hash": "c41ff7d65ad85fdc54f1e291d910fb24"
+    },
+    {
+      "object": "public.stock_universe_entries",
+      "count": 23,
+      "hash": "f84b0bfad86b59b17093382e88a9a0a5"
+    },
+    {
+      "object": "universe_private.reader_credentials",
+      "count": 2,
+      "hash": "f617e88936d96ffc1b1f10a0cea8eacb"
+    }
+  ],
+  "taskAudit": [
+    {
+      "taskId": "af678577-5cf0-4bc4-b1f0-fe3e90230cf3",
+      "symbol": "601869.SS",
+      "status": "succeeded",
+      "requested_at": "2026-10-02 16:28:03.196416+00",
+      "started_at": "2026-10-02 16:28:19.234015+00",
+      "completed_at": "2026-10-02 16:28:36.354613+00",
+      "result_version": "af678577-5cf0-4bc4-b1f0-fe3e90230cf3",
+      "error": null
+    },
+    {
+      "taskId": "9782cf03-3aff-4888-b3d3-81a8838266ac",
+      "symbol": "601869.SS",
+      "status": "failed",
+      "requested_at": "2026-10-02 16:28:38.962625+00",
+      "started_at": "2026-10-02 16:28:40.465204+00",
+      "completed_at": "2026-10-02 16:28:54.530881+00",
+      "result_version": null,
+      "error": "provider_or_pipeline_failure"
+    },
+    {
+      "taskId": "c63cf4ab-0d78-4f15-a0dd-01be7ec1334d",
+      "symbol": "601869.SS",
+      "status": "failed",
+      "requested_at": "2026-10-02 16:28:57.099859+00",
+      "started_at": "2026-10-02 16:28:57.544945+00",
+      "completed_at": "2026-10-02 16:28:58.166477+00",
+      "result_version": null,
+      "error": "worker_revoked"
+    }
+  ],
+  "cleanup": {
+    "tasks": 0,
+    "users": 0,
+    "results": 0,
+    "workers": 0,
+    "sessions": 0,
+    "identities": 0,
+    "refreshTokens": 0
+  },
+  "publication": {
+    "workflowId": 37033106250,
+    "url": "https://github.com/flyinlemon-H/investment-workbench-mobile/actions/runs/37033106250",
+    "status": "success",
+    "push": "integration branch and fast-forward main to approved Candidate",
+    "releaseGate": {
+      "pass": 207,
+      "fail": 0
+    },
+    "resourcesVerified": 90
+  },
+  "tests": {
+    "candidateHistoricalJS": 1159,
+    "verificationToolingHistoricalJS": 1186,
+    "onlineClarity": 31,
+    "onlineClarityBrowser": 24,
+    "pythonRerun": 27,
+    "viewports": [
+      360,
+      390,
+      1280
+    ]
+  },
+  "productCodeModified": false,
+  "cliTokenRead": false,
+  "remoteAcceptance": {
+    "projectId": "fntslvdxnupmdljnadec",
+    "startedAt": "2026-10-02T16:27:31.453Z",
+    "accounts": [
+      {
+        "label": "owner",
+        "userId": "b0a69f45-2831-4d6c-9489-40d390344da9",
+        "email": "market-prod-owner-80f8cbd2aa83@example.invalid"
+      },
+      {
+        "label": "outsider",
+        "userId": "e97092f1-8b27-4060-bb76-764ee748e05e",
+        "email": "market-prod-outsider-45bd5a96e466@example.invalid"
+      }
+    ],
+    "checks": [
+      {
+        "name": "real_auth_owner",
+        "passed": true
+      },
+      {
+        "name": "real_auth_outsider",
+        "passed": true
+      },
+      {
+        "name": "unauthenticated_create_denied",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "unauthorized_worker_denied",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "capability_owner_configured",
+        "passed": true
+      },
+      {
+        "name": "capability_outsider_configured",
+        "passed": true
+      },
+      {
+        "name": "reject_invalid_symbol",
+        "passed": true
+      },
+      {
+        "name": "reject_invalid_type",
+        "passed": true
+      },
+      {
+        "name": "reject_command",
+        "passed": true
+      },
+      {
+        "name": "reject_path",
+        "passed": true
+      },
+      {
+        "name": "reject_url",
+        "passed": true
+      },
+      {
+        "name": "reject_owner",
+        "passed": true
+      },
+      {
+        "name": "reject_sql",
+        "passed": true
+      },
+      {
+        "name": "reject_shell",
+        "passed": true
+      },
+      {
+        "name": "reject_script",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_taskType",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_symbol",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_command",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_path",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_url",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_sql",
+        "passed": true
+      },
+      {
+        "name": "worker_reject_script",
+        "passed": true
+      },
+      {
+        "name": "worker_only_claim_finish",
+        "passed": true
+      },
+      {
+        "name": "direct_public_tasks_denied",
+        "passed": true,
+        "status": 404
+      },
+      {
+        "name": "direct_public_results_denied",
+        "passed": true,
+        "status": 404
+      },
+      {
+        "name": "direct_public_workers_denied",
+        "passed": true,
+        "status": 404
+      },
+      {
+        "name": "direct_market_private_tasks_denied",
+        "passed": true,
+        "status": 406
+      },
+      {
+        "name": "direct_market_private_results_denied",
+        "passed": true,
+        "status": 406
+      },
+      {
+        "name": "direct_market_private_workers_denied",
+        "passed": true,
+        "status": 406
+      },
+      {
+        "name": "worker_cannot_create_tasks",
+        "passed": true
+      },
+      {
+        "name": "browser_is_authorized_production",
+        "passed": true
+      },
+      {
+        "name": "initial_stale_agreement",
+        "passed": true
+      },
+      {
+        "name": "duplicate_active_reused",
+        "passed": true
+      },
+      {
+        "name": "worker_offline_remains_queued",
+        "passed": true
+      },
+      {
+        "name": "outsider_cannot_read_task",
+        "passed": true
+      },
+      {
+        "name": "viewport_360_queued",
+        "passed": true,
+        "status": "等待执行端"
+      },
+      {
+        "name": "viewport_390_queued",
+        "passed": true,
+        "status": "等待执行端"
+      },
+      {
+        "name": "viewport_1280_queued",
+        "passed": true,
+        "status": "等待执行端"
+      },
+      {
+        "name": "running_visible",
+        "passed": true
+      },
+      {
+        "name": "viewport_360_running",
+        "passed": true,
+        "status": "正在更新行情"
+      },
+      {
+        "name": "viewport_390_running",
+        "passed": true,
+        "status": "正在更新行情"
+      },
+      {
+        "name": "viewport_1280_running",
+        "passed": true,
+        "status": "正在更新行情"
+      },
+      {
+        "name": "second_claim_does_not_execute",
+        "passed": true
+      },
+      {
+        "name": "outsider_cannot_finish",
+        "passed": true
+      },
+      {
+        "name": "remote_succeeded",
+        "passed": true,
+        "status": "succeeded",
+        "error": null
+      },
+      {
+        "name": "actual_incremental_bars",
+        "passed": true,
+        "before": 364,
+        "after": 367
+      },
+      {
+        "name": "version_matches_request",
+        "passed": true
+      },
+      {
+        "name": "provider_continuity",
+        "passed": true,
+        "provider": "yahoo"
+      },
+      {
+        "name": "freshness_discussion_same_version",
+        "passed": true,
+        "pageFresh": true,
+        "ready": true,
+        "dataStatus": "fresh",
+        "resultVersion": "af678577-5cf0-4bc4-b1f0-fe3e90230cf3",
+        "latestCompleteBar": "2026-09-30",
+        "technicalAsOf": "2026-09-30"
+      },
+      {
+        "name": "viewport_360_succeeded",
+        "passed": true,
+        "status": "行情已更新至 2026-09-30"
+      },
+      {
+        "name": "viewport_390_succeeded",
+        "passed": true,
+        "status": "行情已更新至 2026-09-30"
+      },
+      {
+        "name": "viewport_1280_succeeded",
+        "passed": true,
+        "status": "行情已更新至 2026-09-30"
+      },
+      {
+        "name": "outsider_cannot_read_result",
+        "passed": true
+      },
+      {
+        "name": "provider_failure_is_failed",
+        "passed": true
+      },
+      {
+        "name": "previous_remote_result_unchanged",
+        "passed": true
+      },
+      {
+        "name": "previous_browser_result_preserved",
+        "passed": true
+      },
+      {
+        "name": "viewport_360_failed",
+        "passed": true,
+        "status": "更新失败"
+      },
+      {
+        "name": "viewport_390_failed",
+        "passed": true,
+        "status": "更新失败"
+      },
+      {
+        "name": "viewport_1280_failed",
+        "passed": true,
+        "status": "更新失败"
+      },
+      {
+        "name": "no_business_field_mutation",
+        "passed": true
+      },
+      {
+        "name": "no_browser_errors_or_overflow",
+        "passed": true
+      },
+      {
+        "name": "revocation_fixture_running",
+        "passed": true
+      },
+      {
+        "name": "revoked_worker_owner_claim_denied",
+        "passed": true
+      },
+      {
+        "name": "revoked_worker_owner_finish_denied",
+        "passed": true
+      },
+      {
+        "name": "revoked_worker_outsider_claim_denied",
+        "passed": true
+      },
+      {
+        "name": "revoked_worker_outsider_finish_denied",
+        "passed": true
+      },
+      {
+        "name": "revoked_running_task_failed",
+        "passed": true
+      },
+      {
+        "name": "revocation_preserves_valid_result",
+        "passed": true
+      }
+    ],
+    "loops": [
+      {
+        "symbol": "601869.SS",
+        "taskId": "af678577-5cf0-4bc4-b1f0-fe3e90230cf3",
+        "resultVersion": "af678577-5cf0-4bc4-b1f0-fe3e90230cf3",
+        "requestedAt": "2026-10-02T16:28:03.196416+00:00",
+        "startedAt": "2026-10-02T16:28:19.234015+00:00",
+        "completedAt": "2026-10-02T16:28:36.354613+00:00",
+        "provider": "yahoo",
+        "seedBars": 364,
+        "resultBars": 367,
+        "dataUpdated": true,
+        "fingerprint": "7c7a8c485b77153b027372329921221fde411edb3a2333c244f5918a3652bcdb",
+        "pageFresh": true,
+        "ready": true,
+        "dataStatus": "fresh",
+        "latestCompleteBar": "2026-09-30",
+        "technicalAsOf": "2026-09-30"
+      }
+    ],
+    "externalRequests": [
+      {
+        "origin": "https://fntslvdxnupmdljnadec.supabase.co",
+        "path": "/rest/v1/stock_universe_entries",
+        "blocked": true
+      },
+      {
+        "origin": "https://fntslvdxnupmdljnadec.supabase.co",
+        "path": "/rest/v1/stock_universe_entries",
+        "blocked": true
+      }
+    ],
+    "completedAt": "2026-10-02T16:29:04.354Z",
+    "status": "passed"
+  },
+  "onlineIntegrity": {
+    "status": "passed",
+    "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
+    "deploymentCommit": "9d02277fd271848116d5f3bd41c9c3303f921351",
+    "assetVersion": "market-data-orchestrator-v1-integration-20261002",
+    "files": 90,
+    "checkedAt": "2026-10-02T16:21:35.200Z"
+  },
+  "clarityBrowser": [
+    {
+      "viewport": 360,
+      "case": "A-forming-pullback",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "B-forming-breakout",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "C-ready-conflict",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "D-extended",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "E-failed",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "F-old-v3",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "G-intermediate",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 360,
+      "case": "H-wait",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "A-forming-pullback",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "B-forming-breakout",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "C-ready-conflict",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "D-extended",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "E-failed",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "F-old-v3",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "G-intermediate",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 390,
+      "case": "H-wait",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "A-forming-pullback",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "B-forming-breakout",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "C-ready-conflict",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "D-extended",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "E-failed",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "F-old-v3",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "G-intermediate",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    },
+    {
+      "viewport": 1280,
+      "case": "H-wait",
+      "pass": true,
+      "protectedFactsUnchanged": true,
+      "originalAiPreserved": true
+    }
+  ]
+}
