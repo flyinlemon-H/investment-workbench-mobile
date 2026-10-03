@@ -2,6 +2,8 @@
 
 日期：2026-10-03（Asia/Shanghai）。最终状态：**AUTH_PASSWORD_RECOVERY_NEEDS_FIX**。
 
+后续远端验收已开始，见 [AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md](AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md)。远端错误回跳已实证生产目标 `?auth=recovery` 被接受，无需为该目标新增 Redirect URL；完整配置、密码策略及真实邮件仍待验收。下文未核实配置的描述保留为本地实现阶段记录，以远端报告的新证据为准。
+
 产品实现及自动测试已完成；尚缺生产 Auth 配置只读确认和隔离账户真实邮件闭环证据，因此不宣称 READY_FOR_PRODUCTION_REVIEW。这里的 NEEDS_FIX 表示验收缺口，当前自动测试未发现未修复的恢复流程故障。
 
 - 开发分支：`codex/auth-password-recovery-v1`，独立 worktree。
