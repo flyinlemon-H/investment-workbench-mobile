@@ -1,8 +1,8 @@
 # AUTH_PASSWORD_RECOVERY_V1
 
-日期：2026-10-03（Asia/Shanghai）。最终状态：**AUTH_PASSWORD_RECOVERY_NEEDS_FIX**。
+日期：2026-10-03（Asia/Shanghai）。当前交付状态：**WAITING_FOR_USER_PASSWORD_RECOVERY**。原本地开发阶段结论为 AUTH_PASSWORD_RECOVERY_NEEDS_FIX，后续已按用户修订策略发布，详见远端验收报告。
 
-**验收策略更新（2026-10-03）：**上行状态及下文结论保留为原本地开发阶段记录。用户现已取消独立测试邮箱真实邮件的前置发布硬门禁，授权自动/redirect/安全/生产基线通过后先发布，再停在 WAITING_FOR_USER_PASSWORD_RECOVERY。真实密码由用户本人输入，完成后继续生产最终验收；当前以 [远端验收报告](AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md) 为准，不得提前宣称 PRODUCTION_ACCEPTANCE_PASSED。
+**验收策略更新（2026-10-03）：**下文实现阶段的“未部署/配置未核实/NEEDS_FIX”结论为历史记录。用户已取消独立测试邮箱真实邮件的前置发布硬门禁；复核通过后 Candidate `7df5f7b56e70b8c40324bf2137cf93928ec6128b` 已发布，当前停在 WAITING_FOR_USER_PASSWORD_RECOVERY。真实密码由用户本人输入，完成后继续生产最终验收；以 [远端验收报告](AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md) 为准，不得提前宣称 PRODUCTION_ACCEPTANCE_PASSED。
 
 后续远端验收已开始，见 [AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md](AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE.md)。远端错误回跳已实证生产目标 `?auth=recovery` 与测试 loopback 目标被接受，两边均无需新增 Redirect URL。用户已人工核验两项目配置：密码最小长度 6，无额外字符要求，默认邮件服务 2 emails/hour。指定测试邮箱不是现有组织团队成员，不能用该默认服务完成真实邮件验收；本轮发信数为 0。下文未核实配置的描述保留为本地实现阶段记录，以远端报告的新证据为准。
 

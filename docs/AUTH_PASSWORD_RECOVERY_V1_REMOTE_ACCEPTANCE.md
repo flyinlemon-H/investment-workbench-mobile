@@ -2,7 +2,7 @@
 
 2026-10-03（Asia/Shanghai）阶段记录。用户已明确调整最终验收策略：取消“独立隔离邮箱真实 recovery 闭环先于发布”的硬门禁；允许其他自动、redirect、安全和生产基线门禁通过后先发布，再由用户本人对现有生产账户执行手机恢复。发布后必须停在 **WAITING_FOR_USER_PASSWORD_RECOVERY**；真实用户操作及后续验收完成前不得标记 PRODUCTION_ACCEPTANCE_PASSED。
 
-本阶段仍无生产/测试 Auth 配置写入、无账户创建/修改、无邮件发送。前端发布授权已明确，当前完成发布前门禁，实际发布结果由下文后续记录补充。不得读取、生成、记录或代替用户输入新密码；不新增 Team 成员、不配置 Custom SMTP、不修改其他 Auth 设置。
+**当前状态：WAITING_FOR_USER_PASSWORD_RECOVERY。** Candidate 已发布、静态资源及线上入口验收通过；真实用户尚未执行邮件恢复，因此不是 PRODUCTION_ACCEPTANCE_PASSED。本阶段无生产/测试 Auth 配置写入、无账户创建/修改、无代理发信。不得读取、生成、记录或代替用户输入新密码；不新增 Team 成员、不配置 Custom SMTP、不修改其他 Auth 设置。
 
 ## 1. Production Auth Baseline
 
@@ -68,19 +68,19 @@ Auth 变更审计：Before 为上述用户确认列表；Change = NONE；After �
 
 NOT_RUN。独立测试邮箱已提供，但用户确认它**不是现有组织 Team 成员邮箱**。根据 [Supabase 默认 SMTP 官方限制](https://supabase.com/docs/guides/auth/auth-smtp)，未配置自定义 SMTP 时，只会向现有团队成员邮箱发送 Auth 邮件，其他地址被拒绝。应用 Auth 用户与组织 Team 成员是不同概念。
 
-故本轮停止于发送前，不以创建 Auth 账户或修改 redirect 试图绕过限制；不新增团队权限、不配置 SMTP。本轮真实邮件发送数 **0**，没有需要用户点击的邮件。用户进一步确认没有其他符合条件的独立邮箱，当前授权范围内的真实邮件验收因此被阻塞。禁止使用生产真实账户作为测试替代。
+旧策略阶段因该限制停在发送前，未创建 Auth 测试账户、未扩大团队权限、未配置 SMTP。用户随后明确取消独立邮箱前置硬门禁，改由发布后的生产真实账户本人操作。本轮代理真实邮件发送数 **0**；截至交付，用户尚未请求邮件，不宣称邮件送达。
 
-符合条件的收件人确认后，预计初始注册确认与 recovery 各最多 1 封，合计最多 2 封；发信前考虑该项目此前一小时其他发送占用，不保证本任务拥有全部额度。无重复发送、无自动重试、无限流压力测试。一次请求失败即记录并停止后续发信。
+当前计划无需注册测试账户。用户在手机点击一次发送 recovery 邮件即可开始验收；项目默认限制为 2 emails/hour，还可能被该项目前一小时其他邮件占用。无重复发送、无自动重试、无限流压力测试；不保证额度只被本任务使用。
 
 ## 7. Recovery Redirect Result
 
 无效链接的远端回跳目标匹配 PASS；真实邮件内链接及实际点击回跳 NOT_RUN。两者不能等同。
 
-生产公开根路径 `/?auth=recovery` GET HTTP 200，query 保留，未出现 Pages 404；线上仍为旧版本，不含 recovery 产品脚本。
+生产公开根路径 `/?auth=recovery` GET HTTP 200，query 保留，未出现 Pages 404；发布后两个 recovery 产品脚本均已上线并通过 hash 校验。真实邮件 callback/session 尚待用户操作。
 
 ## 8. PASSWORD_RECOVERY Result
 
-真实远端 session 事件 NOT_RUN。原本地实际 SDK + 模拟 HTTP 测试通过的结论不替代这一项。
+真实远端 session 事件 NOT_RUN，等待用户本人手机操作。实际 SDK + 模拟 HTTP 的自动测试不替代这一项。
 
 ## 9. Password Update Result
 
@@ -118,15 +118,35 @@ NOT_RUN。Codex 不读取旧/新密码，也不代用户尝试；不能用自动
 
 实现提交 `0fa4ac691e5d6d5d826960e43b1ec82afc211c99`；已有报告/清单提交 `47781a7920ef56b392c609ecfa90c3cf319c3a8f`。待发布版本 `auth-password-recovery-v1-20261003`。
 
-用户已授权按修订后的门禁发布。最终 Candidate 由本轮策略记录及重新生成的发布清单提交确定，包含最新 production main；不将尚未完成的真实用户恢复写成通过。
+最终 Production Candidate：`7df5f7b56e70b8c40324bf2137cf93928ec6128b`。
+
+重新生成的 manifest sourceCommit：`67ff5c3bb7ea213d9f878a613f6bb7456c81f0be`。assetVersion：`auth-password-recovery-v1-20261003`。包含原 production main `9d02277fd271848116d5f3bd41c9c3303f921351`，通过非强制 fast-forward 发布；无产品代码新改动，仅策略文档和发布清单更新。91 个资源，含 manifest 共 92 个 artifact 文件。
 
 ## 17. Production Publish
 
-NOT_RUN。没有 push main、push 分支、触发 Pages 或部署 Auth 配置。
+PASS。先推送 `codex/auth-password-recovery-v1`，再将 main 从 `9d02277…` 非强制快进至 `7df5f7b…`。两步均成功。
+
+[Pages workflow 37135438868](https://github.com/flyinlemon-H/investment-workbench-mobile/actions/runs/37135438868) conclusion = success；build 与 deploy 均成功。工作流开始 `2026-10-03T16:03:18Z`，完成状态时间 `2026-10-03T16:04:09Z`（UTC）。CI 内生产基线门禁及资源校验通过。
+
+未改 Supabase 配置或业务数据库。部署后审计文档提交不等同于线上 deploymentCommit；线上版本以本节 Candidate 和 manifest 为准。
 
 ## 18. Production Online Acceptance
 
-仅核实线上旧版本、发布 commit、Pages 根路径 query 和 Auth 错误回跳。新“忘记密码？”入口尚未生产发布。不得通知用户已可在生产恢复密码。
+线上版本、manifest sourceCommit、deploymentCommit 与 Candidate 完全一致。`2026-10-03T16:05:27.838Z`（UTC）逐一 GET 并校验所有发布资源：**91/91 PASS**，无 hash/长度不匹配。
+
+使用下载并重新校验的生产资源运行原 Entry Clarity 测试：**31/31 PASS**；合成 fixture 不含真实投资数据。门禁确认 preserved Entry Clarity、Discussion/Plan/Runtime、Orchestrator、Unified Freshness 产品文件没有发生回退。
+
+在生产应用实际点击：更多 → 工具 → 账户 → 账户与同步设置 → 忘记密码？。入口可见，打开“找回密码”表单，邮箱为空，发送按钮可用；未点击发送，未尝试登录/注册/密码更新。
+
+线上入口/找回密码三视口：
+
+| viewport | modal left/right | clientWidth / scrollWidth | 结果 |
+| --- | --- | --- | --- |
+| 360 | 10 / 335 | 323 / 323 | PASS，无横向溢出 |
+| 390 | 10 / 365 | 353 / 353 | PASS，无横向溢出 |
+| 1280 | 420 / 860 | 438 / 438 | PASS，无横向溢出 |
+
+三视口的邮件已发送、设置密码、成功/失败等完整状态仍属于发布前模拟 HTTP 验收；本轮没有用生产真实密码或伪造真实会话重做这些状态。浏览器视口已恢复；生产应用页保留供用户继续，代理停止凭据相关操作。
 
 ## 19. Test Account Cleanup
 
@@ -144,6 +164,12 @@ Chrome 工具报告请求头策略加载失败。应用内浏览器能打开 Sup
 
 ## 21. Final Status
 
-原 AUTH_PASSWORD_RECOVERY_NEEDS_FIX 的“独立邮箱前置门禁”原因已被用户的新策略明确解除。自动门禁已复核通过，正在进行授权的前端发布；发布验证通过后的暂停状态为 **WAITING_FOR_USER_PASSWORD_RECOVERY**。
+**WAITING_FOR_USER_PASSWORD_RECOVERY**。
+
+独立邮箱的前置门禁已由用户明确取消，其他发布门禁通过，前端已成功发布并完成上述线上安全验收。不是 PRODUCTION_ACCEPTANCE_PASSED。
 
 此时真实邮件、改密、新密码登录及旧链接行为仍未验收，不标记 PRODUCTION_ACCEPTANCE_PASSED。仅在用户本人完成操作、后续验证通过后更新最终 Production Acceptance。
+
+用户下一步：手机打开正式应用，更多 → 工具 → 账户 → 账户与同步设置 → 忘记密码？ → 输入已确认具有 Team 收件资格的现有生产账户邮箱 → 发送一次 → 自行收取并打开 recovery 邮件 → 自行输入及确认新密码。成功后只回复“已恢复”，不要发送密码、token 或完整邮件链接。
+
+用户确认完成后再继续核验正常 session、本人正常登录、恢复 UI 已退出且刷新不重复、旧 recovery 邮件链接行为。不会继续 Worker pairing 或行情任务。
