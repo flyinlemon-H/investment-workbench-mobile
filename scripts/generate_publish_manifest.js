@@ -16,6 +16,8 @@ roleByPath.set('src/plan-discussion-v4-ui.js','explicit user decision, Plan draf
 roleByPath.set('data/supabase_config.js','public Supabase URL and publishable key only');
 roleByPath.set('src/vendor/supabase-client.js','pinned Supabase SDK with MIT license; browser Auth and add-only inserts');
 roleByPath.set('src/supabase-browser-client.js','single browser Supabase client, compatible persistent session and normalized Auth lifecycle');
+roleByPath.set('src/auth-password-recovery.js','Supabase password recovery intent, validated session and password update');
+roleByPath.set('src/auth-password-recovery-ui.js','accessible mobile email recovery and new password dialog');
 roleByPath.set('src/universe-auto-add.js','durable local-first canonical stock addition queue and standard Auth');
 roleByPath.set('src/universe-sync-ui.js','local/cloud/market status, login and scoped PC reader setup');
 roleByPath.set('src/api/ai-api.js','PC AI Bridge raw request/response transport envelope');
@@ -77,6 +79,8 @@ const paths=[...new Set([
   'data/supabase_config.js',
   'src/vendor/supabase-client.js',
   'src/supabase-browser-client.js',
+  'src/auth-password-recovery.js',
+  'src/auth-password-recovery-ui.js',
   'src/universe-auto-add.js',
   'src/universe-sync-ui.js',
   ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'&&file!=='src/v13-risk-engine.js'),
@@ -132,8 +136,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'market-data-orchestrator-v1-integration-20261002',
-  dataMode:'Production Entry Decision Clarity and preserved Discussion/Plan/Runtime plus daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
+  assetVersion:'auth-password-recovery-v1-20261003',
+  dataMode:'Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

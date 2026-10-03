@@ -63,6 +63,7 @@ function session(){const now=Math.floor(Date.now()/1000);const claims={sub:fixtu
     window.__persist=persistCandidateSnapshot;window.__applyWrites=0;persistCandidateSnapshot=async c=>{__applyWrites++;return __persist(c)};
     window.__missingCanonical=JSON.stringify(state);window.__missingLedger=localStorage.getItem(`universe-add-queue-${UNIVERSE_CLOUD_CONFIG.projectRef}`);ManualAnalysisSyncCloud.setRole('receiver');
   });
+  await page.getByRole('button',{name:'更多',exact:true}).click();await page.locator('[data-more-page="tools"]').click();await page.locator('#syncToolsSection summary').click();
   await page.locator('#analysisFetchBtn').click();await page.locator('[data-analysis-update="0"]').waitFor();assert.equal(await page.locator('[data-analysis-update="0"]').isEnabled(),false);assert.match(await page.locator('#analysisSyncBody').innerText(),/本机尚未添加该股票/);assert.equal(await page.locator('#analysisSyncConfirm').isVisible(),false);
   assert.equal(await page.evaluate(()=>__applyWrites===0&&JSON.stringify(state)===__missingCanonical&&localStorage.getItem(`universe-add-queue-${UNIVERSE_CLOUD_CONFIG.projectRef}`)===__missingLedger),true);assert.equal(requests.filter(r=>r.path==='/rest/v1/stock_universe_entries').length,missingBefore);
   const remoteRevision=await page.evaluate(async()=>{const update=(await ManualAnalysisSyncCloud.initialize().fetchUpdates(state)).updates[0];return update.envelope.revision});await page.locator('#analysisSyncCancel').click();

@@ -3,6 +3,7 @@
   // One session owner. Preserve the production SDK storage key and format.
   let client=null,session=null,ready=null,known=false,version=0;
   const listeners=new Set();
+  const recovery=root.AuthPasswordRecovery?.create({root,getClient,configuration,signOut});
   function configuration(){
     const config=root.UNIVERSE_CLOUD_CONFIG;
     if(!config||!config.projectRef||config.url!==`https://${config.projectRef}.supabase.co`||!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey))throw new Error('SUPABASE_CONFIG_INVALID');
@@ -14,7 +15,8 @@
   }
   function accept(event,value){
     value=value||null;
-    if(known&&session?.access_token===value?.access_token&&session?.user?.id===value?.user?.id)return;
+    recovery?.accept(event,value);
+    if(event!=='PASSWORD_RECOVERY'&&known&&session?.access_token===value?.access_token&&session?.user?.id===value?.user?.id)return;
     known=true;session=value;version++;
     for(const listener of listeners)notify(listener,event,session);
   }
@@ -41,8 +43,8 @@
   async function getSession(){await initialize();const before=version,{data,error}=await getClient().auth.getSession();if(error)throw error;if(version===before)accept('SESSION',data.session);return session}
   async function getUser(){return (await getSession())?.user||null}
   function onAuthStateChange(listener){listeners.add(listener);if(known)notify(listener,'INITIAL_SESSION',session);void initialize().catch(()=>{});return ()=>listeners.delete(listener)}
-  async function signIn(email,password){const {data,error}=await getClient().auth.signInWithPassword({email,password});if(error)throw error;accept('SIGNED_IN',data.session);return data}
+  async function signIn(email,password){recovery?.reset();const {data,error}=await getClient().auth.signInWithPassword({email,password});if(error)throw error;accept('SIGNED_IN',data.session);return data}
   async function signUp(email,password){const {data,error}=await getClient().auth.signUp({email,password,options:{emailRedirectTo:new URL('./',root.location.href).href}});if(error)throw error;if(data.session)accept('SIGNED_IN',data.session);return data}
   async function signOut(){const {error}=await getClient().auth.signOut({scope:'local'});if(error)throw error;accept('SIGNED_OUT',null)}
-  root.SupabaseBrowserClient=Object.freeze({configuration,getClient,initialize,getSession,getUser,onAuthStateChange,signIn,signUp,signOut});
+  root.SupabaseBrowserClient=Object.freeze({configuration,getClient,initialize,getSession,getUser,onAuthStateChange,signIn,signUp,signOut,recovery});
 })(typeof window!=='undefined'?window:globalThis);
