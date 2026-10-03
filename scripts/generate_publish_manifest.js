@@ -19,6 +19,7 @@ roleByPath.set('src/supabase-browser-client.js','single browser Supabase client,
 roleByPath.set('src/auth-password-recovery.js','Supabase password recovery intent, validated session and password update');
 roleByPath.set('src/auth-password-recovery-ui.js','accessible mobile email recovery and new password dialog');
 roleByPath.set('src/universe-auto-add.js','durable local-first canonical stock addition queue and standard Auth');
+roleByPath.set('src/auth-login-feedback.js','safe sign-in validation and non-secret in-memory error categories');
 roleByPath.set('src/universe-sync-ui.js','local/cloud/market status, login and scoped PC reader setup');
 roleByPath.set('src/api/ai-api.js','PC AI Bridge raw request/response transport envelope');
 roleByPath.set('src/api/api-client.js','loopback-only GET/POST transport with timeouts and Local Network Access handling');
@@ -82,6 +83,7 @@ const paths=[...new Set([
   'src/auth-password-recovery.js',
   'src/auth-password-recovery-ui.js',
   'src/universe-auto-add.js',
+  'src/auth-login-feedback.js',
   'src/universe-sync-ui.js',
   ...existing.files.map(entry=>entry.path).filter(file=>file!=='.nojekyll'&&file!=='src/v13-risk-engine.js'),
   'src/api/ai-api.js',
@@ -136,7 +138,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'auth-password-recovery-v1-20261003',
+  assetVersion:'auth-login-feedback-v1-20261004',
   dataMode:'Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
   files
 };

@@ -101,9 +101,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Password Recovery release cache-busts new and preserved Workbench modules',()=>{
+test('Login Feedback release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='auth-password-recovery-v1-20261003';
+  const version='auth-login-feedback-v1-20261004';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/technical-freshness.js',
@@ -119,6 +119,7 @@ test('Password Recovery release cache-busts new and preserved Workbench modules'
     'src/vendor/supabase-client.js',
     'src/universe-auto-add.js',
     'src/universe-sync-ui.js',
+    'src/auth-login-feedback.js',
     'src/auth-password-recovery.js',
     'src/supabase-browser-client.js',
     'src/auth-password-recovery-ui.js',
