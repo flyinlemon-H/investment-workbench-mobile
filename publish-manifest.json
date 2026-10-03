@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "0fa4ac691e5d6d5d826960e43b1ec82afc211c99",
+  "sourceCommit": "67ff5c3bb7ea213d9f878a613f6bb7456c81f0be",
   "assetVersion": "auth-password-recovery-v1-20261003",
   "dataMode": "Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
