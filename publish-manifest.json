@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "67ff5c3bb7ea213d9f878a613f6bb7456c81f0be",
-  "assetVersion": "auth-password-recovery-v1-20261003",
+  "sourceCommit": "dc8107a9e216e0abfb33e7dba40ae12df4f7d1c5",
+  "assetVersion": "auth-login-feedback-v1-20261004",
   "dataMode": "Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 73728,
-      "sha256": "d6403945600807c6301ff8326621997086443ef7346a219c2ef4c0435cbbcb29"
+      "bytes": 73546,
+      "sha256": "9ab95f34885189933e40801183986878cfcea0e8242f76b2f8659adeafcb011f"
     },
     {
       "path": "social_posts.json",
@@ -105,6 +105,12 @@
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
       "bytes": 33559,
       "sha256": "f9578618c9914254788af52cfe31ffe124c25c6a9172f1069688db33f0f36529"
+    },
+    {
+      "path": "src/auth-login-feedback.js",
+      "role": "safe sign-in validation and non-secret in-memory error categories",
+      "bytes": 2385,
+      "sha256": "c941ebb2c7e8595b6f6a5a6d1ad7fc022a918cf5632b9a08232c2c8b257b13b9"
     },
     {
       "path": "src/auth-password-recovery-ui.js",
@@ -505,8 +511,8 @@
     {
       "path": "src/universe-sync-ui.js",
       "role": "local/cloud/market status, login and scoped PC reader setup",
-      "bytes": 8230,
-      "sha256": "0c88b9becacab823d2728b9d7ec61832ef972a352c4175b803902718bda65ada"
+      "bytes": 11755,
+      "sha256": "ee61a7bceba6b3236d41f64d6c0f695f15953a287ad27b5afe40fd0cd31e199c"
     },
     {
       "path": "src/v13-alpha3-services.js",
