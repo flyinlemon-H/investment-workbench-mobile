@@ -1,6 +1,6 @@
 # AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE
 
-2026-10-03（Asia/Shanghai）阶段记录。任务进行中，等待用户完成 Supabase Dashboard 登录；尚未进入真实邮件阶段，不宣称 WAITING_FOR_USER_EMAIL_CONFIRMATION 或生产通过。
+2026-10-03（Asia/Shanghai）阶段记录。用户已人工核验并提供两项目 Dashboard 配置；与前轮远端公开设置及回跳结果结合完成配置判断。当前阻塞于默认邮件服务的收件人限制：用户确认指定独立测试邮箱不是现有组织团队成员邮箱。尚未发信，不宣称 WAITING_FOR_USER_EMAIL_CONFIRMATION 或生产通过。
 
 本轮无生产/测试 Auth 配置写入，无账户创建/修改，无邮件发送，无前端 push/deploy。原实现状态 AUTH_PASSWORD_RECOVERY_NEEDS_FIX 尚未提升。
 
@@ -17,13 +17,15 @@
 | mailer_autoconfirm | false | 邮箱确认启用 |
 | external.anonymous_users | false | 匿名用户登录关闭 |
 
-完整 Auth 管理配置、SMTP 状态、密码要求与 recovery 邮件限制仍待 Dashboard 登录后核验。未读取 CLI token、password hash、access token 或 refresh token。
+用户人工核验：默认 Supabase 邮件服务，自定义 SMTP 未配置，发送限制 2 emails/hour；密码最小长度 6，无额外字符复杂度；Prevent leaked passwords 关闭。Email provider、Confirm email、Anonymous sign-in 与上述远端公开设置一致。未读取 CLI token、password hash、access token 或 refresh token。未核实的其他策略（例如 secure password change）不自行推断。
 
 ## 2. Test Auth Baseline
 
 `investment-analysis-test-s01 / lblyapnsngqnjimgskkp`：MCP 确认 ACTIVE_HEALTHY，ap-southeast-1。上述四项公开 Auth 字段与生产相同。用户已指定可收信的独立测试邮箱；仓库报告不公开该私人邮箱地址。
 
 仅对该邮箱进行 `auth.users` 的 email/created_at 投影查询，结果为空：本轮开始前尚无该测试账户。未读取密码字段或凭据。
+
+用户人工核验：默认 Supabase 邮件服务、自定义 SMTP 未配置、2 emails/hour；密码最小长度 6，无额外字符复杂度；Email OTP expiration 3600 seconds，Email OTP length 8 digits。
 
 ## 3. Site URL
 
@@ -34,7 +36,7 @@
 | Production | `https://flyinlemon-h.github.io/investment-workbench-mobile/` | 303 / otp_expired |
 | Test | `http://localhost:3000/` | 303 / otp_expired |
 
-这是远端默认回跳的实态证据；Dashboard 中的 Site URL 配置值仍需读屏核对。
+用户人工核验的 Site URL：生产为上表生产地址；测试为 `http://localhost:3000`。与默认回跳结果一致（测试响应补上末尾 `/`）。证据来源分别为用户 Dashboard 核验与 agent 实际 HTTP 响应，并未把人工记录写成 agent 读屏结果。
 
 ## 4. Redirect URLs
 
@@ -45,19 +47,30 @@
 | Production | `https://flyinlemon-h.github.io/investment-workbench-mobile/?auth=recovery` | 与请求完全相同 | 已允许 |
 | Test | `http://127.0.0.1:8899/?auth=recovery` | 与请求完全相同 | 已允许 |
 
-两者均为 303 / otp_expired。生产与测试所需目的地已被远端行为确认覆盖，**无需重复新增 URL**。完整 Additional Redirect URLs 列表尚未取得；不推断具体是哪条 allowlist 覆盖。
+两者均为 303 / otp_expired。生产与测试所需目的地已被远端行为确认覆盖，**无需新增 URL**。
+
+用户确认的完整 Additional Redirect URLs：
+
+- Production：`https://flyinlemon-h.github.io/investment-workbench-mobile/`；`http://127.0.0.1:8768/`。
+- Test：空列表（No Redirect URLs）。
+
+生产 `?auth=recovery` 的覆盖来自 Site URL 同源规则；不能把根路径 allowlist 条目当作任意 query 的通配符。测试 `http://127.0.0.1:8899/?auth=recovery` 在空允许列表下仍被实际接受，与官方 loopback 特例一致。因此测试邮件闭环使用这一精确目标即可，不为它添加冗余配置，不新增 wildcard。该地址供当前 PC 上的浏览器使用，手机 localhost 不能访问 PC。
 
 依据：[Supabase Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls) 与 [官方 Auth redirect 验证实现](https://github.com/supabase/auth/blob/master/internal/utilities/request.go)。当前开源实现除 allowlist glob 外还处理 Site URL 同源与 loopback；具体托管版本可能不同，因此以本轮实际响应为目标匹配证据，不能只按字符串相等判断。
 
-Auth 变更审计：Before/After 管理列表尚未读取；Change = NONE。未增加 wildcard，未改 Site URL 或任何其他策略。
+Auth 变更审计：Before 为上述用户确认列表；Change = NONE；After 与 Before 相同（未执行写操作）。未改 Site URL、password policy、provider、email confirmation、anonymous login、leaked password protection、SMTP 或其他 Auth 设置。
 
 ## 5. Password Policy
 
-最低长度、字符要求、secure password change、其他密码策略仍待读取。现有 UI 的 8 位最低检查与服务器错误提示待同真实配置核对，不宣称生产策略就是 8 位。
+两项目密码最小长度均为 6，无额外字符复杂度要求，来源为用户 Dashboard 人工核验。产品的 8 位最低输入检查沿用原账户 UI，比服务端最低长度更严格，能够满足已核实要求；“至少 8 位”是当前应用的输入要求，不是 Supabase 配置值。服务端错误继续由固定中文提示处理。未降低/修改任何密码策略，也未增加新的复杂度策略。
 
 ## 6. Real Email Result
 
-NOT_RUN。独立测试邮箱已提供，但尚未创建账户或发送邮件。当前没有需要用户点击的测试邮件。SMTP/default provider、可用收件人范围和发送限制尚未核实。
+NOT_RUN。独立测试邮箱已提供，但用户确认它**不是现有组织 Team 成员邮箱**。根据 [Supabase 默认 SMTP 官方限制](https://supabase.com/docs/guides/auth/auth-smtp)，未配置自定义 SMTP 时，只会向现有团队成员邮箱发送 Auth 邮件，其他地址被拒绝。应用 Auth 用户与组织 Team 成员是不同概念。
+
+故本轮停止于发送前，不以创建 Auth 账户或修改 redirect 试图绕过限制；不新增团队权限、不配置 SMTP。本轮真实邮件发送数 **0**，没有需要用户点击的邮件。用户进一步确认没有其他符合条件的独立邮箱，当前授权范围内的真实邮件验收因此被阻塞。禁止使用生产真实账户作为测试替代。
+
+符合条件的收件人确认后，预计初始注册确认与 recovery 各最多 1 封，合计最多 2 封；发信前考虑该项目此前一小时其他发送占用，不保证本任务拥有全部额度。无重复发送、无自动重试、无限流压力测试。一次请求失败即记录并停止后续发信。
 
 ## 7. Recovery Redirect Result
 
@@ -123,10 +136,12 @@ NOT_RUN。没有 push main、push 分支、触发 Pages 或部署 Auth 配置。
 
 Chrome 工具报告请求头策略加载失败。应用内浏览器能打开 Supabase Dashboard，但进入登录页。尝试现有界面的“Continue with GitHub”被自动审批拒绝，理由是转到 GitHub 的 OAuth 登录未明确授权。未绕过拒绝，未读取凭据，已把可见登录页交给用户自行登录。
 
-继续所需：用户在右侧完成 Supabase 登录，或提供两项目非敏感 URL/密码/邮件配置。之后核实配置 → 准备隔离测试应用和账户 → 真实 recovery 邮件及密码闭环 → 清理 → 完成最终 Candidate/发布门禁 → 授权范围内发布 → 线上验收。用户的真实密码仍由本人设置。
+原 Dashboard 读取阻塞已通过用户人工提供配置消除，无须继续 GitHub OAuth 操作。用户已确认没有可用的现有团队成员独立邮箱，当前授权范围内不能完成真实邮件闭环；必须另行明确测试邮件投递方案，例如单独评审并授权测试项目使用自定义 SMTP。修改 SMTP 或新增组织成员不属于本任务既有授权，不执行。此处只是说明缺少的条件，不表示新增方案已批准或已具备服务商/发件域名配置。
+
+真实邮件链路通过后才能继续 Candidate/发布门禁与生产发布。生产真实账户最终也受默认 SMTP 收件人限制；“auth.users 中存在账户”不能证明它属于组织 Team，需要在最终用户恢复前核实投递资格。不得自动向该账户发测试邮件。
 
 ## 21. Final Status
 
-尚无新的最终判定；任务暂停于 Dashboard 登录/完整配置核验，原状态 **AUTH_PASSWORD_RECOVERY_NEEDS_FIX** 保持，原因是未完成验收而非已确认的代码缺陷。
+**AUTH_PASSWORD_RECOVERY_NEEDS_FIX** 保持。原因是已确认指定测试邮箱不满足默认邮件服务的投递条件，真实 recovery 硬门禁未完成；不是 redirect 配置错误，也不是已确认的恢复代码缺陷。
 
-不标记 READY_FOR_PRODUCTION_DEPLOY 或 READY_FOR_USER_PASSWORD_RESET，也不将尚未发送的邮件写成 WAITING_FOR_USER_EMAIL_CONFIRMATION。用户登录后从当前步骤继续，保留已有授权和本轮证据。
+不标记 READY_FOR_PRODUCTION_DEPLOY 或 READY_FOR_USER_PASSWORD_RESET，也不将尚未发送的邮件写成 WAITING_FOR_USER_EMAIL_CONFIRMATION。取得合格独立收件人后从真实测试账户准备步骤继续，保留已有授权和本轮证据。
