@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "a9e044d05b6920007c8a1af101c56a56438e1ba2",
-  "assetVersion": "market-data-orchestrator-v1-integration-20261002",
-  "dataMode": "Production Entry Decision Clarity and preserved Discussion/Plan/Runtime plus daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
+  "sourceCommit": "0fa4ac691e5d6d5d826960e43b1ec82afc211c99",
+  "assetVersion": "auth-password-recovery-v1-20261003",
+  "dataMode": "Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 74761,
-      "sha256": "6cbb8b0874333560ec2620010dff1d5f132de4cff1a998b149717c2b8bbbdf6a"
+      "bytes": 73728,
+      "sha256": "d6403945600807c6301ff8326621997086443ef7346a219c2ef4c0435cbbcb29"
     },
     {
       "path": "social_posts.json",
@@ -105,6 +105,18 @@
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
       "bytes": 33559,
       "sha256": "f9578618c9914254788af52cfe31ffe124c25c6a9172f1069688db33f0f36529"
+    },
+    {
+      "path": "src/auth-password-recovery-ui.js",
+      "role": "accessible mobile email recovery and new password dialog",
+      "bytes": 5991,
+      "sha256": "793cfe7e74f6a8b777d6fd3bf3b2a6b6fb07c889f5ffaa35f1c78f501bac7bba"
+    },
+    {
+      "path": "src/auth-password-recovery.js",
+      "role": "Supabase password recovery intent, validated session and password update",
+      "bytes": 8700,
+      "sha256": "00d2a0d06414d7d063942611816d82ac498307163d5ec11d9d3bb5fee736b50d"
     },
     {
       "path": "src/batch-technical-review.js",
@@ -451,8 +463,8 @@
     {
       "path": "src/supabase-browser-client.js",
       "role": "single browser Supabase client, compatible persistent session and normalized Auth lifecycle",
-      "bytes": 3481,
-      "sha256": "743a69490540d8e39b7dfe27ffd0796c30ebf31c657e93c45c1b02d00bbe6df6"
+      "bytes": 3664,
+      "sha256": "d5ebd302372160dc5b4fabfeaf170f644b37c83fc9f33d095b4121ab909d998f"
     },
     {
       "path": "src/symbol-identity.js",
@@ -493,8 +505,8 @@
     {
       "path": "src/universe-sync-ui.js",
       "role": "local/cloud/market status, login and scoped PC reader setup",
-      "bytes": 7832,
-      "sha256": "62a53cc7c3bcfb5d58a149bfdaa847bee804e530570746c603a5299544964a02"
+      "bytes": 8230,
+      "sha256": "0c88b9becacab823d2728b9d7ec61832ef972a352c4175b803902718bda65ada"
     },
     {
       "path": "src/v13-alpha3-services.js",
