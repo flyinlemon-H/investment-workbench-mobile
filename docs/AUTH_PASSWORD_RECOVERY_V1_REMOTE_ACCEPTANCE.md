@@ -1,8 +1,8 @@
 # AUTH_PASSWORD_RECOVERY_V1_REMOTE_ACCEPTANCE
 
-2026-10-03（Asia/Shanghai）阶段记录。用户已人工核验并提供两项目 Dashboard 配置；与前轮远端公开设置及回跳结果结合完成配置判断。当前阻塞于默认邮件服务的收件人限制：用户确认指定独立测试邮箱不是现有组织团队成员邮箱。尚未发信，不宣称 WAITING_FOR_USER_EMAIL_CONFIRMATION 或生产通过。
+2026-10-03（Asia/Shanghai）阶段记录。用户已明确调整最终验收策略：取消“独立隔离邮箱真实 recovery 闭环先于发布”的硬门禁；允许其他自动、redirect、安全和生产基线门禁通过后先发布，再由用户本人对现有生产账户执行手机恢复。发布后必须停在 **WAITING_FOR_USER_PASSWORD_RECOVERY**；真实用户操作及后续验收完成前不得标记 PRODUCTION_ACCEPTANCE_PASSED。
 
-本轮无生产/测试 Auth 配置写入，无账户创建/修改，无邮件发送，无前端 push/deploy。原实现状态 AUTH_PASSWORD_RECOVERY_NEEDS_FIX 尚未提升。
+本阶段仍无生产/测试 Auth 配置写入、无账户创建/修改、无邮件发送。前端发布授权已明确，当前完成发布前门禁，实际发布结果由下文后续记录补充。不得读取、生成、记录或代替用户输入新密码；不新增 Team 成员、不配置 Custom SMTP、不修改其他 Auth 设置。
 
 ## 1. Production Auth Baseline
 
@@ -88,11 +88,11 @@ NOT_RUN。独立测试邮箱已提供，但用户确认它**不是现有组织 T
 
 ## 10. New Password Login
 
-NOT_RUN，仍是发布硬门禁。
+NOT_RUN。按用户修订策略改为发布后由用户本人执行，尚无真实登录验收结论。
 
 ## 11. Old Password Rejection
 
-NOT_RUN，仍是发布硬门禁。
+NOT_RUN。Codex 不读取旧/新密码，也不代用户尝试；不能用自动测试结果宣称真实旧密码已失效。用户修订后的后续验收明确包含 session、正常登录、recovery UI 退出与旧 recovery link 行为。
 
 ## 12. Refresh Result
 
@@ -110,15 +110,15 @@ NOT_RUN，仍是发布硬门禁。
 
 - `git ls-remote` 与 `git fetch origin main` 确认最新 main：`9d02277fd271848116d5f3bd41c9c3303f921351`。
 - `git merge-base --is-ancestor origin/main HEAD` 通过，Auth 分支包含最新 main。
-- 本轮重新执行 production_baseline_regression：**207/207 PASS**。
+- 按新策略再次执行 production_baseline_regression：**207/207 PASS**。
 - 线上 manifest：assetVersion `market-data-orchestrator-v1-integration-20261002`，sourceCommit `a9e044d05b6920007c8a1af101c56a56438e1ba2`，deploymentCommit `9d02277fd271848116d5f3bd41c9c3303f921351`，89 个资源。
-- 本轮未修改产品代码；既有 JS/SQL 1190/1190、Auth 定向 59/59、Entry Clarity 31/31、三视口 45 项/21 图与新清单 91 个资源完整性结果，见前置报告。这些是已有精确实现版本的自动证据，发布前仍需按最终 Candidate 确认门禁。
+- 本轮未修改产品代码；按新策略重新运行 JS/SQL **1190/1190**、Auth 定向 **59/59**、Entry Clarity **31/31**、三视口 **45 项/21 图**、原 Auth/同步浏览器回归，全部 PASS。浏览器 Auth HTTP 为模拟，不发真实邮件。原业务产品文件与 production main 无差异。
 
 ## 16. Release Candidate
 
 实现提交 `0fa4ac691e5d6d5d826960e43b1ec82afc211c99`；已有报告/清单提交 `47781a7920ef56b392c609ecfa90c3cf319c3a8f`。待发布版本 `auth-password-recovery-v1-20261003`。
 
-最终 production release Candidate 尚未定版：真实邮件硬门禁未通过。当前阶段文档提交不代表发布批准或远端验收通过。
+用户已授权按修订后的门禁发布。最终 Candidate 由本轮策略记录及重新生成的发布清单提交确定，包含最新 production main；不将尚未完成的真实用户恢复写成通过。
 
 ## 17. Production Publish
 
@@ -136,14 +136,14 @@ NOT_RUN。没有 push main、push 分支、触发 Pages 或部署 Auth 配置。
 
 Chrome 工具报告请求头策略加载失败。应用内浏览器能打开 Supabase Dashboard，但进入登录页。尝试现有界面的“Continue with GitHub”被自动审批拒绝，理由是转到 GitHub 的 OAuth 登录未明确授权。未绕过拒绝，未读取凭据，已把可见登录页交给用户自行登录。
 
-原 Dashboard 读取阻塞已通过用户人工提供配置消除，无须继续 GitHub OAuth 操作。用户已确认没有可用的现有团队成员独立邮箱，当前授权范围内不能完成真实邮件闭环；必须另行明确测试邮件投递方案，例如单独评审并授权测试项目使用自定义 SMTP。修改 SMTP 或新增组织成员不属于本任务既有授权，不执行。此处只是说明缺少的条件，不表示新增方案已批准或已具备服务商/发件域名配置。
+原 Dashboard 读取阻塞已通过用户人工提供配置消除，无须继续 GitHub OAuth 操作。独立邮箱不具备默认服务收件资格的事实保持；用户已明确取消它作为前置发布硬门禁。不得为此新增组织成员或配置 Custom SMTP，也无需继续寻找其他测试邮箱。
 
-真实邮件链路通过后才能继续 Candidate/发布门禁与生产发布。用户后续明确确认生产真实账户的邮箱已经是现有组织 Team 成员，因此该账户符合默认邮件服务的收件人资格；证据来源是用户人工核验，尚无真实邮件送达证据，仍受 2 emails/hour 及服务可用性限制。
+按修订策略，自动、redirect、安全与生产基线门禁通过后可以先发布 Candidate。生产真实账户邮箱已由用户确认是现有组织 Team 成员，符合默认邮件服务的收件人资格；尚无真实送达证据，仍受 2 emails/hour 及服务可用性限制。
 
-这一事实补充没有撤销此前“不得使用生产真实账户作为隔离测试邮箱、不得自动发测试 recovery 邮件、真实密码由用户本人设置”的边界。独立测试邮箱的投递阻塞仍存在；未向生产真实账户发送邮件或操作密码。
+发布后由用户本人在手机端点击“忘记密码？”、请求生产账户的真实 recovery 邮件、打开邮件并自行输入新密码。Codex 不主动发信、不读取/生成/记录/代输新密码。用户完成后，再继续核验 session、正常登录、恢复 UI 退出及旧邮件链接行为；不得要求用户发送密码或完整 recovery URL。
 
 ## 21. Final Status
 
-**AUTH_PASSWORD_RECOVERY_NEEDS_FIX** 保持。原因是已确认指定测试邮箱不满足默认邮件服务的投递条件，真实 recovery 硬门禁未完成；不是 redirect 配置错误，也不是已确认的恢复代码缺陷。
+原 AUTH_PASSWORD_RECOVERY_NEEDS_FIX 的“独立邮箱前置门禁”原因已被用户的新策略明确解除。自动门禁已复核通过，正在进行授权的前端发布；发布验证通过后的暂停状态为 **WAITING_FOR_USER_PASSWORD_RECOVERY**。
 
-不标记 READY_FOR_PRODUCTION_DEPLOY 或 READY_FOR_USER_PASSWORD_RESET，也不将尚未发送的邮件写成 WAITING_FOR_USER_EMAIL_CONFIRMATION。取得合格独立收件人后从真实测试账户准备步骤继续，保留已有授权和本轮证据。
+此时真实邮件、改密、新密码登录及旧链接行为仍未验收，不标记 PRODUCTION_ACCEPTANCE_PASSED。仅在用户本人完成操作、后续验证通过后更新最终 Production Acceptance。
