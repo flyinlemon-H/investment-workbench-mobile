@@ -1,8 +1,8 @@
 # AUTH_LOGIN_FEEDBACK_AND_VALIDATION_FIX_V1
 
-日期：2026-10-04（Asia/Shanghai）。状态：**READY_FOR_PRODUCTION_DEPLOY**。
+日期：2026-10-04（Asia/Shanghai）。本次登录反馈修复状态：**PRODUCTION_ACCEPTANCE_PASSED**。
 
-仅完成本地修复、回归和发布准备；没有推送或部署生产，没有修改 Supabase Auth 设置、数据库、Worker 或真实业务数据。
+第 1–15 节保留实现阶段记录。随后经单独授权完成生产发布及隔离线上验收，详见 [生产发布报告](AUTH_LOGIN_FEEDBACK_AND_VALIDATION_FIX_V1_PRODUCTION_DEPLOY.md)。没有修改 Supabase Auth 设置、数据库、Worker 或真实业务数据。
 
 ## 1. Confirmed Issues
 
@@ -120,6 +120,8 @@
 
 ## 16. Final Status
 
-**READY_FOR_PRODUCTION_DEPLOY**
+实现阶段完成时为 **READY_FOR_PRODUCTION_DEPLOY**。单独授权生产发布后，本登录反馈任务现为 **PRODUCTION_ACCEPTANCE_PASSED**。
 
-实现、定向回归、全量门禁、三视口和资源完整性均已通过。未推送分支、未发布生产、未修改生产 Auth 或数据库。生产仍使用原 `7df5f7b…` Candidate；真正 Safari 登录与 Password Recovery 最终 Production Acceptance 尚未在本任务完成。
+最终生产提交 `156d97b42c5bbaffd88d1c361979665d6707313a`；release `auth-login-feedback-v1-20261004`；重新生成的 manifest sourceCommit `d21c88cb66fb280347c68f31e9b8da8608424a0e`。Pages workflow `37140317555` 成功，线上 92/92 资源、登录 65/65、Recovery 隔离回归 45/45、Entry Clarity 31/31、Orchestrator/Freshness 11/11 及三个视口入口检查通过。
+
+用户在部署前已经确认手机可正常登录；本任务未退出用户、要求重新登录或操作真实凭据。线上浏览器验收采用全新上下文和完全拦截的模拟 Auth 响应；不代表真实 iOS Safari 再次验收。Password Recovery 的独立真实邮件最终验收仍未完成，不将该任务标记为通过。Worker Shortcut pairing 和 provider mismatch 留给独立后续任务。
