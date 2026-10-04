@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import re
+from .evidence import accepted as unit_accepted
 
 VERSION = 'provider-continuity-rebase-v1'
 FIELDS = ('priceHistory','technicalIndicators','technicalData','marketDataFreshness')
@@ -94,7 +95,7 @@ def compare(old,new,units):
             family='price' if key in ('open','high','low','close') else key
             px,py=a[day].get('provider'),b[day].get('provider')
             ux,uy=units.get(px,{}).get(family,{}),units.get(py,{}).get(family,{})
-            if not (ux.get('confirmed') and uy.get('confirmed') and ux.get('unit')==uy.get('unit') and ux.get('currency')==uy.get('currency')):
+            if not (unit_accepted(ux) and unit_accepted(uy) and ux.get('unit')==uy.get('unit') and ux.get('currency')==uy.get('currency')):
                 unknown+=1;continue
             dx=Decimal(str(x))*Decimal(str(ux.get('scale',1)));dy=Decimal(str(y))*Decimal(str(uy.get('scale',1)));delta=abs(dy-dx)
             if not delta:exact+=1
@@ -118,7 +119,7 @@ def technical(rows,contract,units):
         dif=[a-b for a,b in zip(ema(closes,12),ema(closes,26))];dea=ema(dif,9)
         macd=dict(dif=round(dif[-1],6),dea=round(dea[-1],6),histogram=round(2*(dif[-1]-dea[-1]),6))
     vu=units.get(contract['canonicalProvider'],{}).get('volume',{});vs=[r.get('volume') for r in rows]
-    usable=vu.get('confirmed') and vu.get('unit')=='shares' and all(v is not None for v in vs)
+    usable=unit_accepted(vu) and vu.get('unit')=='shares' and all(v is not None for v in vs)
     vs=[v*vu.get('scale',1) for v in vs] if usable else []
     recent=sum(vs[-5:])/5 if len(vs)>=5 else None;prev=sum(vs[-10:-5])/5 if len(vs)>=10 else None
     volume=dict(recent_5d_average=round(recent,2) if recent is not None else None,previous_5d_average=round(prev,2) if prev is not None else None,
@@ -175,8 +176,8 @@ def candidate(req,provider,rows,provider_version,now,evidence):
 def verify(value):
     body={k:v for k,v in value.items() if k not in ('candidateHash','candidateId')}
     if digest(body)!=value.get('candidateHash') or value.get('candidateId')!='rebase_'+value['candidateHash']:raise ValueError('candidate_hash_mismatch')
-    validate_bars(value['stock']['priceHistory'],None if value.get('schemaVersion')==2 else value['sourceContract']['canonicalProvider'])
-    if value.get('schemaVersion') == 2:
+    validate_bars(value['stock']['priceHistory'],None if value.get('schemaVersion',1)>=2 else value['sourceContract']['canonicalProvider'])
+    if value.get('schemaVersion', 1) >= 2:
         from .revision import verify as verify_revision
         verify_revision(value)
     return value

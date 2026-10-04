@@ -29,6 +29,7 @@ def main():
     generate.add_argument('--symbol',required=True);generate.add_argument('--end',required=True)
     generate.add_argument('--provider',choices=['both',*REGISTRY],default='both')
     review=commands.add_parser('review');review.add_argument('--object',required=True)
+    export=commands.add_parser('export-review');export.add_argument('--object',required=True);export.add_argument('--output',type=Path,required=True)
     pending=commands.add_parser('pending');pending.add_argument('--symbol')
     approve=commands.add_parser('approve');approve.add_argument('--object',required=True);approve.add_argument('--request',required=True)
     approve.add_argument('--provider',choices=REGISTRY,required=True);approve.add_argument('--phrase',required=True)
@@ -57,6 +58,9 @@ def main():
         result=recommend(outcomes)
         result['status']='PILOT_READY_FOR_USER_REVIEW' if any(x.get('candidateHash') for x in outcomes) else 'PILOT_BLOCKED_PROVIDER_UNAVAILABLE'
     elif args.command=='review':result=store.read(args.object)
+    elif args.command=='export-review':
+        from .review import export_review
+        result=export_review(store.read(args.object),args.output)
     elif args.command=='pending':result=store.pending(symbol(args.symbol) if args.symbol else None)
     elif args.command=='approve':result=store.approve(args.object,args.request,args.phrase,args.provider,load(args.resolutions),args.actor)
     elif args.command=='apply':

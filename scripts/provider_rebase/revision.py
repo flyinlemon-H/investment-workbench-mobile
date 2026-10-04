@@ -6,6 +6,7 @@ the same Store, binding semantic content separately from the review package.
 import copy
 from decimal import Decimal
 from . import core as C
+from . import evidence as E
 
 VERSION = 'provider-revision-engine-v1'
 NORMALIZATION = 'python-round-6-v1'
@@ -199,7 +200,7 @@ def technical_preview(rows, contract):
     td['programRiskFlags']=[name for key,name in [('priceVsMA20','price_below_ma20'),('ma5VsMA20','ma5_below_ma20'),('macdSign','macd_below_signal')] if last[key]==-1]
     unit=contract.get('units',{}).get(contract['canonicalProvider'],{}).get('volume',{})
     volume=[r.get('volume') for r in rows[-20:]]
-    comparable=unit.get('confirmed') and unit.get('unit')=='shares' and all(v is not None for v in volume)
+    comparable=E.accepted(unit) and unit.get('unit')=='shares' and all(v is not None for v in volume)
     td.update(volume=volume[-1]*unit.get('scale',1) if comparable else None,
         volumeAvg20=sum(volume)/len(volume)*unit.get('scale',1) if comparable else None,
         volumeChangePct=ind['volume_change']['change_pct'],volumeStatus='comparable' if comparable else 'unavailable')
@@ -241,6 +242,10 @@ def candidate(req, provider, rows, provider_version, now, evidence):
     for target,raw in zip(c['stock']['priceHistory'],rows):target['rawProviderId']=raw.get('rawProviderId',raw['provider'])
     c.pop('candidateHash'); c.pop('candidateId')
     contract = source_contract(req['symbol'], provider, rows, provider_version, evidence.get('units'))
+    if evidence.get('validationProfile') == E.PROFILE:
+        contract.update(canonicalProviderId=selected, priceCurrency='HKD' if contract['market']=='HK' else 'CNY',
+            priceUnit=('HKD' if contract['market']=='HK' else 'CNY')+'/share', volumeUnit='shares',
+            amountAvailability='NOT_AVAILABLE' if selected=='yahoo' else 'AVAILABLE', unitValidationProfile=E.PROFILE)
     report = inspect(req['base']['priceHistory'], rows, contract,
         req['base']['marketDataFreshness'].get('sourceContract'))
     mixed = len({canonical(r['provider']) for r in req['base']['priceHistory']}) > 1
@@ -304,6 +309,8 @@ def candidate(req, provider, rows, provider_version, now, evidence):
     for target in (c['stock']['marketDataFreshness'], c['stock']['technicalIndicators'], c['stock']['technicalData']):
         target.update(dataContentVersion=c['contentHash'], technicalVersion=technical_version,
             latestCompleteBar=rows[-1]['date'])
+    if evidence.get('validationProfile') == E.PROFILE:
+        finalize_evidence(c, req, rows, contract, evidence)
     c['approvalPackageHash'] = C.digest(c)
     c['candidateHash'] = C.digest(c)
     c['candidateId'] = 'rebase_' + c['candidateHash']
@@ -320,3 +327,37 @@ def verify(c):
         raise ValueError('SOURCE_CONTRACT_MISMATCH')
     if any(canonical(r['provider'])!=c['sourceContract']['canonicalProvider'] or canonical(r.get('rawProviderId',r['provider']))!=c['sourceContract']['canonicalProvider'] for r in c['stock']['priceHistory']):raise ValueError('SOURCE_CONTRACT_MISMATCH')
     return c
+
+
+def finalize_evidence(c, req, rows, contract, evidence):
+    old = req['base']['priceHistory']
+    statuses, blocked = E.units_gate(contract, old, evidence, c['revisionReport'].get('comparison', {}), rows)
+    volume = E.volume_review(old, rows, contract, evidence)
+    guards = E.guard_gate(evidence)
+    c['schemaVersion'] = 3
+    c['validationProfile'] = E.PROFILE
+    c['guardImplementationHash'] = evidence.get('guardImplementationHash')
+    c['unitStatuses'] = statuses
+    c['volumeValidation'] = volume
+    c['guardDelivery'] = guards
+    c['blockers'] = [b for b in c['blockers'] if b not in ('UNIT_CONTRACT_INCOMPLETE', 'VOLUME_DIFFERENCE_UNEXPLAINED', 'writer_deployment_not_confirmed')]
+    if volume['unvalidatedDates']: blocked.append('VOLUME_DIFFERENCE_UNEXPLAINED')
+    if guards['missingPaths']: blocked.append('writer_deployment_not_confirmed')
+    if evidence.get('guardImplementationHash') != E.implementation_hash(): blocked.append('guard_implementation_changed')
+    complete = E.technical_complete(c['technicalPreview'], len(rows))
+    if not complete: blocked.append('TECHNICAL_PREVIEW_INCOMPLETE')
+    c['technicalValidation'] = dict(complete=complete, unsupported=['price_action_classifier', 'volume_spike_classifier', 'price_volume_relationship_classifier', 'amount_facts'])
+    c['blockers'] = sorted(set(c['blockers'] + blocked))
+    changed_price = any(v['differenceCount'] for k,v in c['fieldDiffSummary'].items() if k in PRICE)
+    changed_volume = bool(volume['changedDates'])
+    c['revisionCategories'] = (['MULTI_FIELD_REVISION', 'PRICE_HISTORY_REVISION', 'VOLUME_HISTORY_REVISION'] if changed_price and changed_volume else ['PRICE_HISTORY_REVISION'] if changed_price else ['VOLUME_HISTORY_REVISION'] if changed_volume else [])
+    meta = evidence.get('providerMetadata', {})
+    if meta.get('canonicalField') == E.FIELDS.get(contract['canonicalProvider'], {}).get('volume') and meta.get('unusedField') and not E.equal(meta.get('canonicalValue'), meta.get('unusedValue')):
+        c['revisionCategories'].append('PROVIDER_META_INCONSISTENCY')
+        c['warnings'].append('KNOWN_PROVIDER_INCONSISTENCY')
+    c['reviewItems'] = sorted(set(c['reviewItems'] + (['exchange_validated_volume_revision_review'] if changed_volume else [])))
+    c['targetProviderConfirmation'] = evidence.get('providerConfirmation', {})
+    if c['targetProviderConfirmation'].get('provider') != contract['canonicalProvider'] or c['targetProviderConfirmation'].get('symbol') != contract['symbol']:
+        c['blockers'].append('provider_confirmation_required')
+    c['validationStatus'] = 'invalid' if c['blockers'] else 'review_required'
+    c['approvalReadiness'] = 'BLOCKED' if c['blockers'] else 'READY_FOR_USER_APPROVAL'

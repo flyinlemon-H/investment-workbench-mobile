@@ -6,12 +6,13 @@ import os
 from pathlib import Path
 from . import core as C
 from . import revision as R
+from . import evidence as E
 from .store import Store
 
 def runtime_version(module):
     path=getattr(module,'__file__',None)
-    return 'provider-source-sha256:'+C.digest(dict(provider=hashlib.sha256(Path(path).read_bytes()).hexdigest(),
-        strictParser=hashlib.sha256(Path(__file__).with_name('fetch.py').read_bytes()).hexdigest())) if path else 'fixture-provider-v1'
+    return 'provider-source-sha256:'+C.digest(dict(provider=hashlib.sha256(Path(path).read_text(encoding='utf-8-sig').encode()).hexdigest(),
+        strictParser=hashlib.sha256(Path(__file__).with_name('fetch.py').read_text(encoding='utf-8-sig').encode()).hexdigest())) if path else 'fixture-provider-v1'
 
 def provider_classes(module):
     class StrictYahooDailyProvider:
@@ -70,6 +71,10 @@ class ContinuityChain:
 
 def guarded_updater(updater,provider_module):
     """Publish the entire facts bundle only after a successful per-symbol probe."""
+    installed = getattr(updater, '__market_revision_guard__', None)
+    if installed:
+        if installed != E.implementation_hash():raise ValueError('guard_implementation_changed')
+        return updater
     def update(state,**kwargs):
         results=[];store=kwargs.pop('revision_store',None)
         if store is None:
@@ -122,6 +127,7 @@ def guarded_updater(updater,provider_module):
             except (ValueError,KeyError,TypeError) as error:
                 result.update(success=False,error=str(error) if str(error) in R.SAFE_ERRORS else 'UNSAFE_WRITE_PATH_BLOCKED')
         return results
+    update.__market_revision_guard__ = E.implementation_hash()
     return update
 
 def resolve_baseline(store,ticker,previous):

@@ -63,7 +63,7 @@ class Store:
         with self.tx() as db:
             rid=self._put(db,req,'request');cid=self._put(db,value,'candidate')
             self._event(db,value['symbol'],'candidate_generated',candidateId=value['candidateId'],candidateHash=value['candidateHash'],objectId=cid,requestObject=rid)
-            if value.get('schemaVersion') == 2:
+            if value.get('schemaVersion', 1) >= 2:
                 for state in value['states']:
                     self._event(db,value['symbol'],state,objectId=cid,contentHash=value['contentHash'],approvalPackageHash=value['approvalPackageHash'])
         return cid,rid
@@ -107,7 +107,7 @@ class Store:
             if not actor or any(not str(resolutions.get(k,'')).strip() for k in c['reviewItems']):raise ValueError('unresolved_review_items')
             approval=dict(candidateId=c['candidateId'],candidateHash=c['candidateHash'],objectId=cid,requestObject=rid,
                 provider=provider,resolutions=resolutions,actor=actor,approvedAt=now(),baseHash=c['baseHash'])
-            if c.get('schemaVersion') == 2:
+            if c.get('schemaVersion', 1) >= 2:
                 approval.update(contentHash=c['contentHash'],approvalPackageHash=c['approvalPackageHash'])
             existing=db.execute('SELECT body FROM approvals WHERE hash=?',(c['candidateHash'],)).fetchone()
             if existing:return json.loads(existing[0])
@@ -116,10 +116,13 @@ class Store:
             return approval
 
     def _revalidate(self,c,req):
+        if c.get('schemaVersion', 1) >= 3:
+            from .evidence import implementation_hash
+            if c.get('guardImplementationHash') != implementation_hash():raise ValueError('guard_implementation_changed')
         constructor=candidate
-        if c.get('schemaVersion') == 2:
+        if c.get('schemaVersion', 1) >= 2:
             from .revision import candidate as constructor
-        rebuilt=constructor(req,c['sourceContract']['rawProviderId'] if c.get('schemaVersion')==2 else c['sourceContract']['canonicalProvider'],c['stock']['priceHistory'],
+        rebuilt=constructor(req,c['sourceContract']['rawProviderId'] if c.get('schemaVersion',1)>=2 else c['sourceContract']['canonicalProvider'],c['stock']['priceHistory'],
             c['sourceContract']['providerVersion'],c['generatedAt'],c['evidence'])
         if rebuilt['candidateHash']!=c['candidateHash']:raise ValueError('candidate_validation_outdated')
         if c.get('schemaVersion') == 1:
@@ -154,7 +157,7 @@ class Store:
             if not approved:raise ValueError('explicit_approval_required')
             approval=json.loads(approved[0])
             if approval['objectId']!=cid or approval['requestObject']!=rid or c['blockers']:raise ValueError('approval_binding_mismatch')
-            if c.get('schemaVersion') == 2 and (approval.get('contentHash')!=c['contentHash'] or approval.get('approvalPackageHash')!=c['approvalPackageHash']):raise ValueError('approval_binding_mismatch')
+            if c.get('schemaVersion', 1) >= 2 and (approval.get('contentHash')!=c['contentHash'] or approval.get('approvalPackageHash')!=c['approvalPackageHash']):raise ValueError('approval_binding_mismatch')
             if (row[2] if row else 0)!=expected_generation:raise ValueError('generation_conflict')
             current_facts=facts(current['stock']) if row else facts(base)
             if digest(current_facts)!=c['baseHash'] or req['baseHash']!=c['baseHash']:raise ValueError('base_version_changed')
@@ -166,7 +169,7 @@ class Store:
                     aiJudgmentStatus='needs_review',reason='history_source_changed'))
             stock['technicalData'].update(technicalDataStatus='fresh',dataQuality='validated',dataVersion=c['candidateHash'])
             stock['technicalIndicators']['dataVersion']=c['candidateHash']
-            if c.get('schemaVersion') == 2:
+            if c.get('schemaVersion', 1) >= 2:
                 mf['sourceMigration'].update(reason='same_source_history_revision' if c['type']=='same_provider_revision' else 'history_source_changed',
                     approvalPackageHash=c['approvalPackageHash'])
                 mf.update(revisionStatus='applied',technical_analysis_stale=False)

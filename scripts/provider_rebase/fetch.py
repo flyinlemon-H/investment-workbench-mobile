@@ -7,7 +7,7 @@ from pathlib import Path
 import requests
 from .core import symbol, VERSION
 
-def fetch(provider,ticker,start,end):
+def fetch(provider,ticker,start,end,*,audit_sink=None):
     symbol(ticker);first=date.fromisoformat(start);last=date.fromisoformat(end)
     if first>last:raise ValueError('invalid_window')
     hk=ticker.endswith('.HK');tz=ZoneInfo('Asia/Hong_Kong' if hk else 'Asia/Shanghai')
@@ -31,6 +31,7 @@ def fetch(provider,ticker,start,end):
             for chunk in response.iter_content(65536):
                 content.extend(chunk)
                 if len(content)>8*1024*1024:raise ValueError('provider_response_too_large')
+        if audit_sink is not None:audit_sink(bytes(content))
         data=json.loads(content)
     except requests.Timeout:raise ValueError('provider_timeout') from None
     except requests.RequestException:raise ValueError('provider_network_error') from None

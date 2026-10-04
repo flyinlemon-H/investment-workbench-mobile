@@ -99,9 +99,9 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
   assert(stock.technicalData.resistancePrice>=stock.technicalData.supportPrice);
 });
 
-test('Login Feedback release cache-busts new and preserved Workbench modules',()=>{
+test('Provider Pilot release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='auth-login-feedback-v1-20261004';
+  const version='provider-pilot-readiness-v1-20261005';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
     'src/technical-freshness.js',
