@@ -143,6 +143,8 @@ function publishMarketBridges(options) {
   const dataContent = fs.readFileSync(sourceDataPath, 'utf8');
   const statusContent = fs.readFileSync(sourceStatusPath, 'utf8');
   const incoming = validateBridgeContent(dataContent, { minimumSymbols });
+  const {assertProjection}=require('./market_history_projection_guard');
+  incoming.bridge.stocks.forEach(stock=>assertProjection(stock));
   validateStatusContent(statusContent, incoming, { acceptManualRun: options.acceptManualRun });
 
   const expectedRemoteHead = remoteHead(remote, branch, gitOptions);
@@ -159,6 +161,7 @@ function publishMarketBridges(options) {
     const publishedStatusPath = path.join(clonePath, ALLOWLIST[1]);
     const publishedDataContent = fs.readFileSync(publishedDataPath, 'utf8');
     const published = validateBridgeContent(publishedDataContent, { minimumSymbols });
+    incoming.bridge.stocks.forEach(stock=>assertProjection(stock,published.bridge.stocks.find(old=>old.symbol===stock.symbol)));
     compareAgainstPublished(incoming, published);
 
     if (dataContent.replace(/\r\n/g, '\n') === publishedDataContent.replace(/\r\n/g, '\n')) {

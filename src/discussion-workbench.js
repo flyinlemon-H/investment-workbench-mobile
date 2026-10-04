@@ -223,6 +223,10 @@
   }
   function barsAfter(stock,anchor,options={}){
     const symbol=canonical(stock),expected=canonical(options.symbol||stock),anchorDate=validDate(anchor&&anchor.date||anchor),rows=normalizedBars(stock),warnings=[];
+    const migration=object(object(stock&&stock.marketDataFreshness).sourceMigration);
+    if(symbol&&expected&&symbol===expected&&rows.length&&migration.currentVersion&&migration.previousVersion&&anchorDate){
+      return {mode:'bootstrap',bars:rows.slice(-BOOTSTRAP_FRESH_LIMIT),warnings:[`${migration.reason==='same_source_history_revision'?'历史复权行情已修订':'技术行情来源已迁移'}（${migration.previousVersion} → ${migration.currentVersion}）；旧讨论和判断保留，需基于当前版本复核。`],message:'来源版本变化，使用有限历史窗口重新建立上下文。'};
+    }
     if(!symbol||!expected||symbol!==expected)return {mode:'blocked',bars:[],warnings:['股票代码不一致，无法建立增量上下文。'],message:'股票代码不一致。'};
     if(!rows.length)return {mode:'blocked',bars:[],warnings:['没有可用的完整日线。'],message:'缺少完整日线。'};
     if(!anchorDate){
@@ -253,6 +257,12 @@
     return {mode:'incremental',bars,warnings:uniqueStrings(warnings,6),message:bars.length?`提供锚点后 ${bars.length} 根完整日线。`:'自上次确认后暂无新的完整日K'};
   }
   function technicalSnapshot(stock){
+    if(object(object(stock&&stock.marketDataFreshness).sourceMigration).aiJudgmentStatus==='needs_review'){
+      const data=object(stock&&stock.technicalData),rows=normalizedBars(stock);
+      return normalizeTechnicalSnapshot({trendStatus:'unclear',cyclePosition:'unclear',riskFlags:[],summary:object(stock.marketDataFreshness).sourceMigration.reason==='same_source_history_revision'?'历史复权行情已修订，旧AI判断待复核。':'行情来源已迁移，旧AI判断待复核。',confidence:'low',
+        supportLevels:Number(data.supportPrice)>0?[Number(data.supportPrice)]:[],resistanceLevels:Number(data.resistancePrice)>0?[Number(data.resistancePrice)]:[],
+        anchorBar:rows.at(-1)||null,reviewHash:'source_changed_'+text(object(stock.marketDataFreshness).dataVersion)});
+    }
     const td=object(stock&&stock.technicalData),review=object(stock&&stock.technicalReview),short=object(review.shortTermTechnical),bars=normalizedBars(stock),latest=bars[bars.length-1]||null;
     const summary=text(short.technicalSummary||review.finalTechnicalConclusion||td.summary),riskFlags=uniqueStrings(short.riskFlags||td.riskFlags,8),event=object(short.priceActionEvent||review.priceActionEvent||td.priceActionEvent);
     const reviewUpdatedAt=dateValue(review.updatedAt||review.reviewedAt||review.analysisDate);
@@ -329,7 +339,7 @@
     const protectedHash=`discussionctx_${hash(protectedSnapshot)}`,sourceDiscussionVersion=`discussion_v3_${hash(sourceBinding)}`;
     const readinessStatus=getReadiness()?.technical(stock,options).status,technicalStatus=readinessStatus?({current:'fresh',stale:'stale',anomaly:'anomaly',unavailable:'unavailable'}[readinessStatus]||'unavailable'):(text(stock&&stock.technicalData&&stock.technicalData.technicalDataStatus)||'unavailable'),limitations=['实际券商持仓、成交和订单具有最终权威。','当前目标仓位尚未确认，AI 仓位建议仅为策略提案。'];
     if(technicalStatus!=='fresh')limitations.push('当前技术资料未标记为较新，只能在有限覆盖下谨慎讨论。');
-    const context={schemaVersion:CONTEXT_SCHEMA_VERSION,symbol,name:text(stock&&stock.name),mode:current?'continuation':'bootstrap',sourceDiscussionVersion,currentState:compactCurrentState(current,freshness),continuity:{status:freshness.status,reason:freshness.reason,barMode:increment.mode,barMessage:increment.message,warnings:increment.warnings},changes,currentFacts:{holding,allocation:{status:'unconfirmed',message:'当前目标仓位尚未确认'},technical:{technicalAsOf:technical.anchorBar.date,latestCompleteBar:technical.anchorBar.date,dataStatus:technicalStatus,...(stock.marketDataFreshness?.resultVersion?{resultVersion:stock.marketDataFreshness.resultVersion}:{}),snapshot:technical,bars:increment.bars},plans:activePlans(stock).map(compactPlan),planReviews:currentRefs.planReviews.map(review=>({...review,statusText:review.freshness==='stale'?'计划变更后尚未重新复核':(review.freshness==='current'?'计划复核与当前计划一致':'尚未保存计划复核')})),planRuntime,marketRisk,modules},limitations:limitations.concat(increment.warnings).slice(0,8)};
+    const context={schemaVersion:CONTEXT_SCHEMA_VERSION,symbol,name:text(stock&&stock.name),mode:current?'continuation':'bootstrap',sourceDiscussionVersion,currentState:compactCurrentState(current,freshness),continuity:{status:freshness.status,reason:freshness.reason,barMode:increment.mode,barMessage:increment.message,warnings:increment.warnings},changes,currentFacts:{holding,allocation:{status:'unconfirmed',message:'当前目标仓位尚未确认'},technical:{technicalAsOf:technical.anchorBar.date,latestCompleteBar:technical.anchorBar.date,dataStatus:technicalStatus,...(stock.marketDataFreshness?.resultVersion?{resultVersion:stock.marketDataFreshness.resultVersion}:{}),...(stock.marketDataFreshness?.dataContentVersion?{dataContentVersion:stock.marketDataFreshness.dataContentVersion,technicalVersion:stock.marketDataFreshness.technicalVersion}:{}),snapshot:technical,bars:increment.bars},plans:activePlans(stock).map(compactPlan),planReviews:currentRefs.planReviews.map(review=>({...review,statusText:review.freshness==='stale'?'计划变更后尚未重新复核':(review.freshness==='current'?'计划复核与当前计划一致':'尚未保存计划复核')})),planRuntime,marketRisk,modules},limitations:limitations.concat(increment.warnings).slice(0,8)};
     const readiness=getReadiness();
     if(readiness)context.dataReadiness=readiness.build(stock,options);
     return {context,protectedSnapshot,protectedHash,sourceBinding:clone(sourceBinding),sourceDiscussionVersion,evidenceHash:readiness?readiness.fingerprint(stock):undefined,references:currentRefs,technicalSnapshot:technical,metrics:null};

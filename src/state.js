@@ -190,26 +190,28 @@ function normalizeTechnicalLevelArray(x){
 function normalizeTechnicalData(v){
   const src=(v&&typeof v==='object')?v:{};
   const arr=x=>Array.isArray(x)?x.map(i=>String(i??'').trim()).filter(Boolean):String(x||'').split(/\n|,|，/).map(i=>String(i||'').trim()).filter(Boolean);
-  const nullableNumber=x=>{const n=Number(x);return isFinite(n)&&n>=0?n:null};
+  const nullableNumber=x=>{if(src.dataVersion&&(x===null||x===undefined))return null;const n=Number(x);return isFinite(n)&&n>=0?n:null};
   const fallbackSupport=clampNumber(src.supportPrice,0,Number.MAX_SAFE_INTEGER,0);
   const fallbackResistance=clampNumber(src.resistancePrice,0,Number.MAX_SAFE_INTEGER,0);
   const cyclePosition=TECHNICAL_CYCLE_POSITIONS.includes(String(src.cyclePosition||''))?String(src.cyclePosition):'unclear';
   const macdSrc=src.macd&&typeof src.macd==='object'?src.macd:{};
-  const nullableSigned=x=>{const n=Number(x);return isFinite(n)?n:null};
+  const nullableSigned=x=>{if(src.dataVersion&&(x===null||x===undefined))return null;const n=Number(x);return isFinite(n)?n:null};
   return {
     symbol:String(src.symbol||''),
     price:nullableNumber(src.price),
     priceUpdatedAt:normalizeDateOnly(src.priceUpdatedAt)||'',
     latestCompleteBar:normalizeDateOnly(src.latestCompleteBar)||'',
     technicalAsOf:normalizeDateOnly(src.technicalAsOf)||'',
+    ...(src.dataVersion?{dataVersion:String(src.dataVersion)}:{}),
+    ...Object.fromEntries(['dataContentVersion','technicalVersion'].filter(k=>src[k]).map(k=>[k,String(src[k])])),
     technicalDataStatus:['fresh','stale','unavailable','anomaly'].includes(String(src.technicalDataStatus||''))?String(src.technicalDataStatus):'unavailable',
     technicalWarning:String(src.technicalWarning||''),
     timeframe:String(src.timeframe||'daily'),
     ma5:nullableNumber(src.ma5),
     ma10:nullableNumber(src.ma10),
-    ma20:clampNumber(src.ma20,0,Number.MAX_SAFE_INTEGER,0),
-    ma60:clampNumber(src.ma60,0,Number.MAX_SAFE_INTEGER,0),
-    ma120:clampNumber(src.ma120,0,Number.MAX_SAFE_INTEGER,0),
+    ma20:src.dataVersion?nullableNumber(src.ma20):clampNumber(src.ma20,0,Number.MAX_SAFE_INTEGER,0),
+    ma60:src.dataVersion?nullableNumber(src.ma60):clampNumber(src.ma60,0,Number.MAX_SAFE_INTEGER,0),
+    ma120:src.dataVersion?nullableNumber(src.ma120):clampNumber(src.ma120,0,Number.MAX_SAFE_INTEGER,0),
     macd:{dif:nullableSigned(macdSrc.dif),dea:nullableSigned(macdSrc.dea),histogram:nullableSigned(macdSrc.histogram??macdSrc.hist)},
     volume:nullableNumber(src.volume),
     volumeAvg20:nullableNumber(src.volumeAvg20),
@@ -1027,6 +1029,35 @@ function normalizeClosePrice(value){
   const n=Number(String(value??'').replace(/,/g,'').trim());
   return isFinite(n)&&n>0?n:0;
 }
+function assertMarketHistoryContinuity(stock,rows,metadata={},options={}){
+  const old=stock?.marketDataFreshness||{},contract=old.sourceContract,next=metadata.sourceContract;
+  const history=stock?.priceHistory||[],fields=['date','open','high','low','close','volume','amount','provider','adjustment','price_basis','is_complete_bar'];
+  const value=(r,k)=>r[k]??null;
+  const same=(a,b)=>fields.every(k=>value(a,k)===value(b,k));
+  if(!Array.isArray(rows))throw Error('UNSAFE_WRITE_PATH_BLOCKED');
+  const identical=history.length===rows.length&&history.every((r,i)=>same(r,rows[i]));
+  if(identical&&JSON.stringify(old)===JSON.stringify(metadata))return;
+  if(options.path==='import'&&!identical)throw Error('UNSAFE_WRITE_PATH_BLOCKED');
+  // Unchanged legacy snapshots remain readable; a write requires a full probe.
+  if(history.length===rows.length&&history.every((r,i)=>same(r,rows[i]))&&!contract&&!next)return;
+  const receipt=metadata.historyWriteGuard;
+  if(!receipt||receipt.version!=='provider-revision-engine-v1'||receipt.classification!=='STABLE'||receipt.contentHash!==metadata.dataContentVersion)throw Error('UNSAFE_WRITE_PATH_BLOCKED');
+  if(!next||!Array.isArray(rows)||!rows.length)throw Error('provider_migration_required');
+  if(!next.symbol||!next.providerVersion||next.normalizationVersion!=='python-round-6-v1'||!next.historyWindow)throw Error('SOURCE_CONTRACT_MISMATCH');
+  if(stock.code&&String(stock.code).toUpperCase()!==next.symbol)throw Error('SOURCE_CONTRACT_MISMATCH');
+  if(rows.some((r,i)=>!r.is_complete_bar||!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||(i&&r.date<=rows[i-1].date)||['open','high','low','close'].some(k=>!Number.isFinite(r[k])||r[k]<=0)))throw Error('SOURCE_CONTRACT_MISMATCH');
+  if(next.adjustment!=='qfq'||next.priceBasis!=='adjusted')throw Error('provider_migration_required');
+  if(rows.some(row=>row.provider!==next.canonicalProvider||row.adjustment!==next.adjustment||row.price_basis!==next.priceBasis))throw Error('provider_migration_required');
+  if(new Set(history.map(r=>r.provider)).size>1)throw Error('PROVIDER_REBASE_REQUIRED');
+  if(history.some(r=>r.provider!==next.canonicalProvider))throw Error('PROVIDER_SWITCH');
+  const indexed=new Map(rows.map(r=>[r.date,r]));
+  const oldDates=new Set(history.map(r=>r.date)),oldLast=history.map(r=>r.date).sort().at(-1);
+  if(rows.some(r=>oldLast&&r.date<=oldLast&&!oldDates.has(r.date)))throw Error('SAME_PROVIDER_REVISION');
+  if(history.some(r=>!indexed.has(r.date)||!same(r,indexed.get(r.date))))throw Error('SAME_PROVIDER_REVISION');
+  if(!metadata.technicalVersion||metadata.latestCompleteBar!==rows.at(-1)?.date)throw Error('VERSION_CONFLICT');
+  if(contract&&['canonicalProvider','adjustment','priceBasis','providerVersion'].some(key=>contract[key]!==next[key]))throw Error('provider_migration_required');
+  if(contract&&old.sourceMigration?.generation>Number(metadata.sourceMigration?.generation||0))throw Error('stale_source_generation');
+}
 function normalizePriceHistory(stockOrHistory){
   const raw=Array.isArray(stockOrHistory)?stockOrHistory:(stockOrHistory&&Array.isArray(stockOrHistory.priceHistory)?stockOrHistory.priceHistory:[]);
   const byDate=new Map();
@@ -1127,11 +1158,21 @@ function updateTechnicalDataFromPriceHistory(stock,options={}){
   stock.priceHistory=normalizePriceHistory(stock);
   const completeHistory=stock.priceHistory.filter(row=>row.is_complete_bar!==false);
   const latest=latestCompletePriceBar(completeHistory);
+  const version=stock.marketDataFreshness?.dataContentVersion,technicalVersion=stock.marketDataFreshness?.technicalVersion;
+  if(version&&technicalVersion){
+    const data=stock.technicalData||{},indicators=stock.technicalIndicators||{};
+    const coherent=[data,indicators].every(x=>x.dataContentVersion===version&&x.technicalVersion===technicalVersion)&&latest?.date===data.technicalAsOf;
+    if(!coherent)throw Error('VERSION_CONFLICT');
+    const status=technicalFreshnessStatus(data.technicalAsOf,options.referenceDate||todayDate(),stock.marketDataFreshness);
+    stock.technicalData=normalizeTechnicalData({...data,technicalDataStatus:status});
+    touchDataFreshness(stock,'technicalUpdatedAt',data.technicalAsOf);
+    return {updated:true,technicalAsOf:data.technicalAsOf,status,warnings:[]};
+  }
   const td=normalizeTechnicalData(stock.technicalData);
   const supplied=stock.technicalIndicators&&typeof stock.technicalIndicators==='object'?stock.technicalIndicators:{};
   const suppliedAsOf=normalizePriceDate(supplied.last_trade_date);
   const useSupplied=Boolean(latest&&suppliedAsOf===latest.date);
-  const numberOr=(value,fallback)=>{const n=Number(value);return isFinite(n)?n:fallback};
+  const numberOr=(value,fallback)=>{if(value===null||value===undefined)return stock.marketDataFreshness?.sourceContract?null:fallback;const n=Number(value);return isFinite(n)?n:fallback};
   const ma5=calculateMovingAverage(completeHistory,5),ma10=calculateMovingAverage(completeHistory,10),ma20=calculateMovingAverage(completeHistory,20),ma60=calculateMovingAverage(completeHistory,60),ma120=calculateMovingAverage(completeHistory,120);
   const derivedMacd=calculateMacd(completeHistory),suppliedMacd=supplied.macd&&typeof supplied.macd==='object'?supplied.macd:{};
   const sr=calculateSupportResistance(completeHistory);
@@ -1147,6 +1188,8 @@ function updateTechnicalDataFromPriceHistory(stock,options={}){
     priceUpdatedAt:technicalAsOf,
     latestCompleteBar:technicalAsOf,
     technicalAsOf,
+    ...(stock.marketDataFreshness?.dataVersion?{dataVersion:stock.marketDataFreshness.dataVersion}:{}),
+    ...Object.fromEntries(['dataContentVersion','technicalVersion'].filter(k=>stock.marketDataFreshness?.[k]).map(k=>[k,stock.marketDataFreshness[k]])),
     technicalDataStatus:status,
     technicalWarning:warning,
     ma5:useSupplied?numberOr(supplied.ma5,ma5.value):ma5.value,

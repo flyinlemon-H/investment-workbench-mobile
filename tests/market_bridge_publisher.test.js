@@ -14,9 +14,10 @@ const git = (args, cwd) => execFileSync('git', args, { cwd, encoding: 'utf8', st
 function bridge(date, symbols = SYMBOLS, generatedAt = `${date}T09:38:31.000000+00:00`) {
   return `window.MARKET_DATA_BRIDGE = ${JSON.stringify({ generatedAt, stocks: symbols.map((symbol, index) => ({
     symbol,
-    priceHistory: [{ date, open: 10 + index, high: 11 + index, low: 9 + index, close: 10.5 + index, volume: 1000 + index, is_complete_bar: true }],
-    marketDataFreshness: { last_trade_date: date },
-    technicalIndicators: { last_trade_date: date }
+    priceHistory: Array.from({length:Math.max(1,Math.round((Date.parse(date)-Date.parse('2026-08-13'))/86400000)+1)},(_,n)=>({date:new Date(Math.min(Date.parse(date),Date.parse('2026-08-13'))+n*86400000).toISOString().slice(0,10),open:10+index,high:11+index,low:9+index,close:10.5+index,volume:1000+index,provider:'yahoo',adjustment:'qfq',price_basis:'adjusted',is_complete_bar:true})),
+    marketDataFreshness: { last_trade_date:date,dataContentVersion:'fixture-content',technicalVersion:'fixture-technical',historyWriteGuard:{version:'provider-revision-engine-v1',classification:'STABLE',contentHash:'fixture-content'},sourceContract:{symbol,canonicalProvider:'yahoo',providerVersion:'fixture-v1',normalizationVersion:'python-round-6-v1',adjustment:'qfq',priceBasis:'adjusted',historyWindow:{start:date<'2026-08-13'?date:'2026-08-13',end:date}} },
+    technicalIndicators:{last_trade_date:date,dataContentVersion:'fixture-content',technicalVersion:'fixture-technical'},
+    technicalData:{dataContentVersion:'fixture-content',technicalVersion:'fixture-technical',technicalAsOf:date,latestCompleteBar:date}
   })) })};\n`;
 }
 

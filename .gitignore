@@ -8,3 +8,4 @@ __pycache__/
 /test-results/
 /supabase/.temp/
 /supabase/.branches/
+/.rebase/

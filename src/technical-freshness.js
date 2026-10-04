@@ -23,7 +23,8 @@
     const td=stock.technicalData||{},market=stock.marketDataFreshness||{},indicators=stock.technicalIndicators||{};
     const bars=(stock.priceHistory||[]).filter(b=>b&&b.is_complete_bar!==false&&dateOnly(b.date)&&Number(b.close)>0&&Number.isFinite(Number(b.close))).sort((a,b)=>a.date.localeCompare(b.date));
     const last=bars.at(-1),asOf=dateOnly(td.technicalAsOf),latest=dateOnly(td.latestCompleteBar),history=last?dateOnly(last.date):'';
-    const incomplete=!asOf||!latest||!history,conflict=Boolean(asOf&&[latest,history,market.last_trade_date,indicators.last_trade_date].filter(Boolean).some(d=>d!==asOf));
+    const versionConflict=['dataContentVersion','technicalVersion'].some(k=>market[k]&&(td[k]!==market[k]||indicators[k]!==market[k]));
+    const incomplete=!asOf||!latest||!history,conflict=Boolean(versionConflict||(asOf&&[latest,history,market.last_trade_date,indicators.last_trade_date].filter(Boolean).some(d=>d!==asOf))||(market.dataVersion&&(td.dataVersion!==market.dataVersion||indicators.dataVersion!==market.dataVersion)));
     const raw=td.technicalDataStatus||'unavailable',age=ageStatus(asOf,options.referenceDate||options.reviewDate||options.now||new Date(),market);
     // Reuse existing snapshot and bridge validators; freshness owns only the policy.
     const portfolio=typeof module==='object'&&module.exports?require('./portfolio-review-context.js'):root.PortfolioReviewContext;
@@ -32,8 +33,9 @@
     const bridgeInvalid=Boolean(market.last_trade_date&&universe&&!universe.validBridgeFacts({...stock,symbol:stock.code||stock.symbol}));
     let status=incomplete?'unavailable':raw==='fresh'?'current':raw==='stale'?'stale':raw==='unavailable'?'unavailable':'unknown';
     if(status==='current'&&age!=='fresh')status=age;
+    if(stock.marketRevisionReview?.status==='review_required')status='unknown';
     if(conflict||!consistent||bridgeInvalid||raw==='anomaly'||age==='anomaly'||options.consistent===false)status='anomaly';
-    return {status,ready:status==='current',technicalAsOf:asOf,latestCompleteBar:latest,historyLastDate:history,conflict,incomplete,ageStatus:age,ageInBusinessDays:asOf?businessDays(asOf,marketDate(options.referenceDate||options.reviewDate||options.now||new Date())):NaN};
+    return {status,ready:status==='current',...(market.dataContentVersion?{dataContentVersion:market.dataContentVersion,technicalVersion:market.technicalVersion}:{}),technicalAsOf:asOf,latestCompleteBar:latest,historyLastDate:history,conflict,incomplete,ageStatus:age,ageInBusinessDays:asOf?businessDays(asOf,marketDate(options.referenceDate||options.reviewDate||options.now||new Date())):NaN};
   }
   return Object.freeze({dateOnly,marketDate,ageStatus,evaluateTechnicalFreshness:evaluate});
 });

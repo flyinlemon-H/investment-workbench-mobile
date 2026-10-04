@@ -19,7 +19,7 @@ SCHEMA_VERSION = 1
 REGISTRY_SCHEMA_VERSION = 1
 CHECKSUM_ALGORITHM = "SHA-256"
 SYMBOL_PATTERN = re.compile(r"^(?:\d{6}\.(?:SS|SZ)|\d{4,5}\.HK)$")
-MARKET_FACT_FIELDS = ("priceHistory", "marketDataFreshness", "technicalIndicators")
+MARKET_FACT_FIELDS = ("priceHistory", "marketDataFreshness", "technicalIndicators", "technicalData")
 
 
 try:
@@ -356,7 +356,12 @@ def load_source_updater(source_root: Path) -> Callable[..., list[dict[str, Any]]
     if source_text not in sys.path:
         sys.path.insert(0, source_text)
     module = importlib.import_module("src.market_data.updater")
-    return module.update_market_data
+    try:
+        from .provider_rebase.integration import guarded_updater
+    except ImportError:
+        from provider_rebase.integration import guarded_updater
+    provider = importlib.import_module('src.market_data.provider')
+    return guarded_updater(module.update_market_data, provider)
 
 
 def run_update(

@@ -22,7 +22,7 @@ test('scheduled wrapper remains ASCII-only and resolves the real non-ASCII sourc
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'workbench-wrapper-preflight-'));
   const log=path.join(temp,'preflight.log');
   try{
-    const result=runPowerShell(wrapper,['-PreflightOnly','-LogPath',log]);
+    const result=runPowerShell(wrapper,['-PreflightOnly','-LogPath',log,...(process.env.MARKET_SOURCE_ROOT?['-SourceRoot',process.env.MARKET_SOURCE_ROOT]:[])]);
     assert.equal(result.status,0,`${result.stdout}\n${result.stderr}`);
     const output=fs.readFileSync(log,'utf8');
     assert.match(output,/sourceRunnerPreflight=found/);

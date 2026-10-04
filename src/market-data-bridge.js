@@ -1,6 +1,12 @@
 async function applyMarketDataBridge(options={}){
   const payload=window.MARKET_DATA_BRIDGE;
   if(!payload||!Array.isArray(payload.stocks)||!payload.stocks.length)return 0;
+  // Validate the entire batch before mutating any stock.
+  payload.stocks.forEach(incoming=>{
+    const symbol=window.SymbolIdentity.canonicalMarketSymbol(incoming.symbol);
+    const stock=state.stocks.find(item=>window.SymbolIdentity.canonicalMarketSymbol(item.code||item.symbol)===symbol);
+    if(stock)assertMarketHistoryContinuity(stock,incoming.priceHistory,incoming.marketDataFreshness);
+  });
   let changed=0;const previous=[];const stateUpdatedAt=state.updatedAt;
   payload.stocks.forEach(incoming=>{
     const symbol=window.SymbolIdentity.canonicalMarketSymbol(incoming.symbol);
@@ -16,6 +22,7 @@ async function applyMarketDataBridge(options={}){
     stock.priceHistory=normalizePriceHistory(incoming.priceHistory||[]);
     stock.marketDataFreshness=incoming.marketDataFreshness||{};
     stock.technicalIndicators=incoming.technicalIndicators||{};
+    if(incoming.technicalData)stock.technicalData={...stock.technicalData,...structuredClone(incoming.technicalData)};
     if(typeof updateTechnicalDataFromPriceHistory==='function')updateTechnicalDataFromPriceHistory(stock);
     changed++;
   });

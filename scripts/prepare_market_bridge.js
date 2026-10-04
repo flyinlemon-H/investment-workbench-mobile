@@ -16,6 +16,8 @@ function prepareMarketBridge(content){
     const complete=history.filter(bar=>bar&&bar.is_complete_bar===true);
     removedBars+=history.length-complete.length;
     if(!complete.length)fail(`${symbol} has no complete daily bars.`);
+    const contract=stock.marketDataFreshness?.sourceContract;
+    if(contract&&complete.some(bar=>bar.provider!==contract.canonicalProvider||bar.adjustment!==contract.adjustment||bar.price_basis!==contract.priceBasis))fail(`${symbol} violates its canonical source contract.`);
     const latestDate=String(complete.at(-1).date||'');
     if(stock.marketDataFreshness?.last_trade_date!==latestDate){
       fail(`${symbol} freshness date conflicts with the latest complete bar.`);

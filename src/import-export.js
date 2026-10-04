@@ -72,6 +72,15 @@ function createValidatedCandidateSnapshot(value,options={}){
   return importResetClone(candidate);
 }
 async function persistCandidateSnapshot(candidate){
+  // Full backup imports and candidate saves must obey the same market contract.
+  // Explicit removal of a stock remains the existing product operation.
+  if(typeof assertMarketHistoryContinuity==='function'){
+    const previous=typeof state==='undefined'?[]:(state.stocks||[]);
+    for(const stock of candidate.stocks||[]){
+      const old=previous.find(item=>String(item.code||'').toUpperCase()===String(stock.code||'').toUpperCase());
+      assertMarketHistoryContinuity(old||{},stock.priceHistory||[],stock.marketDataFreshness||{},{path:'import'});
+    }
+  }
   if(globalThis.ManagementCategory)globalThis.ManagementCategory.validateState(candidate);
   if(!globalThis.StorageManager||typeof globalThis.StorageManager.saveState!=='function')throw new Error('存储服务不可用，未修改当前数据。');
   const persist=async value=>{const saved=await globalThis.StorageManager.saveState(value,{critical:true});if(saved===false||(saved&&saved.ok===false))throw new Error('存储未确认成功，原数据保留。');return saved};

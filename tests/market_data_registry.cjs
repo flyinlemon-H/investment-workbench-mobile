@@ -17,12 +17,17 @@ test('real Postgres migration enforces lifecycle, ownership, capabilities and im
  await assert.rejects(api.worker('0'.repeat(64),'claim',{}),/unauthorized/);
  const claimed=await api.worker(token,'claim',{});assert.equal(claimed.status,'running');assert.equal(claimed.workerId,auth.workerId);assert.equal(await api.worker(token,'claim',{}),null);
  await assert.rejects(api.worker(otherToken,'finish',{taskId:task.taskId,error:'injected'}),/task_not_owned/);
- const result=resultFor(task);const bad=structuredClone(result);bad.stock.priceHistory[0].is_complete_bar=false;
+ const result=resultFor(task);
+ result.stock.technicalIndicators.technicalSnapshot={technicalAsOf:result.technicalAsOf,latestCompleteBar:result.latestCompleteBar,dataContentVersion:'a'.repeat(64),technicalVersion:'b'.repeat(64)};
+ const invalidRoot=structuredClone(result);invalidRoot.stock.technicalData={};
+ await assert.rejects(api.worker(token,'finish',{taskId:task.taskId,result:invalidRoot}),/invalid_snapshot/);
+ const bad=structuredClone(result);bad.stock.priceHistory[0].is_complete_bar=false;
  await assert.rejects(api.worker(token,'finish',{taskId:task.taskId,result:bad}),/invalid_bar/);
  assert.equal((await api.account('read',{taskId:task.taskId})).status,'running');
  const done=await api.worker(token,'finish',{taskId:task.taskId,result});assert.equal(done.status,'succeeded');assert.equal(done.resultVersion,task.taskId);
  assert.deepEqual(await api.worker(token,'finish',{taskId:task.taskId,error:'late error'}),done);
  const delivered=await api.account('read',{taskId:task.taskId});assert.equal(delivered.result.resultVersion,done.resultVersion);
+ assert.deepEqual(delivered.result.stock.technicalIndicators.technicalSnapshot,result.stock.technicalIndicators.technicalSnapshot);
  const next=await api.account('request',C.request(task.symbol));assert.notEqual(next.taskId,task.taskId);
  const nextClaim=await api.worker(token,'claim',{});assert.equal(nextClaim.previousResult.taskId,task.taskId);
  await api.worker(token,'finish',{taskId:next.taskId,error:'provider_or_pipeline_failure'});

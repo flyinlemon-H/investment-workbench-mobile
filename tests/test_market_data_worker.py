@@ -16,7 +16,7 @@ W.load_source_updater(SOURCE)
 P=importlib.import_module('src.market_data.provider')
 
 
-def bar(day='2026-09-29',provider='fixture',complete=True):
+def bar(day='2026-09-29',provider='yahoo',complete=True):
     return P.DailyBar(day,10,12,9,11,1000,None,'qfq','adjusted',provider,'2026-10-01T08:00:00Z',complete)
 
 
@@ -36,20 +36,22 @@ class WorkerTests(unittest.TestCase):
         t=task();seed={'priceHistory':[bar().to_dict()]};frozen=copy.deepcopy(seed)
         chain=Chain([bar(),bar('2026-09-30')]);r=W.execute_task(t,seed,SOURCE,chain)
         self.assertEqual(len(r['stock']['priceHistory']),2);self.assertEqual(r['technicalAsOf'],'2026-09-30')
-        self.assertEqual(chain.calls[0][1],date(2026,9,22));self.assertTrue(r['dataUpdated']);self.assertEqual(seed,frozen)
+        self.assertEqual(chain.calls[0][1],date(2026,9,29));self.assertTrue(r['dataUpdated']);self.assertEqual(seed,frozen)
         t['previousResult']=r;r2=W.execute_task(t,None,SOURCE,chain)
         self.assertFalse(r2['dataUpdated']);self.assertEqual(r2['fingerprint'],r['fingerprint']);self.assertEqual(r2['resultVersion'],r['resultVersion'])
         self.assertEqual(r2['stock']['technicalIndicators']['last_trade_date'],'2026-09-30')
+        self.assertEqual(set(r2['stock']),{'symbol','priceHistory','marketDataFreshness','technicalIndicators'})
+        self.assertEqual(r2['stock']['technicalIndicators']['technicalSnapshot']['dataContentVersion'],r2['stock']['marketDataFreshness']['dataContentVersion'])
 
     def test_failure_preserves_previous(self):
         class Failure:
             def fetch_daily(self,*args):raise TimeoutError('secret token URL must not leak')
         seed={'priceHistory':[bar().to_dict()]};before=copy.deepcopy(seed)
-        with self.assertRaisesRegex(ValueError,'provider_or_pipeline_failure'):W.execute_task(task(),seed,SOURCE,Failure())
+        with self.assertRaisesRegex(ValueError,'REVISION_PROBE_FAILED'):W.execute_task(task(),seed,SOURCE,Failure())
         self.assertEqual(seed,before)
 
     def test_adjustment_provider_and_revision_rejected(self):
-        cases=[('adjustment_mismatch',{'adjustment':'raw'}),('adjustment_mismatch',{'price_basis':'raw'}),('provider_mismatch',{'provider':'yahoo'}),('adjustment_revision_requires_full_rebuild',{'close':10.5})]
+        cases=[('UNKNOWN_CONTINUITY_RISK',{'adjustment':'raw'}),('UNKNOWN_CONTINUITY_RISK',{'price_basis':'raw'}),('PROVIDER_SWITCH',{'provider':'eastmoney'}),('UNIT_CONTRACT_INCOMPLETE',{'close':10.5})]
         for error,patch in cases:
             seed={'priceHistory':[{**bar().to_dict(),**patch}]}
             with self.subTest(error=error),self.assertRaisesRegex(ValueError,error):W.execute_task(task(),seed,SOURCE,Chain([bar()]))
@@ -63,6 +65,26 @@ class WorkerTests(unittest.TestCase):
     def test_no_arbitrary_input(self):
         for patch in [{'symbol':'../x'},{'taskType':'SHELL'},{'command':'calc'},{'path':'C:/x'},{'url':'https://evil'}]:
             with self.subTest(patch=patch),self.assertRaises(ValueError):W.validate_task({**task(),**patch})
+
+    def test_approved_local_version_restores_incremental_without_mixed_seed(self):
+        from scripts.provider_rebase.store import Store
+        from tests.test_provider_rebase import setup_candidate,bars
+        seed,req,candidate=setup_candidate()
+        from scripts.provider_rebase import core as C
+        from scripts.provider_rebase.integration import runtime_version
+        candidate=C.candidate(req,'yahoo',bars(),runtime_version(P),candidate['generatedAt'],candidate['evidence'])
+        with tempfile.TemporaryDirectory() as directory:
+            store=Store(Path(directory)/'fixture.sqlite');cid,rid=store.save(req,candidate)
+            store.approve(cid,rid,'Approve candidate '+candidate['candidateHash'],'yahoo',{},'fixture reviewer')
+            store.apply(cid,rid,seed)
+            t=task();t['symbol']='2899.HK';chain=Chain([P.DailyBar(**row) for row in bars(141)])
+            result=W.execute_task(t,seed,SOURCE,chain,rebase_store=store)
+            self.assertEqual(len(result['stock']['priceHistory']),141)
+            self.assertEqual(result['provider'],'yahoo');self.assertIn('ma120',result['stock']['technicalIndicators'])
+            self.assertEqual(result['stock']['marketDataFreshness']['dataContentVersion'],result['stock']['technicalIndicators']['technicalSnapshot']['dataContentVersion'])
+            self.assertEqual(seed['priceHistory'][70]['provider'],'eastmoney')
+            with self.assertRaisesRegex(ValueError,'PROVIDER_SWITCH'):
+                W.execute_task(t,seed,SOURCE,Chain([P.DailyBar(**row) for row in bars(141,'eastmoney')]),rebase_store=store)
 
     def test_publish_outbox_replay_without_refetch(self):
         t=task();result=W.execute_task(t,None,SOURCE,Chain([bar()]))

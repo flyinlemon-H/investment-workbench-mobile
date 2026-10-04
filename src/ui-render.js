@@ -5986,6 +5986,7 @@ async function handlePriceHistoryCsvImport(e){
   const reader=new FileReader();
   reader.onload=async()=>{
     const parsed=parsePriceHistoryCsv(reader.result);
+    try{assertMarketHistoryContinuity(stock,parsed.records,{})}catch(error){alert('该标的已锁定行情来源；请使用 Provider Rebase 候选评审流程，不能用 CSV 覆盖。');return}
     stock.priceHistory=normalizePriceHistory(parsed.records);
     const result=updateTechnicalDataFromPriceHistory(stock);
     touchDataFreshness(stock,'technicalUpdatedAt');

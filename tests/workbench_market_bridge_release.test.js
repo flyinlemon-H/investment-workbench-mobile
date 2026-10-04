@@ -42,7 +42,7 @@ test('release publishes an internally consistent market bridge with technical in
   for(const key of ['dif','dea','histogram'])assert.equal(typeof stock.technicalIndicators.macd[key],'number');
 });
 
-test('Workbench consumes bridge data through one critical save',async()=>{
+test('Workbench blocks an unprobed legacy bridge before its first canonical write',async()=>{
   const bridge=loadPublishedBridge();
   const incoming=bridge.stocks.find(item=>item.symbol==='2899.HK');
   const stock={
@@ -61,17 +61,15 @@ test('Workbench consumes bridge data through one critical save',async()=>{
     updateTechnicalDataFromPriceHistory:target=>{technicalRefreshes+=1;target.technicalData={technicalAsOf:target.priceHistory.at(-1).date,technicalDataStatus:'fresh'}},
     saveState:async(value,options)=>saves.push({value,options})
   };
+  const guardContext=vm.createContext({});
+  vm.runInContext(read('src/state.js'),guardContext);
+  context.assertMarketHistoryContinuity=guardContext.assertMarketHistoryContinuity;
   (context.TechnicalFreshness=require('../src/technical-freshness.js'),vm.createContext(context));
   vm.runInContext(`${read('src/market-data-bridge.js')}\nthis.applyMarketDataBridge=applyMarketDataBridge;`,context);
-  const changed=await context.applyMarketDataBridge();
-  assert.equal(changed,1);
-  assert.equal(saves.length,1);
-  assert.equal(technicalRefreshes,1);
-  assert.equal(saves[0].options.critical,true);
-  assert.equal(stock.priceHistory.at(-1).date,incoming.priceHistory.at(-1).date);
-  assert.equal(stock.marketDataFreshness.fetched_at,incoming.marketDataFreshness.fetched_at);
-  assert.deepEqual(stock.technicalIndicators,incoming.technicalIndicators);
-  assert.equal(stock.technicalData.technicalAsOf,incoming.priceHistory.at(-1).date);
+  await assert.rejects(context.applyMarketDataBridge(),/UNSAFE_WRITE_PATH_BLOCKED/);
+  assert.equal(saves.length,0);
+  assert.equal(technicalRefreshes,0);
+  assert.equal(stock.priceHistory.length,0);
 });
 
 test('601138.SS runtime derives program-owned dates and same-snapshot levels from the final complete bar',()=>{

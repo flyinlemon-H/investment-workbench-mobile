@@ -19,10 +19,12 @@ try:
     from .fetch_cloud_universe import PROJECTS, NoRedirect, protect
     from .market_symbol_contract import canonical_symbol
     from .update_market_universe import load_source_updater
+    from .provider_rebase.revision import SAFE_ERRORS
 except ImportError:
     from fetch_cloud_universe import PROJECTS, NoRedirect, protect
     from market_symbol_contract import canonical_symbol
     from update_market_universe import load_source_updater
+    from provider_rebase.revision import SAFE_ERRORS
 
 sys.dont_write_bytecode = True
 
@@ -62,46 +64,28 @@ def validate_rows(rows):
         raise ValueError('invalid_bar_order')
 
 
-class GuardedChain:
-    def __init__(self, chain, existing, complete_check):
-        self.chain, self.existing, self.complete_check = chain, existing, complete_check
-
-    def fetch_daily(self, symbol, start, end):
-        bars, provider, errors = self.chain.fetch_daily(symbol,start,end)
-        rows=[bar.to_dict() for bar in bars]
-        validate_rows(rows)
-        old={row['date']:row for row in self.existing}
-        if old:
-            validate_rows(self.existing)
-            if any(row.get('provider')!=provider for row in self.existing):
-                raise ValueError('provider_mismatch')
-            for row in rows:
-                prior=old.get(row['date'])
-                if prior and prior.get('is_complete_bar') is True and row['is_complete_bar']:
-                    if any(abs(row[k]-prior[k])>max(abs(prior[k])*0.00001,0.00001) for k in ('open','high','low','close')):
-                        raise ValueError('adjustment_revision_requires_full_rebuild')
-        for bar in bars:
-            if bar.provider != provider:
-                raise ValueError('provider_mismatch')
-            # Never trust a future/intraday complete flag, including in a test adapter.
-            bar.is_complete_bar = bool(bar.is_complete_bar and self.complete_check(date.fromisoformat(bar.date),symbol.market))
-        return bars, provider, errors
-
-
-def execute_task(task, seed, source_root, chain=None):
+def execute_task(task, seed, source_root, chain=None, rebase_store=None):
     validate_task(task)
     updater=load_source_updater(Path(source_root))
     provider=importlib.import_module('src.market_data.provider')
     prior=task.get('previousResult')
     incoming=prior.get('stock') if prior else seed
+    if rebase_store is not None:
+        try:
+            from .provider_rebase.integration import resolve_baseline
+        except ImportError:
+            from provider_rebase.integration import resolve_baseline
+        incoming=resolve_baseline(rebase_store,task['symbol'],incoming)
     stock={'code':task['symbol'],'priceHistory':copy.deepcopy((incoming or {}).get('priceHistory',[]))}
+    stock['marketDataFreshness']=copy.deepcopy((incoming or {}).get('marketDataFreshness') or {})
+    stock['technicalIndicators']=copy.deepcopy((incoming or {}).get('technicalIndicators') or {})
+    stock['technicalData']=copy.deepcopy((incoming or {}).get('technicalData') or stock['technicalIndicators'].pop('technicalSnapshot',None) or {})
     before=[b for b in stock['priceHistory'] if b.get('is_complete_bar') is True]
-    guarded=GuardedChain(chain or provider.ProviderChain(), stock['priceHistory'], provider.is_complete_trade_date)
-    outcome=updater({'stocks':[stock]},symbols={task['symbol']},provider_chain=guarded)[0]
+    outcome=updater({'stocks':[stock]},symbols={task['symbol']},provider_chain=chain,revision_store=rebase_store)[0]
     if not outcome['success']:
         # Only fixed errors cross the boundary; provider exceptions can contain URLs.
         reason=outcome.get('error','')
-        safe={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history'}
+        safe={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history'} | SAFE_ERRORS
         raise ValueError(reason if reason in safe else 'provider_or_pipeline_failure')
     stock['priceHistory']=[b for b in stock['priceHistory'] if b.get('is_complete_bar') is True]
     validate_rows(stock['priceHistory'])
@@ -113,6 +97,9 @@ def execute_task(task, seed, source_root, chain=None):
     stock['marketDataFreshness']['provider_errors']=[]
     stock['marketDataFreshness']['resultVersion']=task['taskId']
     snapshot={'symbol':task['symbol'],**{k:stock[k] for k in ('priceHistory','marketDataFreshness','technicalIndicators')}}
+    # The existing RPC permits these four stock keys only. Keep the complete
+    # technical facts inside its existing extensible indicators object.
+    snapshot['technicalIndicators']={**snapshot['technicalIndicators'],'technicalSnapshot':stock['technicalData']}
     return {'schemaVersion':1,'taskId':task['taskId'],'resultVersion':task['taskId'],'symbol':task['symbol'],
             'provider':outcome['provider'],'requestedAt':task['requestedAt'],'completedAt':datetime.now(timezone.utc).isoformat(),
             'latestCompleteBar':latest,'technicalAsOf':latest,'fingerprint':value,'dataUpdated':value!=fingerprint(before),
@@ -145,7 +132,7 @@ def write_json(path, value):
     temp.replace(path)
 
 
-def run_once(registry, source_root, journal, seeds=None):
+def run_once(registry, source_root, journal, seeds=None, rebase_store=None):
     # Persist an outbox before publishing. A lost HTTP response replays finish,
     # whose transaction is idempotent, rather than recalculating/replacing a result.
     if journal.exists():
@@ -163,10 +150,10 @@ def run_once(registry, source_root, journal, seeds=None):
         before_date=max((b['date'] for b in baseline.get('priceHistory',[]) if b.get('is_complete_bar') is True),default=None)
         print(json.dumps({'taskId':task['taskId'],'symbol':task['symbol'],'status':'running','worker':task['workerId'],'startedAt':task['startedAt'],'latestCompleteBarBefore':before_date}),flush=True)
         try:
-            result=execute_task(task,(seeds or {}).get(task['symbol']),source_root)
+            result=execute_task(task,(seeds or {}).get(task['symbol']),source_root,rebase_store=rebase_store)
             payload={'taskId':task['taskId'],'result':result}
         except Exception as error:
-            allowed={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history','provider_or_pipeline_failure','unaligned_result'}
+            allowed={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history','provider_or_pipeline_failure','unaligned_result'} | SAFE_ERRORS
             payload={'taskId':task['taskId'],'error':str(error) if str(error) in allowed else 'pipeline_failure'}
         write_json(journal,{'workerId':registry.credential['workerId'],'owner':registry.credential['userId'],'payload':payload})
     status=registry.rpc('finish',payload)
@@ -183,7 +170,13 @@ def main():
     parser.add_argument('--seed-bridge',type=Path,default=Path(__file__).resolve().parents[1]/'data'/'market_data_bridge.js',help='Read-only existing MARKET_DATA_BRIDGE file')
     parser.add_argument('--pair',action='store_true',help='Read credential JSON from hidden prompt, protect using Windows DPAPI')
     parser.add_argument('--once',action='store_true')
+    parser.add_argument('--rebase-store',type=Path,help='Explicit opt-in active rebase store; candidates alone have no active pointer')
     args=parser.parse_args()
+    try:
+        from .provider_rebase.store import Store
+    except ImportError:
+        from provider_rebase.store import Store
+    rebase_store=Store(args.rebase_store or args.state_dir/'revision-candidates.sqlite')
     directory=args.state_dir.resolve()
     if directory.is_relative_to(Path(__file__).resolve().parents[1]):raise ValueError('private_directory_required')
     directory.mkdir(parents=True,exist_ok=True)
@@ -211,7 +204,7 @@ def main():
     while True:
         failed=False
         try:
-            outcome=run_once(registry,args.source_root,directory/'outbox.json',seeds)
+            outcome=run_once(registry,args.source_root,directory/'outbox.json',seeds,rebase_store=rebase_store)
             failed=bool(outcome and outcome['status']=='failed')
         except Exception:
             failed=True

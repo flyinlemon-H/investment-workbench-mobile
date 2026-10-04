@@ -10,18 +10,23 @@
       if((await root.SupabaseBrowserClient.getUser())?.id!==userId)throw Error('account_changed');
       const stock=state.stocks.find(s=>root.SymbolIdentity.canonicalMarketSymbol(s.code||s.symbol)===result.symbol);
       if(!stock)throw Error('标的已移除');
+      assertMarketHistoryContinuity(stock,snapshot.priceHistory,snapshot.marketDataFreshness);
       if(stock.marketDataFreshness?.resultVersion===result.resultVersion)return;
       if(stock.marketDataFreshness?.last_trade_date>result.latestCompleteBar)throw Error('已有更新日K，拒绝覆盖旧版本');
       const currentTime=Date.parse(stock.marketDataFreshness?.fetched_at||''),incomingTime=Date.parse(snapshot.marketDataFreshness?.fetched_at||'');
       if(Number.isFinite(currentTime)&&Number.isFinite(incomingTime)&&currentTime>incomingTime)throw Error('已有较新行情，本次旧结果不会覆盖当前快照');
       const updatedAt=state.updatedAt;
-      const keys=['priceHistory','marketDataFreshness','technicalIndicators','technicalData','dataFreshness'];
+      const keys=['priceHistory','marketDataFreshness','technicalIndicators','technicalData','dataFreshness','marketRevisionReview'];
       const before=Object.fromEntries(keys.map(k=>[k,structuredClone(stock[k])]));
       try{
         stock.priceHistory=normalizePriceHistory(snapshot.priceHistory);
         stock.marketDataFreshness={...structuredClone(snapshot.marketDataFreshness),resultVersion:result.resultVersion,taskId:result.taskId,fingerprint:result.fingerprint};
         stock.technicalIndicators=structuredClone(snapshot.technicalIndicators);
+        const technicalSnapshot=snapshot.technicalData||stock.technicalIndicators.technicalSnapshot;
+        delete stock.technicalIndicators.technicalSnapshot;
+        if(technicalSnapshot)stock.technicalData={...stock.technicalData,...structuredClone(technicalSnapshot)};
         updateTechnicalDataFromPriceHistory(stock);
+        if(stock.marketRevisionReview)stock.marketRevisionReview={...stock.marketRevisionReview,status:'resolved_by_stable_probe',resultVersion:result.resultVersion};
         await saveState(state,{critical:true});
       }catch(error){for(const k of keys)stock[k]=before[k];state.updatedAt=updatedAt;throw error}
     }
@@ -35,6 +40,17 @@
       const button=node.querySelector('[data-market-update]');button.disabled=Boolean(view?.task&&['queued','running'].includes(view.task.status));button.textContent=view?.task?.status==='failed'?'重试更新行情':'更新行情';
     });
   }
+  async function recordRevisionReview(task){
+    const reasons=['SAME_PROVIDER_REVISION','UNIT_CONTRACT_INCOMPLETE','REVISION_SUSPECTED','PROVIDER_REBASE_REQUIRED'];
+    if(task?.status!=='failed'||!reasons.includes(task.error)||typeof state==='undefined'||task.requestedBy!==owner)return;
+    const stock=state.stocks.find(s=>root.SymbolIdentity.canonicalMarketSymbol(s.code||s.symbol)===task.symbol);
+    if(!stock||stock.marketRevisionReview?.taskId===task.taskId)return;
+    const before=stock.marketRevisionReview;
+    stock.marketRevisionReview={status:'review_required',taskId:task.taskId,reason:task.error};
+    try{await saveState(state,{critical:true})}catch(error){stock.marketRevisionReview=before;throw error}
+    if(typeof renderStockDetail==='function')renderStockDetail();
+    refresh();
+  }
   async function poll(){
     if(busy||document.hidden)return;
     const nodes=[...document.querySelectorAll('[data-market-orchestrator]')],symbols=new Set(nodes.map(n=>n.dataset.marketOrchestrator));
@@ -44,7 +60,16 @@
       if(symbol)symbols.add(symbol);
     }
     if(!symbols.size)return;busy=true;
-    try{for(const symbol of symbols){const task=await client.sync(symbol);if(task&&!['queued','running'].includes(task.status))requestedSymbols.delete(symbol);if(task?.status==='succeeded'&&renderedVersions.get(task.symbol)!==task.resultVersion&&typeof renderStockDetail==='function'){renderedVersions.set(task.symbol,task.resultVersion);renderStockDetail();refresh()}}}
+    try{
+      for(const symbol of symbols){
+        const task=await client.sync(symbol);
+        if(task&&!['queued','running'].includes(task.status))requestedSymbols.delete(symbol);
+        await recordRevisionReview(task);
+        if(task?.status==='succeeded'&&renderedVersions.get(task.symbol)!==task.resultVersion&&typeof renderStockDetail==='function'){
+          renderedVersions.set(task.symbol,task.resultVersion);renderStockDetail();refresh();
+        }
+      }
+    }
     catch(error){for(const node of nodes)node.querySelector('[data-market-status]').textContent=errorText(error)}finally{busy=false}
 
   }
