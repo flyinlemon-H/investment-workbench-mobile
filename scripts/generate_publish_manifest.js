@@ -70,6 +70,8 @@ roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recom
 const paths=[...new Set([
   'provider-rebase-review.html',
   'src/provider-rebase-review-ui.js',
+  'src/approved-market-migration.js',
+  'src/provider-migration-review-actions.js',
   'src/technical-freshness.js',
   'src/market-data-orchestrator.js',
   'src/market-data-task-ui.js',

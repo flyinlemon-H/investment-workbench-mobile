@@ -3,7 +3,7 @@
   'use strict';
   let owner=null,busy=false;
   const renderedVersions=new Map(),requestedSymbols=new Set();
-  const errorText=error=>marketHistoryGuardMessage(error)||String(error?.message||'连接失败，请稍后重试');
+  const errorText=error=>String(error?.message||'').startsWith('migration_')?'迁移已保存在远端，本机尚未接收：当前快照或保存状态需核对。请勿重复 Apply。':marketHistoryGuardMessage(error)||String(error?.message||'连接失败，请稍后重试');
   async function account(action,input){const {data,error}=await root.SupabaseBrowserClient.getClient().rpc('market_data_account',{p_action:action,p_input:input});if(error)throw Error(error.message||'行情服务不可用');return data}
   const client=root.MarketDataOrchestrator.createClient({rpc:account,user:async()=>{const session=await root.SupabaseBrowserClient.getSession();owner=session?.user?.id||null;return owner},changed:refresh,
     apply:async(snapshot,result,userId)=>{
@@ -30,6 +30,20 @@
         await saveState(state,{critical:true});
       }catch(error){for(const k of keys)stock[k]=before[k];state.updatedAt=updatedAt;throw error}
     }
+  });
+  const migration=root.ApprovedMarketMigration?.create({
+    rpc:async(action,input)=>{const {data,error}=await root.SupabaseBrowserClient.getClient().rpc('market_data_migration',{p_action:action,p_input:input});if(error)throw Error(error.message||'迁移服务不可用');return data},
+    user:async()=>(await root.SupabaseBrowserClient.getUser())?.id||null,
+    getState:()=>state,
+    persist:async(next,original,userId)=>{
+      const persist=async value=>{
+        if(state!==original||(await root.SupabaseBrowserClient.getUser())?.id!==userId)throw Error('migration_local_version_conflict');
+        return StorageManager.saveState(value,{critical:true});
+      };
+      if(typeof MultiTabProtection!=='undefined')await MultiTabProtection.runProtectedSave(next,persist,{critical:true});else await persist(next);
+    },
+    adopt:next=>{state=next},
+    changed:()=>{if(typeof renderStockDetail==='function')renderStockDetail();refresh()}
   });
   function refresh(){
     document.querySelectorAll('[data-market-orchestrator]').forEach(node=>{
@@ -62,6 +76,7 @@
     if(!symbols.size)return;busy=true;
     try{
       for(const symbol of symbols){
+        if(migration)await migration.sync(symbol);
         const task=await client.sync(symbol);
         if(task&&!['queued','running'].includes(task.status))requestedSymbols.delete(symbol);
         await recordRevisionReview(task);
@@ -90,7 +105,7 @@
       alert('执行端授权已生成。请在可信执行端配对，妥善保管并删除传输副本。');
     }catch(error){if(update){update.disabled=false;refresh();update.closest('[data-market-orchestrator]').querySelector('[data-market-status]').textContent=errorText(error)}else alert(errorText(error))}
   });
-  root.MarketDataTaskUi={panel,poll,client};
+  root.MarketDataTaskUi={panel,poll,client,migration};
   root.setInterval(poll,5000);
   root.SupabaseBrowserClient.onAuthStateChange((_event,session)=>{owner=session?.user?.id||null;client.clear();renderedVersions.clear();requestedSymbols.clear();void poll()});
 })(window);

@@ -123,6 +123,14 @@ class Registry:
             if len(data)>2*1024*1024:raise ValueError('response_too_large')
             return json.loads(data)
 
+    def migration_current(self, symbol):
+        ref=self.credential['projectRef']
+        req=Request(f'https://{ref}.supabase.co/rest/v1/rpc/market_data_migration_current',data=json.dumps({'p_token':self.credential['token'],'p_symbol':symbol}).encode(),headers={'apikey':PROJECTS[ref],'Content-Type':'application/json'},method='POST')
+        with build_opener(NoRedirect()).open(req,timeout=25) as response:
+            data=response.read(8*1024*1024+1)
+            if len(data)>8*1024*1024:raise ValueError('response_too_large')
+            return json.loads(data)
+
 
 def write_json(path, value):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -150,6 +158,15 @@ def run_once(registry, source_root, journal, seeds=None, rebase_store=None):
         before_date=max((b['date'] for b in baseline.get('priceHistory',[]) if b.get('is_complete_bar') is True),default=None)
         print(json.dumps({'taskId':task['taskId'],'symbol':task['symbol'],'status':'running','worker':task['workerId'],'startedAt':task['startedAt'],'latestCompleteBarBefore':before_date}),flush=True)
         try:
+            if hasattr(registry,'migration_current'):
+                try:
+                    from .provider_rebase.remote import worker_baseline
+                except ImportError:
+                    from provider_rebase.remote import worker_baseline
+                migrated=worker_baseline(registry.migration_current(task['symbol']),registry.credential['userId'],task['symbol'])
+                if migrated is not None:
+                    task=copy.deepcopy(task)
+                    task['previousResult']={'stock':migrated}
             result=execute_task(task,(seeds or {}).get(task['symbol']),source_root,rebase_store=rebase_store)
             payload={'taskId':task['taskId'],'result':result}
         except Exception as error:

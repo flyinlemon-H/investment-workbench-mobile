@@ -158,6 +158,7 @@ class Store:
             approved=db.execute('SELECT body FROM approvals WHERE hash=?',(c['candidateHash'],)).fetchone()
             if not approved:raise ValueError('explicit_approval_required')
             approval=json.loads(approved[0])
+            if approval.get('status') == 'SUPERSEDED_BY_RELEASE_BINDING':raise ValueError('approval_superseded')
             if approval['objectId']!=cid or approval['requestObject']!=rid or c['blockers']:raise ValueError('approval_binding_mismatch')
             if c.get('schemaVersion', 1) >= 2 and (approval.get('contentHash')!=c['contentHash'] or approval.get('approvalPackageHash')!=c['approvalPackageHash']):raise ValueError('approval_binding_mismatch')
             if (row[2] if row else 0)!=expected_generation:raise ValueError('generation_conflict')
@@ -194,3 +195,17 @@ class Store:
             db.execute('UPDATE active SET version=?,previous=?,generation=? WHERE symbol=?',(row[1],row[0],row[2]+1,ticker))
             self._event(db,ticker,'rolled_back',fromVersion=row[0],toVersion=row[1],generation=row[2]+1,reason=reason)
             return dict(version=row[1],generation=row[2]+1)
+
+    def supersede_approval(self, candidate_hash, release_binding):
+        """Retain original approval plus append-only supersession audit; never transfer."""
+        with self.tx() as db:
+            row=db.execute('SELECT body FROM approvals WHERE hash=?',(candidate_hash,)).fetchone()
+            if not row:raise ValueError('approval_missing')
+            approval=json.loads(row[0])
+            if approval.get('status')=='SUPERSEDED_BY_RELEASE_BINDING':return approval
+            c=self._get(db,approval['objectId'],'candidate')
+            if db.execute('SELECT 1 FROM active WHERE symbol=?',(c['symbol'],)).fetchone():raise ValueError('active_migration_conflict')
+            approval.update(status='SUPERSEDED_BY_RELEASE_BINDING',supersededAt=now(),supersededByRelease=copy.deepcopy(release_binding))
+            db.execute('UPDATE approvals SET body=? WHERE hash=?',(encoded(approval).decode(),candidate_hash))
+            self._event(db,c['symbol'],'approval_superseded',originalApproval=json.loads(row[0]),reason=approval['status'],releaseBinding=release_binding)
+            return approval

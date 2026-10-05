@@ -22,7 +22,7 @@
   const warnings=section('门禁与限制');warnings.append(element('p',c.blockers.length?'阻塞：'+c.blockers.join('；'):'无候选硬阻塞；仍需用户明确批准具体 hash。'),element('p','已知限制：'+c.warnings.join('；')),element('p','未实现指标：'+(c.technicalValidation?.unsupported||[]).join('；')),element('p','回滚：使用完整旧版本归档和原子指针；审批包附隔离验证结果。'));
   const hashes=section('审批绑定');for(const k of ['candidateHash','contentHash','approvalPackageHash'])hashes.append(element('strong',k),element('code',c[k]));
   const deployment=c.evidence?.productionDeployment;if(deployment)hashes.append(element('p','生产守卫部署：'+deployment.commit+' / '+deployment.assetVersion));
-  current=c;doc.getElementById('review-approve').disabled=c.blockers.length>0;doc.getElementById('review-message').textContent='已载入本地候选。摘要不替代执行端的 hash 与审批校验。';
+  current=c;root.ProviderMigrationReviewActions?.loaded(c);doc.getElementById('review-approve').disabled=c.blockers.length>0;doc.getElementById('review-message').textContent='已载入本地候选。摘要不替代执行端的 hash 与审批校验。';
  }
  doc.getElementById('candidate-file').addEventListener('change',async event=>{
   current=null;doc.getElementById('review-approve').disabled=true;doc.getElementById('review-content').replaceChildren();doc.getElementById('review-instruction').value='';
@@ -30,4 +30,5 @@
  });
  doc.getElementById('review-approve').addEventListener('click',()=>{if(!current||current.blockers.length)return;doc.getElementById('review-instruction').value='Approve candidate '+current.candidateHash+'\napprovalPackageHash '+current.approvalPackageHash+'\n此页面未保存审批，也未执行 Apply。'});
  doc.getElementById('review-keep').addEventListener('click',()=>{doc.getElementById('review-instruction').value='保持当前正式历史；未创建审批，未执行 Apply。'});
+ root.ProviderRebaseReview={render};
 })(window);
