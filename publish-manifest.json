@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "77e9a398c8df2866038bc83311e29b6bd7279506",
+  "sourceCommit": "3d20253ab1ae1f260e8d6fb0295dbf8938a65723",
   "assetVersion": "market-write-guard-v1-20261005",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
@@ -55,14 +55,14 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 73456,
-      "sha256": "9c00f2fe27c7a2334053ee0d95dc57080e3ea36630dd2555ac8030400a4e7263"
+      "bytes": 74638,
+      "sha256": "ef7173d54c55479b251a9826f42ae8ca12678bcb0c1c8e4bec9b03ccebee38e2"
     },
     {
       "path": "provider-rebase-review.html",
       "role": "browser runtime dependency",
-      "bytes": 2139,
-      "sha256": "2a6e91b6b16650dd0cf851b146b77b126a27cf45541c3384e8f940460f2e100e"
+      "bytes": 3938,
+      "sha256": "89a89188ddc15875cde4a088b349c31314b012a772c8315d7cf9e0422e89e692"
     },
     {
       "path": "social_posts.json",
@@ -111,6 +111,12 @@
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
       "bytes": 33944,
       "sha256": "0e84fa6e82f369e8e8d064498e2434766a1578a565ac1af2f459f25fa94b0e63"
+    },
+    {
+      "path": "src/approved-market-migration.js",
+      "role": "browser runtime dependency",
+      "bytes": 5492,
+      "sha256": "4e3a938ade69990720cdf969d2f2c0dc02463575b96e4df17d5d17937e347efe"
     },
     {
       "path": "src/auth-login-feedback.js",
@@ -265,8 +271,8 @@
     {
       "path": "src/market-data-task-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 8583,
-      "sha256": "16596552203ed1b0b537cddd14ab918b6531dc004e0cf1937834fc92272ac54a"
+      "bytes": 9758,
+      "sha256": "586356b0ee61ebfa9dc6f89dc467ea4e329925fde5b568d41bf82c39d5ecf8a6"
     },
     {
       "path": "src/multi-stock-analysis.js",
@@ -377,10 +383,16 @@
       "sha256": "c4d1ab250bdf08243c5caa5c92875d5ac12551a3f1816c9fb6a763740b39cf46"
     },
     {
+      "path": "src/provider-migration-review-actions.js",
+      "role": "browser runtime dependency",
+      "bytes": 4034,
+      "sha256": "dfed06ffe2e5919ebf5909a22b45ad01f5b16c2a5847aae39389ee4d60cce593"
+    },
+    {
       "path": "src/provider-rebase-review-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 4814,
-      "sha256": "0f0c2cd30f9d9b89804b73dc7fd4e6188538821f925fbf128801e5e29ee6ee85"
+      "bytes": 4898,
+      "sha256": "b713af6beaf4146779207d2fe49bbdf3058b659472c260a2007aafeac56696e1"
     },
     {
       "path": "src/rebalance.js",
