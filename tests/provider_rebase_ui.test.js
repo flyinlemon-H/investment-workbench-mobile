@@ -4,13 +4,13 @@ const context={console,TechnicalFreshness:require('../src/technical-freshness.js
 vm.runInContext(fs.readFileSync(require.resolve('../src/state.js'),'utf8'),context);
 const W=require('../src/discussion-workbench.js');
 vm.runInContext(fs.readFileSync(require.resolve('../src/import-export.js'),'utf8'),context);
-const contract={symbol:'2899.HK',canonicalProvider:'yahoo',providerVersion:'v1',adjustment:'qfq',priceBasis:'adjusted',normalizationVersion:'python-round-6-v1',historyWindow:{start:'2026-10-02',end:'2026-10-02'}};
-const receipt={sourceContract:contract,dataContentVersion:'h',technicalVersion:'t',latestCompleteBar:'2026-10-02',historyWriteGuard:{version:'provider-revision-engine-v1',classification:'STABLE',contentHash:'h'}};
+const contract={symbol:'2899.HK',market:'HK',interval:'daily',canonicalProvider:'yahoo',providerVersion:'v1',adjustment:'qfq',priceBasis:'adjusted',normalizationVersion:'python-round-6-v1',historyWindow:{start:'2026-10-02',end:'2026-10-02'}};
+const receipt={sourceContract:contract,revisionStatus:'revision_stable',last_trade_date:'2026-10-02',dataContentVersion:'a'.repeat(64),technicalVersion:'b'.repeat(64),latestCompleteBar:'2026-10-02',historyWriteGuard:{version:'provider-revision-engine-v1',classification:'STABLE',contentHash:'a'.repeat(64)}};
 const row={date:'2026-10-02',open:10,high:12,low:9,close:11,volume:100,provider:'yahoo',adjustment:'qfq',price_basis:'adjusted',is_complete_bar:true};
 test('certified history rejects legacy/static/CSV mixed overwrite',()=>{
  const stock={marketDataFreshness:{...receipt,sourceMigration:{generation:2}}};
  assert.throws(()=>context.assertMarketHistoryContinuity(stock,[row],{}),/UNSAFE_WRITE_PATH_BLOCKED/);
- assert.throws(()=>context.assertMarketHistoryContinuity(stock,[{...row,provider:'eastmoney'}],{sourceContract:contract}),/UNSAFE_WRITE_PATH_BLOCKED/);
+ assert.throws(()=>context.assertMarketHistoryContinuity(stock,[{...row,provider:'eastmoney'}],{sourceContract:contract}),/SOURCE_CONTRACT_MISMATCH/);
  assert.throws(()=>context.assertMarketHistoryContinuity(stock,[row],{...receipt,sourceMigration:{generation:1}}),/generation/);
  assert.doesNotThrow(()=>context.assertMarketHistoryContinuity(stock,[row],{...receipt,sourceMigration:{generation:2}}));
 });
@@ -69,7 +69,7 @@ test('guard rejects micro revisions, missing historical dates, raw imports and m
  const stock={code:'2899.HK',priceHistory:[row],marketDataFreshness:{}};
  assert.throws(()=>context.assertMarketHistoryContinuity(stock,[{...row,close:11.000004}],receipt),/SAME_PROVIDER_REVISION/);
  assert.throws(()=>context.assertMarketHistoryContinuity(stock,[{...row,date:'2026-10-03'}],receipt),/SAME_PROVIDER_REVISION/);
- assert.throws(()=>context.assertMarketHistoryContinuity({},[row],receipt,{path:'import'}),/UNSAFE_WRITE_PATH_BLOCKED/);
+ assert.doesNotThrow(()=>context.assertMarketHistoryContinuity({},[row],receipt,{path:'import'}));
  stock.priceHistory.push({...row,date:'2026-10-01',provider:'eastmoney'});
  assert.throws(()=>context.assertMarketHistoryContinuity(stock,[row],receipt),/PROVIDER_REBASE_REQUIRED/);
 });

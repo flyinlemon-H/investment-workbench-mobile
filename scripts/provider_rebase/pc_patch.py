@@ -29,7 +29,7 @@ def build(source_root):
     guard=Path(__file__).with_name('pc_guard.py').read_text(encoding='utf-8').replace('from .revision import require_stable','from .provider_rebase.revision import require_stable').replace('from .evidence import accepted','from .provider_rebase.evidence import accepted')
     patch=''.join(difflib.unified_diff(before.splitlines(True),after.splitlines(True),fromfile='a/src/market_data/updater.py',tofile='b/src/market_data/updater.py'))
     patch+=''.join(difflib.unified_diff([],guard.splitlines(True),fromfile='/dev/null',tofile='b/src/market_data/continuity_guard.py'))
-    shared={name:Path(__file__).with_name(name).read_text(encoding='utf-8') for name in ('__init__.py','core.py','revision.py','store.py','integration.py','fetch.py','evidence.py')}
+    shared={name:Path(__file__).with_name(name).read_text(encoding='utf-8') for name in ('__init__.py','core.py','revision.py','store.py','integration.py','fetch.py','evidence.py','deployment.py')}
     for name,text in shared.items():
         patch+=''.join(difflib.unified_diff([],text.splitlines(True),fromfile='/dev/null',tofile='b/src/market_data/provider_rebase/'+name))
     return dict(baseSha256=hashlib.sha256(path.read_bytes()).hexdigest(),updatedSource=after,guardSource=guard,sharedSources=shared,patch=patch)

@@ -1029,34 +1029,48 @@ function normalizeClosePrice(value){
   const n=Number(String(value??'').replace(/,/g,'').trim());
   return isFinite(n)&&n>0?n:0;
 }
+function marketHistoryGuardError(code,legacy=''){
+  const error=Error(code+(legacy?': '+legacy:''));error.code=code;return error;
+}
+function marketHistoryGuardMessage(error){
+  const code=error?.code||String(error?.message||error||'').split(':')[0];
+  return ({PROVIDER_SWITCH_REQUIRED:'行情来源发生变化，需要先完成历史数据迁移。',HISTORICAL_REVISION_REVIEW_REQUIRED:'同一行情源的历史复权数据发生修订，需要复核。',SOURCE_CONTRACT_MISMATCH:'行情来源契约不一致，已阻止覆盖正式行情。',MIXED_HISTORY_REBASE_REQUIRED:'当前历史含多个行情来源，需要先完成历史数据迁移。',VERSION_CONFLICT:'数据版本发生冲突，未覆盖当前有效行情。',UNSAFE_IMPORT_BLOCKED:'导入数据缺少必要的来源契约，已阻止覆盖正式行情。'})[code]||'';
+}
+function marketHistorySnapshot(stock){
+  return Object.fromEntries(['priceHistory','marketDataFreshness','technicalIndicators','technicalData'].map(k=>[k,stock?.[k]??(k==='priceHistory'?[]:{})]));
+}
 function assertMarketHistoryContinuity(stock,rows,metadata={},options={}){
   const old=stock?.marketDataFreshness||{},contract=old.sourceContract,next=metadata.sourceContract;
   const history=stock?.priceHistory||[],fields=['date','open','high','low','close','volume','amount','provider','adjustment','price_basis','is_complete_bar'];
-  const value=(r,k)=>r[k]??null;
-  const same=(a,b)=>fields.every(k=>value(a,k)===value(b,k));
-  if(!Array.isArray(rows))throw Error('UNSAFE_WRITE_PATH_BLOCKED');
-  const identical=history.length===rows.length&&history.every((r,i)=>same(r,rows[i]));
-  if(identical&&JSON.stringify(old)===JSON.stringify(metadata))return;
-  if(options.path==='import'&&!identical)throw Error('UNSAFE_WRITE_PATH_BLOCKED');
-  // Unchanged legacy snapshots remain readable; a write requires a full probe.
-  if(history.length===rows.length&&history.every((r,i)=>same(r,rows[i]))&&!contract&&!next)return;
-  const receipt=metadata.historyWriteGuard;
-  if(!receipt||receipt.version!=='provider-revision-engine-v1'||receipt.classification!=='STABLE'||receipt.contentHash!==metadata.dataContentVersion)throw Error('UNSAFE_WRITE_PATH_BLOCKED');
-  if(!next||!Array.isArray(rows)||!rows.length)throw Error('provider_migration_required');
-  if(!next.symbol||!next.providerVersion||next.normalizationVersion!=='python-round-6-v1'||!next.historyWindow)throw Error('SOURCE_CONTRACT_MISMATCH');
-  if(stock.code&&String(stock.code).toUpperCase()!==next.symbol)throw Error('SOURCE_CONTRACT_MISMATCH');
-  if(rows.some((r,i)=>!r.is_complete_bar||!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||(i&&r.date<=rows[i-1].date)||['open','high','low','close'].some(k=>!Number.isFinite(r[k])||r[k]<=0)))throw Error('SOURCE_CONTRACT_MISMATCH');
-  if(next.adjustment!=='qfq'||next.priceBasis!=='adjusted')throw Error('provider_migration_required');
-  if(rows.some(row=>row.provider!==next.canonicalProvider||row.adjustment!==next.adjustment||row.price_basis!==next.priceBasis))throw Error('provider_migration_required');
-  if(new Set(history.map(r=>r.provider)).size>1)throw Error('PROVIDER_REBASE_REQUIRED');
-  if(history.some(r=>r.provider!==next.canonicalProvider))throw Error('PROVIDER_SWITCH');
-  const indexed=new Map(rows.map(r=>[r.date,r]));
-  const oldDates=new Set(history.map(r=>r.date)),oldLast=history.map(r=>r.date).sort().at(-1);
-  if(rows.some(r=>oldLast&&r.date<=oldLast&&!oldDates.has(r.date)))throw Error('SAME_PROVIDER_REVISION');
-  if(history.some(r=>!indexed.has(r.date)||!same(r,indexed.get(r.date))))throw Error('SAME_PROVIDER_REVISION');
-  if(!metadata.technicalVersion||metadata.latestCompleteBar!==rows.at(-1)?.date)throw Error('VERSION_CONFLICT');
-  if(contract&&['canonicalProvider','adjustment','priceBasis','providerVersion'].some(key=>contract[key]!==next[key]))throw Error('provider_migration_required');
-  if(contract&&old.sourceMigration?.generation>Number(metadata.sourceMigration?.generation||0))throw Error('stale_source_generation');
+  const same=(a,b)=>fields.every(k=>(a[k]??null)===(b[k]??null));
+  const fail=(code,legacy)=>{throw marketHistoryGuardError(code,legacy)};
+  if(!Array.isArray(rows)||!rows.length||!next)fail('UNSAFE_IMPORT_BLOCKED','UNSAFE_WRITE_PATH_BLOCKED');
+  if(!next.symbol||!next.providerVersion||next.normalizationVersion!=='python-round-6-v1'||!next.historyWindow||!['yahoo','eastmoney'].includes(next.canonicalProvider))fail('SOURCE_CONTRACT_MISMATCH');
+  const symbol=String(stock.code||stock.symbol||options.symbol||next.symbol).toUpperCase();
+  if(symbol!==next.symbol||next.market!==(symbol.endsWith('.HK')?'HK':'CN')||next.interval!=='daily')fail('SOURCE_CONTRACT_MISMATCH');
+  if(next.adjustment!=='qfq'||next.priceBasis!=='adjusted')fail('SOURCE_CONTRACT_MISMATCH');
+  if(rows.some((r,i)=>r.is_complete_bar!==true||!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||(i&&r.date<=rows[i-1].date)||['open','high','low','close'].some(k=>!Number.isFinite(r[k])||r[k]<=0)||r.high<Math.max(r.open,r.close,r.low)||r.low>Math.min(r.open,r.close)||['volume','amount'].some(k=>r[k]!=null&&(!Number.isFinite(r[k])||r[k]<0))))fail('SOURCE_CONTRACT_MISMATCH');
+  if(rows.some(r=>r.provider!==next.canonicalProvider||r.adjustment!==next.adjustment||r.price_basis!==next.priceBasis||r.canonicalProviderId&&r.canonicalProviderId!==r.provider||r.rawProviderId&&r.rawProviderId!==r.provider))fail('SOURCE_CONTRACT_MISMATCH');
+  if(new Set(history.map(r=>r.provider)).size>1)fail('MIXED_HISTORY_REBASE_REQUIRED','PROVIDER_REBASE_REQUIRED');
+  if(history.some(r=>r.provider!==next.canonicalProvider))fail('PROVIDER_SWITCH_REQUIRED','PROVIDER_SWITCH');
+  const indexed=new Map(rows.map(r=>[r.date,r])),oldDates=new Set(history.map(r=>r.date)),oldLast=history.map(r=>r.date).sort().at(-1);
+  if(rows.some(r=>oldLast&&r.date<=oldLast&&!oldDates.has(r.date))||history.some(r=>!indexed.has(r.date)||!same(r,indexed.get(r.date))))fail('HISTORICAL_REVISION_REVIEW_REQUIRED','SAME_PROVIDER_REVISION');
+  if(contract&&['symbol','canonicalProvider','adjustment','priceBasis','providerVersion','normalizationVersion'].some(k=>contract[k]!==next[k]))fail('SOURCE_CONTRACT_MISMATCH');
+  const unitSemantics=c=>Object.fromEntries(Object.entries(c.units||{}).sort(([a],[b])=>a.localeCompare(b)).map(([p,fs])=>[p,Object.fromEntries(Object.entries(fs).sort(([a],[b])=>a.localeCompare(b)).map(([k,u])=>[k,{unit:u.unit,currency:u.currency,scale:u.scale}]))]));
+  if(contract&&JSON.stringify(unitSemantics(contract))!==JSON.stringify(unitSemantics(next)))fail('SOURCE_CONTRACT_MISMATCH');
+  if(next.historyWindow.start!==rows[0].date||next.historyWindow.end!==rows.at(-1).date)fail('SOURCE_CONTRACT_MISMATCH');
+  const receipt=metadata.historyWriteGuard,hash=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
+  if(!receipt||receipt.version!=='provider-revision-engine-v1'||receipt.classification!=='STABLE')fail('UNSAFE_IMPORT_BLOCKED','UNSAFE_WRITE_PATH_BLOCKED');
+  if(metadata.revisionStatus!=='revision_stable')fail('HISTORICAL_REVISION_REVIEW_REQUIRED','SAME_PROVIDER_REVISION');
+  if(!hash(metadata.dataContentVersion)||!hash(metadata.technicalVersion)||receipt.contentHash!==metadata.dataContentVersion||metadata.latestCompleteBar!==rows.at(-1).date||metadata.last_trade_date!==rows.at(-1).date)fail('VERSION_CONFLICT');
+  if(old.sourceMigration?.generation>Number(metadata.sourceMigration?.generation||0))fail('VERSION_CONFLICT','stale_source_generation');
+  if(old.dataContentVersion&&metadata.previousDataContentVersion&&old.dataContentVersion!==metadata.previousDataContentVersion&&old.dataContentVersion!==metadata.dataContentVersion)fail('VERSION_CONFLICT');
+  if(old.last_trade_date>metadata.last_trade_date||Date.parse(old.fetched_at)>Date.parse(metadata.fetched_at))fail('VERSION_CONFLICT');
+  if(options.snapshot){
+    const incoming=options.snapshot,technical=incoming.technicalData||incoming.technicalIndicators?.technicalSnapshot;
+    if(!technical||[technical,incoming.technicalIndicators].some(x=>x?.dataContentVersion!==metadata.dataContentVersion||x?.technicalVersion!==metadata.technicalVersion)||technical.technicalAsOf!==rows.at(-1).date||technical.latestCompleteBar!==rows.at(-1).date||incoming.technicalIndicators.last_trade_date!==rows.at(-1).date)fail('VERSION_CONFLICT');
+  }
+  return {allowed:true,classification:'STABLE'};
 }
 function normalizePriceHistory(stockOrHistory){
   const raw=Array.isArray(stockOrHistory)?stockOrHistory:(stockOrHistory&&Array.isArray(stockOrHistory.priceHistory)?stockOrHistory.priceHistory:[]);
@@ -1066,6 +1080,7 @@ function normalizePriceHistory(stockOrHistory){
     const close=normalizeClosePrice(row&&row.close);
     if(!date||!(close>0))return;
     const numberOrNull=value=>{
+      if(value===null||value===undefined||value==='')return null;
       const number=Number(value);
       return isFinite(number)?number:null;
     };

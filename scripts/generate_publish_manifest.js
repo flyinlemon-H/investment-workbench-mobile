@@ -68,6 +68,8 @@ roleByPath.set('src/v13-plan-engine.js','Plan V2 lifecycle-aware plan orchestrat
 roleByPath.set('src/v13-recommendation-engine.js','Plan V2 lifecycle-aware recommendation compatibility runtime');
 
 const paths=[...new Set([
+  'provider-rebase-review.html',
+  'src/provider-rebase-review-ui.js',
   'src/technical-freshness.js',
   'src/market-data-orchestrator.js',
   'src/market-data-task-ui.js',
@@ -138,7 +140,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'provider-pilot-readiness-v1-20261005',
+  assetVersion:'market-write-guard-v1-20261005',
   dataMode:'Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
   files
 };

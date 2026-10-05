@@ -3,14 +3,14 @@
   'use strict';
   let owner=null,busy=false;
   const renderedVersions=new Map(),requestedSymbols=new Set();
-  const errorText=error=>String(error?.message||'连接失败，请稍后重试');
+  const errorText=error=>marketHistoryGuardMessage(error)||String(error?.message||'连接失败，请稍后重试');
   async function account(action,input){const {data,error}=await root.SupabaseBrowserClient.getClient().rpc('market_data_account',{p_action:action,p_input:input});if(error)throw Error(error.message||'行情服务不可用');return data}
   const client=root.MarketDataOrchestrator.createClient({rpc:account,user:async()=>{const session=await root.SupabaseBrowserClient.getSession();owner=session?.user?.id||null;return owner},changed:refresh,
     apply:async(snapshot,result,userId)=>{
       if((await root.SupabaseBrowserClient.getUser())?.id!==userId)throw Error('account_changed');
       const stock=state.stocks.find(s=>root.SymbolIdentity.canonicalMarketSymbol(s.code||s.symbol)===result.symbol);
       if(!stock)throw Error('标的已移除');
-      assertMarketHistoryContinuity(stock,snapshot.priceHistory,snapshot.marketDataFreshness);
+      assertMarketHistoryContinuity(stock,snapshot.priceHistory,snapshot.marketDataFreshness,{snapshot});
       if(stock.marketDataFreshness?.resultVersion===result.resultVersion)return;
       if(stock.marketDataFreshness?.last_trade_date>result.latestCompleteBar)throw Error('已有更新日K，拒绝覆盖旧版本');
       const currentTime=Date.parse(stock.marketDataFreshness?.fetched_at||''),incomingTime=Date.parse(snapshot.marketDataFreshness?.fetched_at||'');
@@ -34,7 +34,7 @@
   function refresh(){
     document.querySelectorAll('[data-market-orchestrator]').forEach(node=>{
       const symbol=node.dataset.marketOrchestrator,view=client.view(owner,symbol);
-      node.querySelector('[data-market-status]').textContent=view?.error?`同步未完成：${view.error}`:root.MarketDataOrchestrator.presentation(view?.task,view?.applied);
+      node.querySelector('[data-market-status]').textContent=view?.error?`同步未完成：${marketHistoryGuardMessage(view.error)||view.error}`:root.MarketDataOrchestrator.presentation(view?.task,view?.applied);
       const version=node.querySelector('[data-market-version]');version.textContent=view?.applied?`结果版本 ${view.task.resultVersion}`:'';
       const reason=node.querySelector('[data-market-reason]');reason.textContent=view?.task?.error?`原因：${root.MarketDataOrchestrator.errorLabel(view.task.error)}`:'';
       const button=node.querySelector('[data-market-update]');button.disabled=Boolean(view?.task&&['queued','running'].includes(view.task.status));button.textContent=view?.task?.status==='failed'?'重试更新行情':'更新行情';
@@ -75,7 +75,7 @@
   }
   function panel(symbol){
     try{root.MarketDataOrchestrator.request(symbol)}catch(_error){return ''}
-    return `<section class="card" data-market-orchestrator="${symbol}" style="margin-bottom:12px;overflow-wrap:anywhere"><div class="card-title">行情更新</div><p data-market-status role="status" aria-live="polite">查询行情任务状态</p><p data-market-reason class="card-note"></p><p data-market-version class="card-note"></p><button class="btn" type="button" data-market-update="${symbol}">更新行情</button><details style="margin-top:12px"><summary>执行端设置</summary><p class="card-note">首次使用需在账户设置登录，并授权执行端。执行端未启动时，任务保持等待。</p><button class="btn ghost small" type="button" data-market-pair>生成执行端授权</button> <button class="btn ghost small" type="button" data-market-revoke>撤销执行端授权</button></details></section>`;
+    return `<section class="card" data-market-orchestrator="${symbol}" style="margin-bottom:12px;overflow-wrap:anywhere"><div class="card-title">行情更新</div><p data-market-status role="status" aria-live="polite">查询行情任务状态</p><p data-market-reason class="card-note"></p><p data-market-version class="card-note"></p><p class="card-note"><a href="provider-rebase-review.html" target="_blank" rel="noopener">审阅行情迁移候选</a></p><button class="btn" type="button" data-market-update="${symbol}">更新行情</button><details style="margin-top:12px"><summary>执行端设置</summary><p class="card-note">首次使用需在账户设置登录，并授权执行端。执行端未启动时，任务保持等待。</p><button class="btn ghost small" type="button" data-market-pair>生成执行端授权</button> <button class="btn ghost small" type="button" data-market-revoke>撤销执行端授权</button></details></section>`;
   }
   document.addEventListener('click',async event=>{
     const update=event.target.closest('[data-market-update]'),pair=event.target.closest('[data-market-pair]'),revoke=event.target.closest('[data-market-revoke]');

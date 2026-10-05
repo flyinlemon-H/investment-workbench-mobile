@@ -145,10 +145,12 @@ class Store:
             return dict(version=row[0],previousVersion=row[1],generation=row[2],bundle=self._get(db,row[0],'version'))
         finally:db.close()
 
-    def apply(self,cid,rid,base,expected_generation=0,failpoint=None):
+    def apply(self,cid,rid,base,expected_generation=0,failpoint=None,*,production_deployment=None):
         with self.tx() as db:
             c=verify(self._get(db,cid,'candidate'));req=self._get(db,rid,'request')
             self._revalidate(c,req)
+            expected=c.get('evidence',{}).get('productionDeployment')
+            if expected and production_deployment!=expected:raise ValueError('production_guard_verification_required')
             row=db.execute('SELECT version,previous,generation FROM active WHERE symbol=?',(c['symbol'],)).fetchone()
             if row:
                 current=self._get(db,row[0],'version')

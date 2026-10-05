@@ -468,7 +468,13 @@ async function activateLoadedApplication(){
   if(window.UniverseAutoAdd){
     try{await window.UniverseAutoAdd.initialize(state)}catch(_error){}
   }
-  if(typeof applyMarketDataBridge==='function')await applyMarketDataBridge();
+  if(typeof applyMarketDataBridge==='function'){
+    try{await applyMarketDataBridge()}catch(error){
+      const message=marketHistoryGuardMessage(error);if(!message)throw error;
+      window.marketHistoryGuardNotice=message;
+      const note=document.createElement('aside');note.setAttribute('role','status');note.className='card';note.textContent=message+' 当前正式行情保持不变。';document.body.insertBefore(note,document.body.firstChild);
+    }
+  }
   if(window.UniverseHandoff){
     const reconciliation=window.UniverseHandoff.reconcileState(state,window.MARKET_DATA_BRIDGE);
     if(reconciliation.changed)await saveState(state,{critical:true});

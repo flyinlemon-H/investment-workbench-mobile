@@ -5979,26 +5979,38 @@ function importPriceHistoryCsv(){
   input.value='';
   input.click();
 }
+function parseGuardedMarketHistoryCsv(text){
+  const lines=String(text||'').replace(/^\uFEFF/,'').split(/\r?\n/);
+  const prefix='# market-data-snapshot: ';
+  if(!lines[0].startsWith(prefix))throw marketHistoryGuardError('UNSAFE_IMPORT_BLOCKED','UNSAFE_WRITE_PATH_BLOCKED');
+  let snapshot;try{snapshot=JSON.parse(lines.shift().slice(prefix.length))}catch(_error){throw marketHistoryGuardError('UNSAFE_IMPORT_BLOCKED')}
+  const table=csvRows(lines.join('\n')),headers=table.shift()||[];
+  const required=['date','open','high','low','close','volume','amount','provider','adjustment','price_basis','is_complete_bar'];
+  if(required.some(k=>!headers.includes(k))||new Set(headers).size!==headers.length)throw marketHistoryGuardError('UNSAFE_IMPORT_BLOCKED');
+  const rows=table.map(cells=>Object.fromEntries(required.map(k=>{let v=cells[headers.indexOf(k)];if(['open','high','low','close','volume','amount'].includes(k))v=v===''||v===undefined?null:Number(v);if(k==='is_complete_bar')v=v==='true';return [k,v]})));
+  return {...snapshot,priceHistory:rows};
+}
+async function applyPriceHistoryCsvText(stock,text){
+  const snapshot=parseGuardedMarketHistoryCsv(text);
+  assertMarketHistoryContinuity(stock,snapshot.priceHistory,snapshot.marketDataFreshness,{path:'csv',snapshot});
+  const before=marketHistorySnapshot(stock),updatedAt=state.updatedAt,dataFreshness=structuredClone(stock.dataFreshness);
+  try{
+    stock.priceHistory=structuredClone(snapshot.priceHistory);
+    stock.marketDataFreshness=structuredClone(snapshot.marketDataFreshness);
+    stock.technicalIndicators=structuredClone(snapshot.technicalIndicators);
+    stock.technicalData={...stock.technicalData,...structuredClone(snapshot.technicalData)};
+    await saveState(state,{critical:true});
+  }catch(error){Object.assign(stock,before);stock.dataFreshness=dataFreshness;state.updatedAt=updatedAt;throw error}
+}
 async function handlePriceHistoryCsvImport(e){
-  const file=e.target.files&&e.target.files[0];
-  const stock=state.stocks.find(x=>x.id===detailStockId);
+  const file=e.target.files&&e.target.files[0],stock=state.stocks.find(x=>x.id===detailStockId);
   if(!file||!stock)return;
   const reader=new FileReader();
   reader.onload=async()=>{
-    const parsed=parsePriceHistoryCsv(reader.result);
-    try{assertMarketHistoryContinuity(stock,parsed.records,{})}catch(error){alert('该标的已锁定行情来源；请使用 Provider Rebase 候选评审流程，不能用 CSV 覆盖。');return}
-    stock.priceHistory=normalizePriceHistory(parsed.records);
-    const result=updateTechnicalDataFromPriceHistory(stock);
-    touchDataFreshness(stock,'technicalUpdatedAt');
-    normalizeStockAnalysis(stock);
-    markV13DecisionReviewDirty(stock.id,'technicalReview');
-    try{await saveState(state,{critical:true})}catch(error){criticalWriteFailure(error);return}
-    render();
-    const warnings=[...(parsed.warnings||[]),...(result.warnings||[])];
-    alert(`历史价格导入完成：成功 ${stock.priceHistory.length} 条，过滤 ${parsed.invalidCount||0} 条，重复日期覆盖 ${parsed.duplicateCount||0} 条。${warnings.length?'\n提醒：'+warnings.slice(0,4).join('；'):''}`);
+    try{await applyPriceHistoryCsvText(stock,reader.result)}catch(error){alert(marketHistoryGuardMessage(error)||'导入失败，当前有效行情保持不变。');return}
+    render();alert('完整来源契约和连续性校验通过，行情已导入。');
   };
-  reader.onerror=()=>alert('CSV 读取失败，请确认文件可访问。');
-  reader.readAsText(file,'UTF-8');
+  reader.onerror=()=>alert('CSV 读取失败，请确认文件可访问。');reader.readAsText(file,'UTF-8');
 }
 async function updateTechnicalFromHistoryForDetail(){
   const stock=state.stocks.find(x=>x.id===detailStockId);

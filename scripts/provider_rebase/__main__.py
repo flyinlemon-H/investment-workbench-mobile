@@ -64,7 +64,11 @@ def main():
     elif args.command=='pending':result=store.pending(symbol(args.symbol) if args.symbol else None)
     elif args.command=='approve':result=store.approve(args.object,args.request,args.phrase,args.provider,load(args.resolutions),args.actor)
     elif args.command=='apply':
-        c=store.read(args.object);result=store.apply(args.object,args.request,find(args.baseline,c['symbol']),args.expected_generation)
+        c=store.read(args.object);attestation=None
+        if c.get('evidence',{}).get('productionDeployment'):
+            from .deployment import verify_public_deployment
+            attestation=verify_public_deployment(c['evidence']['productionDeployment'])
+        result=store.apply(args.object,args.request,find(args.baseline,c['symbol']),args.expected_generation,production_deployment=attestation)
     elif args.command=='rollback':result=store.rollback(symbol(args.symbol),args.expected_generation,args.phrase,args.reason)
     elif args.command=='deliver':
         from .projection import project

@@ -5,7 +5,7 @@ async function applyMarketDataBridge(options={}){
   payload.stocks.forEach(incoming=>{
     const symbol=window.SymbolIdentity.canonicalMarketSymbol(incoming.symbol);
     const stock=state.stocks.find(item=>window.SymbolIdentity.canonicalMarketSymbol(item.code||item.symbol)===symbol);
-    if(stock)assertMarketHistoryContinuity(stock,incoming.priceHistory,incoming.marketDataFreshness);
+    if(stock)assertMarketHistoryContinuity(stock,incoming.priceHistory,incoming.marketDataFreshness,{snapshot:incoming});
   });
   let changed=0;const previous=[];const stateUpdatedAt=state.updatedAt;
   payload.stocks.forEach(incoming=>{
