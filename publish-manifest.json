@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "8234b6df6e779983ab2d3c44781ed5ad328c56a3",
-  "assetVersion": "provider-pilot-readiness-v1-20261005",
+  "sourceCommit": "77e9a398c8df2866038bc83311e29b6bd7279506",
+  "assetVersion": "market-write-guard-v1-20261005",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
@@ -55,8 +55,14 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 73996,
-      "sha256": "6ff9bac5a799293746eff063490aee2c8bacd14ac78aee69357def811e623c07"
+      "bytes": 73456,
+      "sha256": "9c00f2fe27c7a2334053ee0d95dc57080e3ea36630dd2555ac8030400a4e7263"
+    },
+    {
+      "path": "provider-rebase-review.html",
+      "role": "browser runtime dependency",
+      "bytes": 2139,
+      "sha256": "2a6e91b6b16650dd0cf851b146b77b126a27cf45541c3384e8f940460f2e100e"
     },
     {
       "path": "social_posts.json",
@@ -103,8 +109,8 @@
     {
       "path": "src/app.js",
       "role": "browser bootstrap, user-initiated Bridge availability and preserved storage recovery runtime",
-      "bytes": 33559,
-      "sha256": "f9578618c9914254788af52cfe31ffe124c25c6a9172f1069688db33f0f36529"
+      "bytes": 33944,
+      "sha256": "0e84fa6e82f369e8e8d064498e2434766a1578a565ac1af2f459f25fa94b0e63"
     },
     {
       "path": "src/auth-login-feedback.js",
@@ -193,8 +199,8 @@
     {
       "path": "src/import-export.js",
       "role": "browser runtime dependency",
-      "bytes": 9456,
-      "sha256": "e2af0fa6641e86b6b3a729686ca67cd21cfd9099ba5a8ad4f806a1413fcef1a1"
+      "bytes": 9828,
+      "sha256": "26e63202e34abb30721b7c13d1d04cfec5a68aba0142f18c9e97ae748c00a88b"
     },
     {
       "path": "src/long-term-logic-contract.js",
@@ -247,20 +253,20 @@
     {
       "path": "src/market-data-bridge.js",
       "role": "browser runtime dependency",
-      "bytes": 2728,
-      "sha256": "f6fd8691fe89718d4b514f3db7079dbb26edec36aaea6bdcb17e0d3fd66e0172"
+      "bytes": 2748,
+      "sha256": "13dc335f84d3f9af11ce752de659faf6e732f4ffa3d961bc7305286a7dfeef56"
     },
     {
       "path": "src/market-data-orchestrator.js",
       "role": "browser runtime dependency",
-      "bytes": 5741,
-      "sha256": "8a040baedb454f5f92e406b980a83121610ac78240863190ed852e310dd158dd"
+      "bytes": 6246,
+      "sha256": "10752d3b0a86793026c3f5bb21ed337c2ca5f6b387508f6fc91dcf566d4fa479"
     },
     {
       "path": "src/market-data-task-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 8377,
-      "sha256": "504a21d7bad810ba88a1206717d2f463b816b387546c98da0b99b22e4c0b0fd1"
+      "bytes": 8583,
+      "sha256": "16596552203ed1b0b537cddd14ab918b6531dc004e0cf1937834fc92272ac54a"
     },
     {
       "path": "src/multi-stock-analysis.js",
@@ -371,6 +377,12 @@
       "sha256": "c4d1ab250bdf08243c5caa5c92875d5ac12551a3f1816c9fb6a763740b39cf46"
     },
     {
+      "path": "src/provider-rebase-review-ui.js",
+      "role": "browser runtime dependency",
+      "bytes": 4814,
+      "sha256": "0f0c2cd30f9d9b89804b73dc7fd4e6188538821f925fbf128801e5e29ee6ee85"
+    },
+    {
       "path": "src/rebalance.js",
       "role": "Plan V2 trigger evaluation, lifecycle retention, and execution audit runtime",
       "bytes": 8417,
@@ -397,8 +409,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 126496,
-      "sha256": "a8fcb2bbd4f7c6debf1ab5b51274146d204ab14d9f7b84cf504486967abf004f"
+      "bytes": 129289,
+      "sha256": "e915a7b5867d73d44535efabc85f9548b1bf3ce9de60bdfa23eca549e9c5523d"
     },
     {
       "path": "src/stock-research-ui.js",
@@ -493,8 +505,8 @@
     {
       "path": "src/ui-render.js",
       "role": "Risk-first homepage cards and counts, quiet state, source-matched navigation and preserved Workbench interfaces",
-      "bytes": 637312,
-      "sha256": "ab3afba814127f79a08ec7c027a53bb1b9924faa87dc5763cdcc80c2d886c19b"
+      "bytes": 638491,
+      "sha256": "2a90f11da0b6f48626ca6471e063bd21e5ab516b9e5ae5dfb5e871cc96cc8d30"
     },
     {
       "path": "src/universe-auto-add.js",
