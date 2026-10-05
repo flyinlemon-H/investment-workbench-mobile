@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "3d20253ab1ae1f260e8d6fb0295dbf8938a65723",
-  "assetVersion": "market-write-guard-v1-20261005",
+  "sourceCommit": "26fe2f7c502eb54c73ea7dfab1eda23705a5e508",
+  "assetVersion": "approved-provider-rebase-apply-v1-20261005",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
