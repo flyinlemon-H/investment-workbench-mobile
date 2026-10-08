@@ -5,14 +5,15 @@ from pathlib import Path
 from .core import REGISTRY, facts, recommend, request, symbol
 from .revision import candidate
 from .store import Store, now
+from .canonical import load_native
 
-def load(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
+def load(path):return load_native(Path(path).read_text(encoding='utf-8-sig'))
 
 def stocks(path):
     text=Path(path).read_text(encoding='utf-8-sig')
     if text.lstrip().startswith('window.MARKET_DATA_BRIDGE ='):
         text=text[text.index('=')+1:].strip().rstrip(';')
-    data=json.loads(text)
+    data=load_native(text)
     if 'symbols' in data:return [{**x.get('marketFacts',{}),'symbol':x['symbol']} for x in data['symbols']]
     return data['stocks']
 
@@ -36,6 +37,7 @@ def main():
     approve.add_argument('--resolutions',type=Path,required=True);approve.add_argument('--actor',required=True)
     apply=commands.add_parser('apply');apply.add_argument('--object',required=True);apply.add_argument('--request',required=True)
     apply.add_argument('--baseline',type=Path,required=True);apply.add_argument('--expected-generation',type=int,required=True)
+    apply.add_argument('--expected-current-version')
     rollback=commands.add_parser('rollback');rollback.add_argument('--symbol',required=True);rollback.add_argument('--expected-generation',type=int,required=True)
     rollback.add_argument('--phrase',required=True);rollback.add_argument('--reason',required=True)
     active=commands.add_parser('active');active.add_argument('--symbol',required=True)
@@ -48,6 +50,8 @@ def main():
         for provider in REGISTRY if args.provider=='both' else [args.provider]:
             try:
                 rows,evidence,version=fetch(provider,ticker,req['requestedHistoryStart'],args.end)
+                from .canonical import VERSION
+                evidence['canonicalSerializationVersion']=VERSION
                 value=candidate(req,provider,rows,version,now(),evidence);cid,rid=store.save(req,value)
                 outcomes.append(dict(provider=provider,objectId=cid,requestObject=rid,candidateHash=value['candidateHash'],
                     barCount=value['barCount'],validationStatus=value['validationStatus'],blockers=value['blockers'],reviewItems=value['reviewItems']))
@@ -68,7 +72,7 @@ def main():
         if c.get('evidence',{}).get('productionDeployment'):
             from .deployment import verify_public_deployment
             attestation=verify_public_deployment(c['evidence']['productionDeployment'])
-        result=store.apply(args.object,args.request,find(args.baseline,c['symbol']),args.expected_generation,production_deployment=attestation)
+        result=store.apply(args.object,args.request,find(args.baseline,c['symbol']),args.expected_generation,production_deployment=attestation,expected_current_version=args.expected_current_version)
     elif args.command=='rollback':result=store.rollback(symbol(args.symbol),args.expected_generation,args.phrase,args.reason)
     elif args.command=='deliver':
         from .projection import project

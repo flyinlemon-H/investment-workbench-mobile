@@ -1,0 +1,207 @@
+[
+  {
+    "name": "integer",
+    "left": "1",
+    "right": "1.0",
+    "equal": true
+  },
+  {
+    "name": "decimal",
+    "left": "33.42",
+    "right": "33.420000",
+    "equal": true
+  },
+  {
+    "name": "negative-zero",
+    "left": "0",
+    "right": "-0.0",
+    "equal": true
+  },
+  {
+    "name": "exponent",
+    "left": "1e-7",
+    "right": "0.0000001",
+    "equal": true
+  },
+  {
+    "name": "safe-integer",
+    "left": "9007199254740991",
+    "right": "9007199254740991.0",
+    "equal": true
+  },
+  {
+    "name": "unsafe-exact-integer",
+    "left": "9007199254740993",
+    "right": "9007199254740992",
+    "equal": false
+  },
+  {
+    "name": "large-integer",
+    "left": "123456789012345678901234567890",
+    "right": "123456789012345678901234567890.0",
+    "equal": true
+  },
+  {
+    "name": "tiny-real-price",
+    "left": "33.42000000000000001",
+    "right": "33.42000000000000002",
+    "equal": false
+  },
+  {
+    "name": "tiny-exponent",
+    "left": "1e-1000",
+    "right": "1.0e-1000",
+    "equal": true
+  },
+  {
+    "name": "volume-plus-one",
+    "left": "33219061",
+    "right": "33219062",
+    "equal": false
+  },
+  {
+    "name": "null-missing",
+    "left": "{\"x\":null}",
+    "right": "{}",
+    "equal": false
+  },
+  {
+    "name": "numeric-string",
+    "left": "\"1\"",
+    "right": "1",
+    "equal": false
+  },
+  {
+    "name": "key-order",
+    "left": "{\"b\":1,\"a\":2}",
+    "right": "{\"a\":2,\"b\":1}",
+    "equal": true
+  },
+  {
+    "name": "whitespace",
+    "left": " { \"a\" : 1.0 } ",
+    "right": "{\"a\":1}",
+    "equal": true
+  },
+  {
+    "name": "unicode",
+    "left": "{\"\ud83d\ude00\":\"\u7d2b\u91d1\u77ff\u4e1a\",\"\u4e2d\":\"\u00e9\"}",
+    "right": "{\"\u4e2d\":\"\\u00e9\",\"\ud83d\ude00\":\"\u7d2b\u91d1\u77ff\u4e1a\"}",
+    "equal": true
+  },
+  {
+    "name": "unicode-no-normalization",
+    "left": "\"\u00e9\"",
+    "right": "\"e\u0301\"",
+    "equal": false
+  },
+  {
+    "name": "nan",
+    "left": "NaN",
+    "reject": true
+  },
+  {
+    "name": "infinity",
+    "left": "Infinity",
+    "reject": true
+  },
+  {
+    "name": "negative-infinity",
+    "left": "-Infinity",
+    "reject": true
+  },
+  {
+    "name": "duplicate-key",
+    "left": "{\"x\":1,\"x\":2}",
+    "reject": true
+  },
+  {
+    "name": "lone-surrogate",
+    "left": "\"\\ud800\"",
+    "reject": true
+  },
+  {
+    "name": "exponent-limit",
+    "left": "1e10001",
+    "reject": true
+  },
+  {
+    "name": "leading-zero",
+    "left": "01",
+    "reject": true
+  },
+  {
+    "name": "bar-provider",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"eastmoney\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-adjustment",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"none\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-price_basis",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"raw\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-date",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2025-12-31\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-is_complete_bar",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": false}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-volume",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 2, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-close",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2.000000000000001, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "bar-count",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "right": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "equal": false,
+    "facts": true
+  },
+  {
+    "name": "order",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}, {\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "reject": true,
+    "facts": true
+  },
+  {
+    "name": "duplicate-date",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-01-01\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-01\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "reject": true,
+    "facts": true
+  },
+  {
+    "name": "invalid-date",
+    "left": "{\"priceHistory\": [{\"date\": \"2026-02-30\", \"open\": 1, \"high\": 2, \"low\": 1, \"close\": 2, \"volume\": 1, \"amount\": null, \"provider\": \"yahoo\", \"adjustment\": \"qfq\", \"price_basis\": \"adjusted\", \"is_complete_bar\": true}, {\"date\": \"2026-01-02\", \"open\": 2, \"high\": 3, \"low\": 1, \"close\": 3, \"volume\": 2, \"provider\": \"yahoo\"}], \"technicalData\": {}, \"technicalIndicators\": {}, \"marketDataFreshness\": {}}",
+    "reject": true,
+    "facts": true
+  }
+]

@@ -20,6 +20,9 @@ def capsule(candidate, request):
     rebuilt=R.candidate(request,contract['rawProviderId'],c['stock']['priceHistory'],contract['providerVersion'],c['generatedAt'],c['evidence'])
     if rebuilt['candidateHash'] != c['candidateHash']:
         raise ValueError('candidate_validation_outdated')
+    if c.get('schemaVersion') == 4:
+        from .canonical import verify_binding
+        verify_binding(c, request['base'])
     semantics = {k: contract.get(k) for k in ('symbol', 'canonicalProvider', 'providerVersion',
         'adjustment', 'priceBasis', 'market', 'interval', 'historyWindow', 'normalizationVersion')}
     semantics['units'] = {p: {f: {k: u.get(k) for k in ('unit', 'currency', 'scale')}
@@ -43,6 +46,10 @@ def worker_baseline(context, owner, symbol):
     if context.get('status') not in ('applied', 'rolled_back') or not context.get('approvalId') or not context.get('previousVersion'):
         raise ValueError('VERSION_CONFLICT')
     stock = copy.deepcopy(context['bundle'])
+    if context.get('candidate', {}).get('schemaVersion') == 4:
+        from . import canonical as K
+        if context.get('canonicalSerializationVersion') != K.VERSION or K.facts_hash(stock) != context.get('currentCanonicalHash'):
+            raise ValueError('VERSION_CONFLICT')
     if set(stock) != set(C.FIELDS):
         raise ValueError('VERSION_CONFLICT')
     return stock

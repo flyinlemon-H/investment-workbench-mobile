@@ -1,7 +1,7 @@
 {
-  "commit": "27731979dc4b63b57d7a6ed262478261140484a4",
-  "assetVersion": "entry-decision-clarity-v1-20260920",
-  "sourceCommit": "23a7eb0979cd6c7e8e3115b71d2153148c68f170",
+  "commit": "1e939b10e66d7c115381da774a5c73d0699a504c",
+  "assetVersion": "approved-provider-rebase-apply-v1-20261005",
+  "sourceCommit": "26fe2f7c502eb54c73ea7dfab1eda23705a5e508",
   "requiredTests": [
     {
       "path": "tests/entry_decision_clarity.test.js",

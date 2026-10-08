@@ -71,6 +71,7 @@ const paths=[...new Set([
   'provider-rebase-review.html',
   'src/provider-rebase-review-ui.js',
   'src/approved-market-migration.js',
+  'src/market-data-canonical.js',
   'src/provider-migration-review-actions.js',
   'src/technical-freshness.js',
   'src/market-data-orchestrator.js',
@@ -142,7 +143,7 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'approved-provider-rebase-apply-v1-20261005',
+  assetVersion:'market-data-canonical-hash-v1-20261008',
   dataMode:'Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
   files
 };

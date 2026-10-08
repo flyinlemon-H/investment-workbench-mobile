@@ -21,6 +21,7 @@
   technical.append(table,element('p','AI 判断 needs_review；历史 Discussion 正文不变；正式 freshness 不随候选前移。'));
   const warnings=section('门禁与限制');warnings.append(element('p',c.blockers.length?'阻塞：'+c.blockers.join('；'):'无候选硬阻塞；仍需用户明确批准具体 hash。'),element('p','已知限制：'+c.warnings.join('；')),element('p','未实现指标：'+(c.technicalValidation?.unsupported||[]).join('；')),element('p','回滚：使用完整旧版本归档和原子指针；审批包附隔离验证结果。'));
   const hashes=section('审批绑定');for(const k of ['candidateHash','contentHash','approvalPackageHash'])hashes.append(element('strong',k),element('code',c[k]));
+  if(c.schemaVersion===4&&c.baselineBinding){for(const k of ['canonicalSerializationVersion','canonicalContentHash','legacyBaseHash','expectedCurrentVersion'])hashes.append(element('strong',k),element('code',c.baselineBinding[k]));hashes.append(element('p','Canonical hash 只证明事实一致，不能替代当前版本、来源契约和精确审批。旧审批包必须重新冻结并批准。'));}
   const deployment=c.evidence?.productionDeployment;if(deployment)hashes.append(element('p','生产守卫部署：'+deployment.commit+' / '+deployment.assetVersion));
   current=c;root.ProviderMigrationReviewActions?.loaded(c);doc.getElementById('review-approve').disabled=c.blockers.length>0;doc.getElementById('review-message').textContent='已载入本地候选。摘要不替代执行端的 hash 与审批校验。';
  }

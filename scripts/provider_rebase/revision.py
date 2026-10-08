@@ -311,6 +311,14 @@ def candidate(req, provider, rows, provider_version, now, evidence):
             latestCompleteBar=rows[-1]['date'])
     if evidence.get('validationProfile') == E.PROFILE:
         finalize_evidence(c, req, rows, contract, evidence)
+    if evidence.get('canonicalSerializationVersion'):
+        from . import canonical as K
+        if evidence['canonicalSerializationVersion'] != K.VERSION:
+            raise ValueError('canonical_version_unsupported')
+        if c['schemaVersion'] != 3:
+            raise ValueError('canonical_requires_complete_evidence')
+        c['schemaVersion'] = 4
+        c['baselineBinding'] = K.binding(req['base'], req['baseHash'])
     c['approvalPackageHash'] = C.digest(c)
     c['candidateHash'] = C.digest(c)
     c['candidateId'] = 'rebase_' + c['candidateHash']

@@ -3,13 +3,14 @@ import json,sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from tests.test_provider_evidence import make, candidate
-from scripts.provider_rebase import remote
+from scripts.provider_rebase import remote, canonical
 out=Path(__file__).resolve().parents[2]/'.rebase/approved-migration-delivery'
 out.mkdir(exist_ok=True)
 for symbol in ('9999.HK','9998.HK'):
     req,rows,ev=make(symbol)
+    ev['canonicalSerializationVersion']=canonical.VERSION
     ev['migrationDeployment']={'rpcVersion':remote.RPC_VERSION,'unsafeWritePathCount':0}
-    ev['productionDeployment']={'assetVersion':'approved-provider-rebase-apply-v1-20261005','commit':'0'*40}
+    ev['productionDeployment']={'assetVersion':'market-data-canonical-hash-v1-20261008','commit':'0'*40}
     c=candidate(req,rows,ev)
     (out/('fixture-'+symbol+'.json')).write_text(json.dumps(remote.capsule(c,req)),encoding='utf-8')
 print('Synthetic migration fixtures ready')

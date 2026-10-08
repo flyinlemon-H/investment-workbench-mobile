@@ -101,9 +101,10 @@ test('601138.SS runtime derives program-owned dates and same-snapshot levels fro
 
 test('Provider Pilot release cache-busts new and preserved Workbench modules',()=>{
   const html=read('index.html');
-  const version='approved-provider-rebase-apply-v1-20261005';
+  const version='market-data-canonical-hash-v1-20261008';
   assert.match(html,new RegExp(`<meta name="app-asset-version" content="${version}">`));
   for(const asset of [
+    'src/market-data-canonical.js',
     'src/technical-freshness.js',
     'src/market-data-orchestrator.js',
     'src/market-data-task-ui.js',

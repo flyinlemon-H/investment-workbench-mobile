@@ -129,6 +129,6 @@ def implementation_hash():
     import hashlib, json
     from pathlib import Path
     root = Path(__file__).parent
-    names = ('core.py', 'revision.py', 'evidence.py', 'integration.py', 'fetch.py', 'store.py', 'deployment.py', 'remote.py')
+    names = ('core.py', 'revision.py', 'evidence.py', 'integration.py', 'fetch.py', 'store.py', 'deployment.py', 'remote.py', 'canonical.py')
     items = {n: hashlib.sha256((root/n).read_text(encoding='utf-8-sig').encode()).hexdigest() for n in names}
     return hashlib.sha256(json.dumps(items, sort_keys=True, separators=(',', ':')).encode()).hexdigest()

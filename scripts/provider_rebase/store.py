@@ -145,7 +145,7 @@ class Store:
             return dict(version=row[0],previousVersion=row[1],generation=row[2],bundle=self._get(db,row[0],'version'))
         finally:db.close()
 
-    def apply(self,cid,rid,base,expected_generation=0,failpoint=None,*,production_deployment=None):
+    def apply(self,cid,rid,base,expected_generation=0,failpoint=None,*,production_deployment=None,expected_current_version=None):
         with self.tx() as db:
             c=verify(self._get(db,cid,'candidate'));req=self._get(db,rid,'request')
             self._revalidate(c,req)
@@ -163,9 +163,16 @@ class Store:
             if c.get('schemaVersion', 1) >= 2 and (approval.get('contentHash')!=c['contentHash'] or approval.get('approvalPackageHash')!=c['approvalPackageHash']):raise ValueError('approval_binding_mismatch')
             if (row[2] if row else 0)!=expected_generation:raise ValueError('generation_conflict')
             current_facts=facts(current['stock']) if row else facts(base)
-            if digest(current_facts)!=c['baseHash'] or req['baseHash']!=c['baseHash']:raise ValueError('base_version_changed')
+            if c.get('schemaVersion') == 4:
+                from . import canonical as K
+                K.verify_binding(c, req['base'])
+                pointer = row[0] if row else c['baseHash']
+                if expected_current_version != pointer:raise ValueError('version_conflict')
+                if K.facts_hash(current_facts)!=c['baselineBinding']['canonicalContentHash']:raise ValueError('base_version_changed')
+            elif digest(current_facts)!=c['baseHash']:raise ValueError('base_version_changed')
+            if req['baseHash']!=c['baseHash']:raise ValueError('base_version_changed')
             if row:previous=row[0]
-            else:previous=self._put(db,dict(symbol=c['symbol'],stock=req['base'],sourceContract=req['base']['marketDataFreshness'].get('sourceContract'),quality='legacy_archived',reason='pre_rebase_snapshot'),'version')
+            else:previous=self._put(db,dict(symbol=c['symbol'],stock=current_facts,sourceContract=current_facts['marketDataFreshness'].get('sourceContract'),quality='legacy_archived',reason='pre_rebase_snapshot'),'version')
             stock=copy.deepcopy(c['stock']);mf=stock['marketDataFreshness']
             mf.update(kline_status='current',dataVersion=c['candidateHash'],resultVersion=c['candidateHash'],
                 sourceMigration=dict(previousVersion=previous,currentVersion=c['candidateHash'],generation=expected_generation+1,
