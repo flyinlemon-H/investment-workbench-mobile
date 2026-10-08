@@ -122,7 +122,7 @@ SQLite 与本地 PostgreSQL隔离验收：同事实异表示通过；微小数�
 
 本地分支：`codex/market-data-canonical-hash-v1`。发布资源版本：`market-data-canonical-hash-v1-20261008`。生产 baseline 文件已更新到该 main；没有改动 Entry Clarity 必须保留的测试 hash。
 
-发布 manifest 必须从本地实现提交生成，增加 canonical runtime；原七个 data 资源保留原字节。最终本地 Candidate commit 和资源完整性 receipt 保存在 `.rebase/canonical-hash-v1/candidate-receipt.json`，同时随交付回复给出。未 push、未更新生产 main、未触发 Pages workflow。
+本地实现提交：`18a79af5d6bb394d2c6b8a91d25652467ce6376a`。发布 manifest 已从该提交生成，97/97 个目标资源 SHA256 与长度核验通过，增加 canonical runtime；原七个 data 资源 hash 全部不变。最终本地 Candidate commit 和资源完整性 receipt 保存在 `.rebase/canonical-hash-v1/candidate-receipt.json`，同时随交付回复给出。未 push、未更新生产 main、未触发 Pages workflow。
 
 ## 10. 原审批包影响
 

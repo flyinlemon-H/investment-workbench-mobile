@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "26fe2f7c502eb54c73ea7dfab1eda23705a5e508",
-  "assetVersion": "approved-provider-rebase-apply-v1-20261005",
+  "sourceCommit": "18a79af5d6bb394d2c6b8a91d25652467ce6376a",
+  "assetVersion": "market-data-canonical-hash-v1-20261008",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
@@ -55,14 +55,14 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 74638,
-      "sha256": "ef7173d54c55479b251a9826f42ae8ca12678bcb0c1c8e4bec9b03ccebee38e2"
+      "bytes": 74368,
+      "sha256": "60c81218bd47d9ad27b1c7f179c4f475308194431dd06cec28221f611f8b3afa"
     },
     {
       "path": "provider-rebase-review.html",
       "role": "browser runtime dependency",
-      "bytes": 3938,
-      "sha256": "89a89188ddc15875cde4a088b349c31314b012a772c8315d7cf9e0422e89e692"
+      "bytes": 4004,
+      "sha256": "11d48864a52914831ed25edc12f12827b2d073106aca82d004193d814db8956c"
     },
     {
       "path": "social_posts.json",
@@ -115,8 +115,8 @@
     {
       "path": "src/approved-market-migration.js",
       "role": "browser runtime dependency",
-      "bytes": 5492,
-      "sha256": "4e3a938ade69990720cdf969d2f2c0dc02463575b96e4df17d5d17937e347efe"
+      "bytes": 6548,
+      "sha256": "608314bb684bdf7e68838a454ee8df42e91b61fce9e2d1d302461a85315c167a"
     },
     {
       "path": "src/auth-login-feedback.js",
@@ -263,6 +263,12 @@
       "sha256": "13dc335f84d3f9af11ce752de659faf6e732f4ffa3d961bc7305286a7dfeef56"
     },
     {
+      "path": "src/market-data-canonical.js",
+      "role": "browser runtime dependency",
+      "bytes": 4801,
+      "sha256": "1794b4f448ca9335bd2263ab7a42e1895ad2fe4e4fa6fb0032a16ab70adb308d"
+    },
+    {
       "path": "src/market-data-orchestrator.js",
       "role": "browser runtime dependency",
       "bytes": 6246,
@@ -391,8 +397,8 @@
     {
       "path": "src/provider-rebase-review-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 4898,
-      "sha256": "b713af6beaf4146779207d2fe49bbdf3058b659472c260a2007aafeac56696e1"
+      "bytes": 5300,
+      "sha256": "c9a335c40274bebe65080cf02e31a29b3df49057c8b1dcfa92eb6639a49d77fa"
     },
     {
       "path": "src/rebalance.js",
