@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "18a79af5d6bb394d2c6b8a91d25652467ce6376a",
+  "sourceCommit": "9a4bb89269a240a863316731f44574be3a3aaecd",
   "assetVersion": "market-data-canonical-hash-v1-20261008",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
