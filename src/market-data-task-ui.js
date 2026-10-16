@@ -35,9 +35,12 @@
     rpc:async(action,input)=>{const {data,error}=await root.SupabaseBrowserClient.getClient().rpc('market_data_migration',{p_action:action,p_input:input});if(error)throw Error(error.message||'迁移服务不可用');return data},
     user:async()=>(await root.SupabaseBrowserClient.getUser())?.id||null,
     getState:()=>state,
+    projectBaseline:projectLegacyMigrationBaseline,
     persist:async(next,original,userId)=>{
+      const before=root.ApprovedMarketMigration.stable(original);
       const persist=async value=>{
-        if(state!==original||(await root.SupabaseBrowserClient.getUser())?.id!==userId)throw Error('migration_local_version_conflict');
+        const currentUser=(await root.SupabaseBrowserClient.getUser())?.id;
+        if(currentUser!==userId||state!==original||root.ApprovedMarketMigration.stable(state)!==before)throw Error('migration_local_version_conflict');
         return StorageManager.saveState(value,{critical:true});
       };
       if(typeof MultiTabProtection!=='undefined')await MultiTabProtection.runProtectedSave(next,persist,{critical:true});else await persist(next);

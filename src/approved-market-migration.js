@@ -7,12 +7,16 @@
  function sort(x){if(Array.isArray(x))return x.map(sort);if(x&&typeof x==='object')return Object.fromEntries(Object.keys(x).sort().map(k=>[k,sort(x[k])]));return x}
  const facts=s=>Object.fromEntries(FIELDS.map(k=>[k,clone(Object.hasOwn(s,k)?s[k]:(k==='priceHistory'?[]:{}))]));
  const canonical=()=>root.MarketDataCanonical||(typeof require==='function'?require('./market-data-canonical.js'):null);
- async function baselineMatches(c,stock,expected){
+ async function baselineMatches(c,stock,expected,projectBaseline){
   if(c.candidate?.schemaVersion!==4)return stable(facts(stock))===stable(expected);
   const K=canonical(),b=c.candidate.baselineBinding;
   if(!K||b?.canonicalSerializationVersion!==K.VERSION||b.legacyBaseHash!==c.expectedCurrentVersion||b.expectedCurrentVersion!==c.expectedCurrentVersion||await K.factsHash(c.baseBundle)!==b.canonicalContentHash)throw Error('canonical_baseline_binding_mismatch');
   if(c.canonicalSerializationVersion!==K.VERSION||await K.factsHash(c.bundle)!==c.currentCanonicalHash||await K.factsHash(c.previousBundle)!==c.previousCanonicalHash)throw Error('canonical_transport_precision_mismatch');
-  return await K.factsHash(facts(stock))===await K.factsHash(expected);
+  if(await K.factsHash(facts(stock))===await K.factsHash(expected))return true;
+  // Only a first receipt of a canonical applied migration may reconcile an exact,
+  // reproducible legacy presentation. Never normalize either canonical hash input.
+  if(c.status!=='applied'||stock.marketMigration||stock.marketDataFreshness?.dataContentVersion||typeof projectBaseline!=='function')return false;
+  return projectBaseline(clone(expected),clone(stock)).some(projected=>stable(facts(stock))===stable(projected));
  }
  function verify(c,owner,symbol){
   if(!c)return null;
@@ -30,7 +34,7 @@
   return c;
  }
  function exact(c){return Object.fromEntries(['migrationId','symbol','candidateHash','contentHash','approvalPackageHash','expectedCurrentVersion','expectedGeneration','guardVersion','approvalId'].map(k=>[k,c[k]]))}
- function create({rpc,user,getState,persist,adopt,changed=()=>{}}){
+ function create({rpc,user,getState,persist,adopt,projectBaseline,changed=()=>{}}){
   let pending=false;
   async function read(symbol,action='current'){const owner=await user();if(!owner)return null;const c=await rpc(action,{symbol});if(await user()!==owner)throw Error('account_changed');return verify(c,owner,symbol)}
   async function sync(symbol){
@@ -41,19 +45,20 @@
     if(index<0)return c;
     const stock=original.stocks[index],local=stock.marketMigration;
     if(local?.owner===c.owner&&local.generation>=c.generation)return c;
+    const originalSnapshot=stable(original),localSnapshot=facts(stock);
     const expected=c.status==='rolled_back'?c.previousBundle:c.baseBundle;
-    if(!await baselineMatches(c,stock,expected))throw Error('migration_local_version_conflict');
+    if(!await baselineMatches(c,stock,expected,projectBaseline))throw Error('migration_local_version_conflict');
     const next=clone(original),target=next.stocks[index];
     for(const key of FIELDS)target[key]=clone(c.bundle[key]);
-    target.marketMigration={owner:c.owner,migrationId:c.migrationId,version:c.currentVersion,previousVersion:c.previousVersion,generation:c.generation,status:c.status,approvalId:c.approvalId,previousSnapshot:clone(c.previousBundle),previousReview:clone(stock.marketRevisionReview??null)};
+    target.marketMigration={owner:c.owner,migrationId:c.migrationId,version:c.currentVersion,previousVersion:c.previousVersion,generation:c.generation,status:c.status,approvalId:c.approvalId,previousSnapshot:clone(c.previousBundle),previousReview:clone(stock.marketRevisionReview??null),previousLocalSnapshot:localSnapshot,previousTechnicalReview:clone(stock.technicalReview??null)};
     if(c.status==='applied'&&target.marketRevisionReview)target.marketRevisionReview={...target.marketRevisionReview,status:'resolved_by_approved_migration',migrationId:c.migrationId};
     if(c.status==='rolled_back'){
      if(local?.previousReview)target.marketRevisionReview=clone(local.previousReview);else delete target.marketRevisionReview;
     }
     next.updatedAt=Math.max(Date.now(),(Number(original.updatedAt)||0)+1);
-    const matches=await baselineMatches(c,getState().stocks[index],expected);
+    const matches=await baselineMatches(c,getState().stocks[index],expected,projectBaseline);
     // Hashing awaits WebCrypto; recheck identity and facts after the last await.
-    if(await user()!==c.owner||getState()!==original||!matches||stable(facts(getState().stocks[index]))!==stable(expected))throw Error('migration_local_version_conflict');
+    if(await user()!==c.owner||getState()!==original||!matches||stable(getState())!==originalSnapshot)throw Error('migration_local_version_conflict');
     // Persistence receives a detached complete state. It must commit before UI adoption.
     await persist(next,original,c.owner);
     adopt(next);changed(c);return c;

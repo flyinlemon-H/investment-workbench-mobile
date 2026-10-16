@@ -1168,8 +1168,31 @@ function normalizeVolumeComparison(priceHistory,symbol){
   const volumeChangePct=previous>0?Number(((recent/previous-1)*100).toFixed(2)):null;
   return {volume:normalized[normalized.length-1],volumeAvg20:Number(average(normalized).toFixed(2)),recent5Average:Number(recent.toFixed(2)),previous5Average:Number(previous.toFixed(2)),volumeChangePct,volumeStatus:'comparable',volumeWarning:'',volumeProviderTransition:providerTransition};
 }
+// Reconstruct only browser-derived presentation from a server-verified old bundle.
+// Local OHLCV, source metadata and technical values are never inputs to this projection.
+function projectLegacyMigrationBaseline(expected,local,options={}){
+  if(expected.marketDataFreshness?.dataContentVersion)return [];
+  return [false,true].map(legacyNullAmount=>{
+    const projected={code:local.code,symbol:local.symbol,...structuredClone(expected)};
+    // Old releases converted null amount to zero. This is NOT canonical equivalence.
+    if(legacyNullAmount)for(const row of projected.priceHistory)if(row.amount===null)row.amount=0;
+    updateTechnicalDataFromPriceHistory(projected,options);
+    projected.technicalData=technicalDataFromReview(local.technicalReview,projected);
+    return Object.fromEntries(['priceHistory','marketDataFreshness','technicalIndicators','technicalData'].map(k=>[k,projected[k]]));
+  });
+}
+// Presentation must not rewrite an immutable bundle just because it is displayed.
+// This is a local formatting check, never permission to write market data or call RPCs.
+function hasReceivedMigrationFacts(stock){
+  const m=stock?.marketMigration,f=stock?.marketDataFreshness,source=f?.sourceMigration;
+  if(m?.status!=='applied'||!m.owner||!m.approvalId||!Number.isSafeInteger(m.generation)||m.generation<1||!source||source.migrationId!==m.migrationId||source.generation!==m.generation||source.currentVersion!==m.version||f.dataVersion!==m.version)return false;
+  const rows=stock.priceHistory,date=rows?.at(-1)?.date;
+  if(!Array.isArray(rows)||!rows.length||rows.some(r=>r.is_complete_bar!==true)||!f.dataContentVersion||!f.technicalVersion)return false;
+  return [f,stock.technicalIndicators,stock.technicalData].every(x=>x?.dataContentVersion===f.dataContentVersion&&x.technicalVersion===f.technicalVersion&&x.latestCompleteBar===date)&&stock.technicalData.technicalAsOf===date;
+}
 function updateTechnicalDataFromPriceHistory(stock,options={}){
   if(!stock)return {updated:false,warnings:['标的不存在']};
+  if(hasReceivedMigrationFacts(stock))return {updated:true,technicalAsOf:stock.technicalData.technicalAsOf,status:technicalFreshnessStatus(stock.technicalData.technicalAsOf,options.referenceDate||todayDate(),stock.marketDataFreshness),warnings:[]};
   stock.priceHistory=normalizePriceHistory(stock);
   const completeHistory=stock.priceHistory.filter(row=>row.is_complete_bar!==false);
   const latest=latestCompletePriceBar(completeHistory);
@@ -2103,12 +2126,14 @@ function normalizeStockAnalysis(stock,context={}){
   stock.shortTermSentiment=normalizeShortTermSentiment(stock.shortTermSentiment,stock);
   stock.informationCompleteness=normalizeInformationCompleteness(stock.informationCompleteness,stock);
   stock.financialData=normalizeFinancialData(stock.financialData);
-  stock.priceHistory=normalizePriceHistory(stock);
-  stock.technicalData=normalizeTechnicalData(stock.technicalData);
-  if(!stock.technicalData.symbol)stock.technicalData.symbol=String(stock.code||stock.symbol||'');
-  updateTechnicalDataFromPriceHistory(stock);
-  stock.technicalReview=normalizeTechnicalReview(stock.technicalReview,stock);
-  stock.technicalData=technicalDataFromReview(stock.technicalReview,stock);
+  if(!hasReceivedMigrationFacts(stock)){
+    stock.priceHistory=normalizePriceHistory(stock);
+    stock.technicalData=normalizeTechnicalData(stock.technicalData);
+    if(!stock.technicalData.symbol)stock.technicalData.symbol=String(stock.code||stock.symbol||'');
+    updateTechnicalDataFromPriceHistory(stock);
+    stock.technicalReview=normalizeTechnicalReview(stock.technicalReview,stock);
+    stock.technicalData=technicalDataFromReview(stock.technicalReview,stock);
+  }
   if(typeof DiscussionWorkbench!=='undefined'&&typeof DiscussionWorkbench.normalizeStore==='function')stock.discussionState=DiscussionWorkbench.normalizeStore(stock.discussionState);
   stock.riskManagement=normalizeRiskManagement(stock.riskManagement);
   stock.riskManagement=calculateRiskManagement(stock);
