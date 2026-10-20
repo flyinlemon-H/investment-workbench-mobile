@@ -24,7 +24,7 @@ class PipelineFailure(ValueError):
 def error_label(code):
     return {
         'SAME_PROVIDER_REVISION': '同一行情源历史价格发生修订，已暂停正式更新，需要审阅。',
-        'UNIT_CONTRACT_INCOMPLETE': '历史修订候选的单位证据尚未完成，已暂停正式更新。',
+        'UNIT_CONTRACT_INCOMPLETE': '历史修订候选的单位证据校验未通过，已暂停正式更新。',
         'REVISION_SUSPECTED': '完整历史探测存在缺口，需要复核。',
         'REVISION_PROBE_FAILED': '完整历史探测失败，未确认源数据。',
         'PROVIDER_SWITCH': '行情来源与正式历史不一致，需要复核来源。',

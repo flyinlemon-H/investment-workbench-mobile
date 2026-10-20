@@ -41,6 +41,9 @@ def evaluate(old, new, old_contract, contract, *, old_raw=None, new_raw=None,
             or units.get('volume', {}).get('unit') != 'shares' or any(units.get(k, {}).get('scale') != 1 for k in ('price','volume'))
             or any(not E.accepted(units.get(k, {})) for k in ('price','volume'))):
         return verdict('REVIEW_REQUIRED', 'SOURCE_CONTRACT_MISMATCH')
+    _,unit_blockers=E.units_gate(contract,old,{},report['comparison'],new)
+    if unit_blockers:
+        return verdict('REVIEW_REQUIRED','UNIT_CONTRACT_INCOMPLETE')
     if any(report['comparison']['fields'][k]['differenceCount'] for k in ('volume','amount')):
         return verdict('REVIEW_REQUIRED', 'QUANTITY_REVISION')
     if report['comparison']['historicalAddedDates'] or report['comparison']['oldOnlyDates']:
