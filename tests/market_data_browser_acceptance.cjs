@@ -4,7 +4,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createDatabase,OWNER}=require('./helpers/market-db.cjs'),{resultFor}=require('./helpers/market-fixture.cjs');
 (async()=>{
  const api=await createDatabase(),token=crypto.randomBytes(32).toString('hex');await api.account('register_worker',{token});
- const {spawn}=require('node:child_process'),real=process.env.MARKET_REAL_PROVIDER==='1';
+ const {spawn,spawnSync}=require('node:child_process'),stableWorker=process.env.MARKET_STABLE_WORKER==='1',real=process.env.MARKET_REAL_PROVIDER==='1';
+ let seedStock=null;if(stableWorker){const initial={taskId:crypto.randomUUID(),taskType:'UPDATE_DAILY_MARKET_DATA',symbol:'601869.SS',requestedBy:OWNER,requestedAt:'2026-10-01T08:00:00Z',status:'running'};const child=spawnSync(process.env.PYTHON_EXECUTABLE||'python',['-B','-m','tests.daily_worker_fixture','--initial'],{input:JSON.stringify(initial),encoding:'utf8',windowsHide:true});assert.equal(child.status,0,child.stderr);seedStock=JSON.parse(child.stdout).stock;}
  const root=path.resolve('.'),output=path.resolve('test-results/market-data-orchestrator');fs.mkdirSync(output,{recursive:true});
  const server=http.createServer(async(req,res)=>{
   try{
@@ -19,6 +20,7 @@ const {createDatabase,OWNER}=require('./helpers/market-db.cjs'),{resultFor}=requ
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_EXECUTABLE||undefined}),results=[];
  try{for(const viewport of (real?[{width:390,height:844}]:[{width:1280,height:900},{width:390,height:844},{width:360,height:800}])){
   const context=await browser.newContext({viewport}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.clock.setFixedTime(new Date('2026-10-01T08:00:00Z')); // Synthetic fixture observation clock, not a production freshness override.
   page.on('dialog',d=>d.dismiss());
   await context.route('**/*',route=>{
    const u=route.request().url();if(new URL(u).origin!==url)return route.abort();
@@ -26,12 +28,13 @@ const {createDatabase,OWNER}=require('./helpers/market-db.cjs'),{resultFor}=requ
    return route.continue();
   });
   await page.goto(url);await page.waitForFunction(()=>document.querySelector('#main')?.dataset.storageState==='ready');
-  await page.evaluate(async()=>{
-   const source={id:'market-test',code:'601869.SS',name:'行情编排隔离验收',type:'holding',shares:100,avgCost:10,currentPrice:11,plans:[],priceHistory:[{date:'2026-09-01',open:10,high:12,low:9,close:11,volume:1000,is_complete_bar:true,provider:'fixture',adjustment:'qfq',price_basis:'adjusted'}],marketDataFreshness:{last_trade_date:'2026-09-01',is_complete_bar:true,kline_status:'current'},technicalIndicators:{last_trade_date:'2026-09-01'}};
+  await page.evaluate(async ({stableWorker,seedStock})=>{
+   const source={id:'market-test',code:'601869.SS',name:'行情编排隔离验收',type:'holding',shares:100,avgCost:10,currentPrice:11,plans:[],priceHistory:[{date:'2026-09-29',open:10,high:12,low:9,close:11,volume:1000,is_complete_bar:true,provider:stableWorker?'yahoo':'fixture',adjustment:'qfq',price_basis:'adjusted'}],marketDataFreshness:{last_trade_date:'2026-09-01',is_complete_bar:true,kline_status:'current'},technicalIndicators:{last_trade_date:'2026-09-01'}};
+   if(seedStock){Object.assign(source,seedStock);source.technicalData=source.technicalIndicators.technicalSnapshot;delete source.technicalIndicators.technicalSnapshot;}
    const candidate=createValidatedCandidateSnapshot({stocks:[source],updatedAt:null});await persistCandidateSnapshot(candidate);state=candidate;render();openStockDetail('market-test','technical');
    globalThis.protectedBefore=JSON.stringify({shares:state.stocks[0].shares,avgCost:state.stocks[0].avgCost,plans:state.stocks[0].plans,orders:state.orders});
-  });
-  assert.equal(await page.evaluate(()=>DiscussionDataReadiness.technical(state.stocks[0]).ready),false);
+  },{stableWorker,seedStock});
+  if(!stableWorker)assert.equal(await page.evaluate(()=>DiscussionDataReadiness.technical(state.stocks[0]).ready),false);
   await page.locator('[data-market-update]').click();await page.waitForFunction(()=>document.querySelector('[data-market-status]')?.textContent==='等待执行端');
   await page.locator('[data-market-orchestrator]').screenshot({path:path.join(output,`queued-${viewport.width}.png`)});
   let claimed;
@@ -45,7 +48,9 @@ const {createDatabase,OWNER}=require('./helpers/market-db.cjs'),{resultFor}=requ
    await page.waitForFunction(()=>document.querySelector('[data-market-status]')?.textContent==='正在更新行情');
    await page.locator('[data-market-orchestrator]').screenshot({path:path.join(output,`running-${viewport.width}.png`)});
    await page.evaluate(()=>openStockDetail('market-test','ai'));
-   await api.worker(token,'finish',{taskId:claimed.taskId,result:resultFor(claimed)});
+   let result=resultFor(claimed);
+   if(stableWorker){const child=spawnSync(process.env.PYTHON_EXECUTABLE||'python',['-B','-m','tests.daily_worker_fixture'],{input:JSON.stringify(claimed),encoding:'utf8',windowsHide:true});assert.equal(child.status,0,child.stderr);result=JSON.parse(child.stdout);assert.equal(result.stock.priceHistory.length,140);}
+   await api.worker(token,'finish',{taskId:claimed.taskId,result});
   }
   await page.evaluate(()=>MarketDataTaskUi.poll());
   await page.evaluate(()=>openStockDetail('market-test','technical'));await page.evaluate(()=>MarketDataTaskUi.poll());
@@ -61,8 +66,20 @@ const {createDatabase,OWNER}=require('./helpers/market-db.cjs'),{resultFor}=requ
   assert.equal(await page.evaluate(()=>JSON.stringify({shares:state.stocks[0].shares,avgCost:state.stocks[0].avgCost,plans:state.stocks[0].plans,orders:state.orders})===protectedBefore),true);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.locator('[data-market-orchestrator]').screenshot({path:path.join(output,`failed-${viewport.width}.png`)});
+  for(const code of ['SAME_PROVIDER_REVISION','UNIT_CONTRACT_INCOMPLETE','REVISION_PROBE_FAILED','PROVIDER_SWITCH','worker_revoked','pipeline_failure']){
+   const queued=await api.account('request',{taskType:'UPDATE_DAILY_MARKET_DATA',symbol:'601869.SS'});
+   const repeated=await api.account('request',{taskType:'UPDATE_DAILY_MARKET_DATA',symbol:'601869.SS'});assert.equal(repeated.taskId,queued.taskId);
+   const task=await api.worker(token,'claim',{});await api.worker(token,'finish',{taskId:task.taskId,error:code});await page.evaluate(()=>MarketDataTaskUi.poll());
+   assert.equal(await page.evaluate(()=>state.stocks[0].marketDataFreshness.resultVersion),claimed.taskId);
+   assert.equal(await page.locator('[data-market-reason]').innerText(), '原因：'+await page.evaluate(code=>MarketDataOrchestrator.errorLabel(code),code));
+   assert.equal(await page.locator('[data-market-version]').isVisible(),false);
+   await page.locator('[data-market-orchestrator]').screenshot({path:path.join(output,`${code}-${viewport.width}.png`)});
+  }
+  await page.reload();await page.waitForFunction(()=>document.querySelector('#main')?.dataset.storageState==='ready');
+  await page.evaluate(()=>openStockDetail('market-test','technical'));await page.evaluate(()=>MarketDataTaskUi.poll());
+  assert.equal(await page.evaluate(()=>state.stocks[0].marketDataFreshness.resultVersion),claimed.taskId);
   await page.evaluate(()=>window.marketTestSignedOut=true);await page.locator('[data-market-update]').click();await page.waitForFunction(()=>document.querySelector('[data-market-status]')?.textContent.includes('请先在账户设置中登录'));
-  assert.deepEqual(errors,[]);results.push({viewport,queued:true,running:true,succeeded:true,failed:true,version:claimed.taskId,freshnessAgreement:true,previousPreserved:true,noProtectedChanges:true,noOverflow:true,errors});await context.close();
+  assert.deepEqual(errors,[]);results.push({viewport,actualWorker:stableWorker,errorMatrix:true,reloadPreserved:true,queued:true,running:true,succeeded:true,failed:true,version:claimed.taskId,freshnessAgreement:true,previousPreserved:true,noProtectedChanges:true,noOverflow:true,errors});await context.close();
  }
  fs.writeFileSync(path.join(output,real?'real-local-loop-results.json':'browser-results.json'),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));await api.db.close()}

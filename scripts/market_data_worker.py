@@ -14,17 +14,20 @@ import sys
 import time
 import uuid
 from urllib.request import Request, build_opener
+from urllib.error import HTTPError
 
 try:
     from .fetch_cloud_universe import PROJECTS, NoRedirect, protect
     from .market_symbol_contract import canonical_symbol
     from .update_market_universe import load_source_updater
     from .provider_rebase.revision import SAFE_ERRORS
+    from .market_worker_errors import PipelineFailure, public_error
 except ImportError:
     from fetch_cloud_universe import PROJECTS, NoRedirect, protect
     from market_symbol_contract import canonical_symbol
     from update_market_universe import load_source_updater
     from provider_rebase.revision import SAFE_ERRORS
+    from market_worker_errors import PipelineFailure, public_error
 
 sys.dont_write_bytecode = True
 
@@ -86,7 +89,7 @@ def execute_task(task, seed, source_root, chain=None, rebase_store=None):
         # Only fixed errors cross the boundary; provider exceptions can contain URLs.
         reason=outcome.get('error','')
         safe={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history'} | SAFE_ERRORS
-        raise ValueError(reason if reason in safe else 'provider_or_pipeline_failure')
+        raise PipelineFailure(reason if reason in safe else 'provider_or_pipeline_failure', bool(outcome.get('candidateObject')))
     stock['priceHistory']=[b for b in stock['priceHistory'] if b.get('is_complete_bar') is True]
     validate_rows(stock['priceHistory'])
     latest=stock['priceHistory'][-1]['date']
@@ -140,7 +143,7 @@ def write_json(path, value):
     temp.replace(path)
 
 
-def run_once(registry, source_root, journal, seeds=None, rebase_store=None):
+def run_once(registry, source_root, journal, seeds=None, rebase_store=None, notify=None):
     # Persist an outbox before publishing. A lost HTTP response replays finish,
     # whose transaction is idempotent, rather than recalculating/replacing a result.
     if journal.exists():
@@ -156,7 +159,8 @@ def run_once(registry, source_root, journal, seeds=None, rebase_store=None):
             raise ValueError('task_owner_mismatch')
         baseline=(task.get('previousResult') or {}).get('stock') or (seeds or {}).get(task['symbol']) or {}
         before_date=max((b['date'] for b in baseline.get('priceHistory',[]) if b.get('is_complete_bar') is True),default=None)
-        print(json.dumps({'taskId':task['taskId'],'symbol':task['symbol'],'status':'running','worker':task['workerId'],'startedAt':task['startedAt'],'latestCompleteBarBefore':before_date}),flush=True)
+        (notify or report_event)({'taskId':task['taskId'],'symbol':task['symbol'],'status':'running','worker':task['workerId'],'startedAt':task['startedAt'],'latestCompleteBarBefore':before_date})
+        candidate_saved=False
         try:
             if hasattr(registry,'migration_current'):
                 try:
@@ -170,17 +174,23 @@ def run_once(registry, source_root, journal, seeds=None, rebase_store=None):
             result=execute_task(task,(seeds or {}).get(task['symbol']),source_root,rebase_store=rebase_store)
             payload={'taskId':task['taskId'],'result':result}
         except Exception as error:
-            allowed={'provider_mismatch','adjustment_mismatch','adjustment_revision_requires_full_rebuild','invalid_ohlc','invalid_bar_order','invalid_history','provider_or_pipeline_failure','unaligned_result'} | SAFE_ERRORS
-            payload={'taskId':task['taskId'],'error':str(error) if str(error) in allowed else 'pipeline_failure'}
-        write_json(journal,{'workerId':registry.credential['workerId'],'owner':registry.credential['userId'],'payload':payload})
+            payload={'taskId':task['taskId'],'error':public_error(error)}
+            candidate_saved=isinstance(error,PipelineFailure) and error.candidate_saved
+        outbox={'workerId':registry.credential['workerId'],'owner':registry.credential['userId'],'payload':payload,'candidateSaved':candidate_saved}
+        write_json(journal,outbox)
     status=registry.rpc('finish',payload)
     result=payload.get('result',{})
-    print(json.dumps({**{k:status.get(k) for k in ('taskId','symbol','status','startedAt','completedAt','workerId','resultVersion','error')},'provider':result.get('provider'),'latestCompleteBarAfter':result.get('latestCompleteBar'),'warnings':result.get('warnings',[])}),flush=True)
+    event={**{k:status.get(k) for k in ('taskId','symbol','status','startedAt','completedAt','workerId','resultVersion')},'error':public_error(status['error']) if status.get('error') else None,'provider':result.get('provider'),'latestCompleteBarAfter':result.get('latestCompleteBar'),'warnings':result.get('warnings',[]),'candidateSaved':outbox.get('candidateSaved') is True}
+    (notify or report_event)(event)
     if status['status'] in ('succeeded','failed'):journal.unlink()
     return status
 
 
-def main():
+def report_event(event):
+    print(json.dumps(event),flush=True)
+
+
+def main(argv=None, notify=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-root',type=Path,required=True)
     parser.add_argument('--state-dir',type=Path,required=True,help='Private local worker directory; outside any repository')
@@ -188,7 +198,7 @@ def main():
     parser.add_argument('--pair',action='store_true',help='Read credential JSON from hidden prompt, protect using Windows DPAPI')
     parser.add_argument('--once',action='store_true')
     parser.add_argument('--rebase-store',type=Path,help='Explicit opt-in active rebase store; candidates alone have no active pointer')
-    args=parser.parse_args()
+    args=parser.parse_args(argv)
     try:
         from .provider_rebase.store import Store
     except ImportError:
@@ -218,18 +228,26 @@ def main():
     else:
         import fcntl
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    while True:
-        failed=False
-        try:
-            outcome=run_once(registry,args.source_root,directory/'outbox.json',seeds,rebase_store=rebase_store)
-            failed=bool(outcome and outcome['status']=='failed')
-        except Exception:
-            failed=True
-            print(json.dumps({'status':'connection_or_delivery_error','message':'Retry pending; inspect registry status. Credentials are not logged.'}),flush=True)
-        if args.once:
-            if failed:raise SystemExit(1)
-            break
-        time.sleep(5)
+    try:
+        while True:
+            failed=False
+            try:
+                outcome=run_once(registry,args.source_root,directory/'outbox.json',seeds,rebase_store=rebase_store,notify=notify)
+                failed=bool(outcome and outcome['status']=='failed')
+                if notify:notify({'status':'waiting'})
+            except Exception as error:
+                failed=True
+                event={'status':'unauthorized' if isinstance(error,HTTPError) and error.code in (401,403) else 'connection_or_delivery_error'}
+                (notify or report_event)(event)
+            if args.once:
+                if failed:raise SystemExit(1)
+                break
+            time.sleep(5)
+    except KeyboardInterrupt:
+        if notify:notify({'status':'stopped'})
+    finally:
+        lock.close()
+
 
 
 if __name__=='__main__':main()

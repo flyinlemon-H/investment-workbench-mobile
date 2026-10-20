@@ -54,11 +54,12 @@
       node.querySelector('[data-market-status]').textContent=view?.error?`同步未完成：${marketHistoryGuardMessage(view.error)||view.error}`:root.MarketDataOrchestrator.presentation(view?.task,view?.applied);
       const version=node.querySelector('[data-market-version]');version.textContent=view?.applied?`结果版本 ${view.task.resultVersion}`:'';
       const reason=node.querySelector('[data-market-reason]');reason.textContent=view?.task?.error?`原因：${root.MarketDataOrchestrator.errorLabel(view.task.error)}`:'';
+      const hint=node.querySelector('[data-market-review-hint]');if(hint)hint.textContent=root.MarketDataOrchestrator.reviewHint(view?.task);
       const button=node.querySelector('[data-market-update]');button.disabled=Boolean(view?.task&&['queued','running'].includes(view.task.status));button.textContent=view?.task?.status==='failed'?'重试更新行情':'更新行情';
     });
   }
   async function recordRevisionReview(task){
-    const reasons=['SAME_PROVIDER_REVISION','UNIT_CONTRACT_INCOMPLETE','REVISION_SUSPECTED','PROVIDER_REBASE_REQUIRED'];
+    const reasons=root.MarketDataOrchestrator.REVIEW_ERRORS;
     if(task?.status!=='failed'||!reasons.includes(task.error)||typeof state==='undefined'||task.requestedBy!==owner)return;
     const stock=state.stocks.find(s=>root.SymbolIdentity.canonicalMarketSymbol(s.code||s.symbol)===task.symbol);
     if(!stock||stock.marketRevisionReview?.taskId===task.taskId)return;
@@ -93,7 +94,7 @@
   }
   function panel(symbol){
     try{root.MarketDataOrchestrator.request(symbol)}catch(_error){return ''}
-    return `<section class="card" data-market-orchestrator="${symbol}" style="margin-bottom:12px;overflow-wrap:anywhere"><div class="card-title">行情更新</div><p data-market-status role="status" aria-live="polite">查询行情任务状态</p><p data-market-reason class="card-note"></p><p data-market-version class="card-note"></p><p class="card-note"><a href="provider-rebase-review.html" target="_blank" rel="noopener">审阅行情迁移候选</a></p><button class="btn" type="button" data-market-update="${symbol}">更新行情</button><details style="margin-top:12px"><summary>执行端设置</summary><p class="card-note">首次使用需在账户设置登录，并授权执行端。执行端未启动时，任务保持等待。</p><button class="btn ghost small" type="button" data-market-pair>生成执行端授权</button> <button class="btn ghost small" type="button" data-market-revoke>撤销执行端授权</button></details></section>`;
+    return `<section class="card" data-market-orchestrator="${symbol}" style="margin-bottom:12px;overflow-wrap:anywhere"><div class="card-title">行情更新</div><p data-market-status role="status" aria-live="polite">查询行情任务状态</p><p data-market-reason class="card-note"></p><details data-market-diagnostics><summary>高级诊断</summary><p data-market-review-hint class="card-note" role="note"></p><p data-market-version class="card-note"></p><p class="card-note"><a href="provider-rebase-review.html" target="_blank" rel="noopener">审阅行情迁移候选</a></p></details><button class="btn" type="button" data-market-update="${symbol}">更新行情</button><details style="margin-top:12px"><summary>执行端设置</summary><p class="card-note">首次使用需在账户设置登录，并授权执行端。执行端未启动时，任务保持等待。</p><button class="btn ghost small" type="button" data-market-pair>生成执行端授权</button> <button class="btn ghost small" type="button" data-market-revoke>撤销执行端授权</button></details></section>`;
   }
   document.addEventListener('click',async event=>{
     const update=event.target.closest('[data-market-update]'),pair=event.target.closest('[data-market-pair]'),revoke=event.target.closest('[data-market-revoke]');
