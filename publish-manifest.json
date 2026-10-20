@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "c8f5d903a6d728d2a94407608cfaa10524049cac",
-  "assetVersion": "post-apply-browser-sync-v1-20261016",
+  "sourceCommit": "197f9a1867ef0a5d41e6281a4f18edb2535d9c7e",
+  "assetVersion": "daily-update-feedback-v1-20261020",
   "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
   "files": [
     {
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 74092,
-      "sha256": "471e649b8b459efb6de11be86f436326a19c1ad3db90a17921003ca479f7c09e"
+      "bytes": 73908,
+      "sha256": "3aa2138a56ab19e1c46b5c813ef07d05386c6296bfd642633607942f4b7d05eb"
     },
     {
       "path": "provider-rebase-review.html",
@@ -271,14 +271,14 @@
     {
       "path": "src/market-data-orchestrator.js",
       "role": "browser runtime dependency",
-      "bytes": 6246,
-      "sha256": "10752d3b0a86793026c3f5bb21ed337c2ca5f6b387508f6fc91dcf566d4fa479"
+      "bytes": 6743,
+      "sha256": "9781ca8471851945b4395b0f10d73815b56a28356b7be0df3facd686fbaaa193"
     },
     {
       "path": "src/market-data-task-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 9968,
-      "sha256": "c2fd09395cfeda490f90f977fe53987979d379a0bb2df4b3bfdc3d4c8343f474"
+      "bytes": 10185,
+      "sha256": "a008ea9d309b2c7dd4378125c8ecc1fb1889d8fbcb72d614010d3d020a8060be"
     },
     {
       "path": "src/multi-stock-analysis.js",
