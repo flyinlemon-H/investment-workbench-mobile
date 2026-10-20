@@ -9,6 +9,7 @@ const root=path.resolve(__dirname,'..');
 const manifestPath=path.join(root,'publish-manifest.json');
 const existing=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
 const roleByPath=new Map(existing.files.map(entry=>[entry.path,entry.role]));
+roleByPath.set('src/market-data-daily-receiver.js','authenticated bounded daily receipt validation, local CAS, recovery snapshot and protected business preservation');
 roleByPath.set('src/plan-context-contract.js','versioned complete Plan definition references, shared context, and independent binding/evidence/applicability guards');
 roleByPath.set('src/discussion-v4.js','program-owned source snapshots and explicit real User Decision with immutable AI judgment history');
 roleByPath.set('src/plan-v4.js','reader-first Plan V4 definitions, same-ID revisions, legacy projection compatibility and atomic audit validation');
@@ -71,6 +72,7 @@ const paths=[...new Set([
   'provider-rebase-review.html',
   'src/provider-rebase-review-ui.js',
   'src/approved-market-migration.js',
+  'src/market-data-daily-receiver.js',
   'src/market-data-canonical.js',
   'src/provider-migration-review-actions.js',
   'src/technical-freshness.js',
@@ -143,8 +145,8 @@ const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'u
 const manifest={
   manifestVersion:1,
   sourceCommit,
-  assetVersion:'daily-update-feedback-v1-20261020',
-  dataMode:'Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions',
+  assetVersion:'bounded-daily-revision-v1-20261020',
+  dataMode:'Operator-enabled 2899.HK Yahoo bounded daily revision receipts with server verification and browser CAS; ordinary history guards remain strict; no automatic Provider Rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and shared freshness; no automatic AI or trade actions',
   files
 };
 fs.writeFileSync(manifestPath,`${JSON.stringify(manifest,null,2)}\n`,'utf8');

@@ -21,13 +21,13 @@ try:
     from .market_symbol_contract import canonical_symbol
     from .update_market_universe import load_source_updater
     from .provider_rebase.revision import SAFE_ERRORS
-    from .market_worker_errors import PipelineFailure, public_error
+    from .market_worker_errors import PipelineFailure, public_error, DailyRejected, PUBLIC_ERRORS
 except ImportError:
     from fetch_cloud_universe import PROJECTS, NoRedirect, protect
     from market_symbol_contract import canonical_symbol
     from update_market_universe import load_source_updater
     from provider_rebase.revision import SAFE_ERRORS
-    from market_worker_errors import PipelineFailure, public_error
+    from market_worker_errors import PipelineFailure, public_error, DailyRejected, PUBLIC_ERRORS
 
 sys.dont_write_bytecode = True
 
@@ -134,6 +134,24 @@ class Registry:
             if len(data)>8*1024*1024:raise ValueError('response_too_large')
             return json.loads(data)
 
+    def daily_rpc(self, action, payload):
+        ref=self.credential['projectRef']
+        req=Request(f'https://{ref}.supabase.co/rest/v1/rpc/market_data_daily_worker',
+            data=json.dumps({'p_token':self.credential['token'],'p_action':action,'p_input':payload},allow_nan=False).encode(),
+            headers={'apikey':PROJECTS[ref],'Content-Type':'application/json'},method='POST')
+        try:
+            with build_opener(NoRedirect()).open(req,timeout=60) as response:
+                data=response.read(24*1024*1024+1)
+                if len(data)>24*1024*1024:raise ValueError('response_too_large')
+                return json.loads(data)
+        except HTTPError as error:
+            # Only this exact missing-RPC response permits the pre-deploy path.
+            try:body=json.loads(error.read(4096))
+            except (ValueError,TypeError):raise error from None
+            if action=='current' and error.code==404 and body.get('code')=='PGRST202':return None
+            if body.get('message') in PUBLIC_ERRORS:raise DailyRejected(body['message']) from None
+            raise error from None
+
 
 def write_json(path, value):
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -161,30 +179,60 @@ def run_once(registry, source_root, journal, seeds=None, rebase_store=None, noti
         before_date=max((b['date'] for b in baseline.get('priceHistory',[]) if b.get('is_complete_bar') is True),default=None)
         (notify or report_event)({'taskId':task['taskId'],'symbol':task['symbol'],'status':'running','worker':task['workerId'],'startedAt':task['startedAt'],'latestCompleteBarBefore':before_date})
         candidate_saved=False
+        review_saved=False
+        channel='ordinary'
         try:
-            if hasattr(registry,'migration_current'):
+            daily=registry.daily_rpc('current',{'symbol':task['symbol']}) if task['symbol']=='2899.HK' and hasattr(registry,'daily_rpc') else None
+            if daily is not None:
                 try:
-                    from .provider_rebase.remote import worker_baseline
+                    from .provider_rebase.daily_protocol import collect
+                    from .provider_rebase.integration import runtime_version
                 except ImportError:
-                    from provider_rebase.remote import worker_baseline
-                migrated=worker_baseline(registry.migration_current(task['symbol']),registry.credential['userId'],task['symbol'])
-                if migrated is not None:
-                    task=copy.deepcopy(task)
-                    task['previousResult']={'stock':migrated}
-            result=execute_task(task,(seeds or {}).get(task['symbol']),source_root,rebase_store=rebase_store)
-            payload={'taskId':task['taskId'],'result':result}
+                    from provider_rebase.daily_protocol import collect
+                    from provider_rebase.integration import runtime_version
+                load_source_updater(Path(source_root))
+                if runtime_version(importlib.import_module('src.market_data.provider'))!=daily['bundle']['marketDataFreshness']['sourceContract']['providerVersion']:
+                    raise ValueError('SOURCE_CONTRACT_MISMATCH')
+                if daily.get('owner')!=registry.credential['userId']:raise ValueError('DAILY_BASELINE_INVALID')
+                payload=collect(daily,task)
+                channel='daily'
+            else:
+                payload=_ordinary_payload(registry,task,seeds,source_root,rebase_store)
         except Exception as error:
             payload={'taskId':task['taskId'],'error':public_error(error)}
             candidate_saved=isinstance(error,PipelineFailure) and error.candidate_saved
-        outbox={'workerId':registry.credential['workerId'],'owner':registry.credential['userId'],'payload':payload,'candidateSaved':candidate_saved}
+            if hasattr(error,'review_evidence'):
+                write_json(journal.parent/'bounded-review-evidence'/(task['taskId']+'.json'),error.review_evidence)
+                review_saved=True
+        outbox={'workerId':registry.credential['workerId'],'owner':registry.credential['userId'],'payload':payload,'candidateSaved':candidate_saved,'reviewEvidenceSaved':review_saved,'channel':channel}
         write_json(journal,outbox)
-    status=registry.rpc('finish',payload)
+    try:
+        status=registry.daily_rpc('finish',payload) if outbox.get('channel')=='daily' else registry.rpc('finish',payload)
+    except DailyRejected as error:
+        # A proven rejection may fail this task; an uncertain network result must replay.
+        status=registry.rpc('finish',{'taskId':payload['taskId'],'error':public_error(error)})
     result=payload.get('result',{})
+    if outbox.get('channel')=='daily':
+        result={'provider':'yahoo','latestCompleteBar':payload['bundle']['priceHistory'][-1]['date']}
     event={**{k:status.get(k) for k in ('taskId','symbol','status','startedAt','completedAt','workerId','resultVersion')},'error':public_error(status['error']) if status.get('error') else None,'provider':result.get('provider'),'latestCompleteBarAfter':result.get('latestCompleteBar'),'warnings':result.get('warnings',[]),'candidateSaved':outbox.get('candidateSaved') is True}
+    if outbox.get('reviewEvidenceSaved'):event['reviewEvidenceSaved']=True
     (notify or report_event)(event)
     if status['status'] in ('succeeded','failed'):journal.unlink()
     return status
 
+
+def _ordinary_payload(registry, task, seeds, source_root, rebase_store):
+    if hasattr(registry,'migration_current'):
+        try:
+            from .provider_rebase.remote import worker_baseline
+        except ImportError:
+            from provider_rebase.remote import worker_baseline
+        migrated=worker_baseline(registry.migration_current(task['symbol']),registry.credential['userId'],task['symbol'])
+        if migrated is not None:
+            task=copy.deepcopy(task)
+            task['previousResult']={'stock':migrated}
+    result=execute_task(task,(seeds or {}).get(task['symbol']),source_root,rebase_store=rebase_store)
+    return {'taskId':task['taskId'],'result':result}
 
 def report_event(event):
     print(json.dumps(event),flush=True)

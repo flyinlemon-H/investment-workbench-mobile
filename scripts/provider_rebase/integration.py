@@ -61,6 +61,11 @@ class ContinuityChain:
                 evidence=dict(units=units,adjustmentConfirmed=True,adjustmentAlgorithmVersion=self.provider_version,
                     writerGuardsConfirmed=False,calendarConfirmed=False,
                     probe=dict(start=start.isoformat(),end=end.isoformat(),mode='entire_retained_window'))
+                # Preserve empirical evidence, including confirmed=False. This
+                # only chooses the existing bounded evidence validator; it does
+                # not authorize a revision or relax the ordinary write guard.
+                if (self.contract or {}).get('unitValidationProfile')==E.PROFILE:
+                    evidence['validationProfile']=E.PROFILE
                 self.candidate=R.candidate(req,provider,rows,self.provider_version,moment,evidence)
                 if self.store:self.candidate_object,self.request_object=self.store.save(req,self.candidate)
                 if 'UNIT_CONTRACT_INCOMPLETE' in self.candidate['blockers'] and reason=='SAME_PROVIDER_REVISION':reason='UNIT_CONTRACT_INCOMPLETE'

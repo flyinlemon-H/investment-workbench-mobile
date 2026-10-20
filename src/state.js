@@ -1190,9 +1190,17 @@ function hasReceivedMigrationFacts(stock){
   if(!Array.isArray(rows)||!rows.length||rows.some(r=>r.is_complete_bar!==true)||!f.dataContentVersion||!f.technicalVersion)return false;
   return [f,stock.technicalIndicators,stock.technicalData].every(x=>x?.dataContentVersion===f.dataContentVersion&&x.technicalVersion===f.technicalVersion&&x.latestCompleteBar===date)&&stock.technicalData.technicalAsOf===date;
 }
+// Display/persistence preservation only. All market writes still require the
+// ordinary strict guard or the authenticated daily receiver's hash and local CAS.
+function hasReceivedDailyFacts(stock){
+  const r=stock?.marketDailyReceipt,f=stock?.marketDataFreshness,rows=stock?.priceHistory;
+  if(!r?.owner||!r.versionId||!Number.isSafeInteger(r.generation)||r.generation<0||r.receipt?.protocol!=='bounded-daily-revision-v1'||!Array.isArray(rows)||!rows.length||rows.some(b=>b.provider!=='yahoo'||b.is_complete_bar!==true)||f?.sourceContract?.symbol!=='2899.HK')return false;
+  const date=rows.at(-1).date;
+  return [f,stock.technicalIndicators,stock.technicalData].every(x=>x?.dataContentVersion===f.dataContentVersion&&x.technicalVersion===f.technicalVersion&&x.latestCompleteBar===date)&&stock.technicalData.technicalAsOf===date;
+}
 function updateTechnicalDataFromPriceHistory(stock,options={}){
   if(!stock)return {updated:false,warnings:['标的不存在']};
-  if(hasReceivedMigrationFacts(stock))return {updated:true,technicalAsOf:stock.technicalData.technicalAsOf,status:technicalFreshnessStatus(stock.technicalData.technicalAsOf,options.referenceDate||todayDate(),stock.marketDataFreshness),warnings:[]};
+  if(hasReceivedMigrationFacts(stock)||hasReceivedDailyFacts(stock))return {updated:true,technicalAsOf:stock.technicalData.technicalAsOf,status:technicalFreshnessStatus(stock.technicalData.technicalAsOf,options.referenceDate||todayDate(),stock.marketDataFreshness),warnings:[]};
   stock.priceHistory=normalizePriceHistory(stock);
   const completeHistory=stock.priceHistory.filter(row=>row.is_complete_bar!==false);
   const latest=latestCompletePriceBar(completeHistory);
@@ -2126,7 +2134,7 @@ function normalizeStockAnalysis(stock,context={}){
   stock.shortTermSentiment=normalizeShortTermSentiment(stock.shortTermSentiment,stock);
   stock.informationCompleteness=normalizeInformationCompleteness(stock.informationCompleteness,stock);
   stock.financialData=normalizeFinancialData(stock.financialData);
-  if(!hasReceivedMigrationFacts(stock)){
+  if(!hasReceivedMigrationFacts(stock)&&!hasReceivedDailyFacts(stock)){
     stock.priceHistory=normalizePriceHistory(stock);
     stock.technicalData=normalizeTechnicalData(stock.technicalData);
     if(!stock.technicalData.symbol)stock.technicalData.symbol=String(stock.code||stock.symbol||'');
