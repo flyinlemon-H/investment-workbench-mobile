@@ -137,6 +137,8 @@ A→B 与 A→C：
 
 测试日志在 `test-results/precision-*.log`；真实数据隔离 Worker 回放摘要 `real-yahoo-worker-replay.json`；三视口结果与截图在 `test-results/market-data-orchestrator/`。检查过 360 成功和 390 修订状态实际截图。
 
+测试产物边界补记：首次 Python 回归沿用了既有测试的默认本地 `market-revisions/candidates.sqlite` 候选/探测日志目录；该目录时间戳发生变化，不能声称所有测试产物从一开始都写入专用临时目录。最终全量回归已将 LOCALAPPDATA 重定向到 `test-results/isolated-appdata`。默认库只读复核 active=0、approvals=0，未执行批准或当前版本切换；没有为清理测试日志而删除既有记录。这一目录不属于上述17个正式文件保护摘要。
+
 ## 生产与数据保护复核
 
 项目 `investment-workbench / fntslvdxnupmdljnadec`：ACTIVE_HEALTHY，ap-southeast-1。
