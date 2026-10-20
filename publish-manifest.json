@@ -1,8 +1,8 @@
 {
   "manifestVersion": 1,
-  "sourceCommit": "197f9a1867ef0a5d41e6281a4f18edb2535d9c7e",
-  "assetVersion": "daily-update-feedback-v1-20261020",
-  "dataMode": "Guarded daily market history imports and result reads; no automatic rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and daily-only authenticated market tasks, versioned results and shared freshness; no automatic AI or trade actions",
+  "sourceCommit": "e241e7863fbbbacc4af8cb7b480502b164f02c25",
+  "assetVersion": "bounded-daily-revision-v1-20261020",
+  "dataMode": "Operator-enabled 2899.HK Yahoo bounded daily revision receipts with server verification and browser CAS; ordinary history guards remain strict; no automatic Provider Rebase Apply; Password recovery through Supabase Auth; preserved Entry Decision Clarity, Discussion/Plan/Runtime and shared freshness; no automatic AI or trade actions",
   "files": [
     {
       "path": "data/ai_decision_review_data.js",
@@ -55,8 +55,8 @@
     {
       "path": "index.html",
       "role": "entrypoint",
-      "bytes": 73908,
-      "sha256": "3aa2138a56ab19e1c46b5c813ef07d05386c6296bfd642633607942f4b7d05eb"
+      "bytes": 74095,
+      "sha256": "b76e1d6349aa5fc01f7628f272ed4f4f8a1a5db012d18e05cbfaedf807e04989"
     },
     {
       "path": "provider-rebase-review.html",
@@ -269,16 +269,22 @@
       "sha256": "1794b4f448ca9335bd2263ab7a42e1895ad2fe4e4fa6fb0032a16ab70adb308d"
     },
     {
+      "path": "src/market-data-daily-receiver.js",
+      "role": "authenticated bounded daily receipt validation, local CAS, recovery snapshot and protected business preservation",
+      "bytes": 4675,
+      "sha256": "b085c11377a5d4a6ed4b0fc16da139cd69f281c651f23a99c2fadc9851a057b0"
+    },
+    {
       "path": "src/market-data-orchestrator.js",
       "role": "browser runtime dependency",
-      "bytes": 6743,
-      "sha256": "9781ca8471851945b4395b0f10d73815b56a28356b7be0df3facd686fbaaa193"
+      "bytes": 8636,
+      "sha256": "25460b15a1ca699d80122bc277ab71b515b16c68453fdf5ac3e8261f7845d1ea"
     },
     {
       "path": "src/market-data-task-ui.js",
       "role": "browser runtime dependency",
-      "bytes": 10185,
-      "sha256": "a008ea9d309b2c7dd4378125c8ecc1fb1889d8fbcb72d614010d3d020a8060be"
+      "bytes": 11873,
+      "sha256": "aa65a03d78f8db977afaf23bc29f377814f5a5b33647551bc8afdbaa80b04491"
     },
     {
       "path": "src/multi-stock-analysis.js",
@@ -427,8 +433,8 @@
     {
       "path": "src/state.js",
       "role": "Single Stock Discussion State normalization plus existing Workbench state runtime",
-      "bytes": 131496,
-      "sha256": "1787dfc03901906d9c7906ba17e0b3650d7368e1974fc5ed63e06f449c65273e"
+      "bytes": 132391,
+      "sha256": "bcc05fed0dfebb88d36402f40726098ed66ae5a5c084e2ba4f3a912ab074259d"
     },
     {
       "path": "src/stock-research-ui.js",
